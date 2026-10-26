@@ -1,0 +1,429 @@
+accumulating-share-class | Accumulating Share Class (Acc) | CORE | A01
+allocated-storage | Allocated Storage | CORE | A01
+asset-class | Asset Class | CORE | A01
+bitcoin | Bitcoin | CORE | A01
+broker | Broker | CORE | A01
+bullion | Bullion | CORE | A01
+bullion-premium | Bullion Premium | CORE | A01
+buy-stop-order | Buy-Stop Order | CORE | A01
+cap-weighted-index | Cap-Weighted Index | CORE | A01
+currency-hedged-share-class | Currency-Hedged Share Class | CORE | A01
+equal-weight-index | Equal-Weight Index | CORE | A01
+exchange-traded-commodity | Exchange-Traded Commodity (ETC) | CORE | A01
+exchange-traded-fund | Exchange-Traded Fund (ETF) | CORE | A01
+expense-ratio | Expense Ratio | CORE | A01
+extended-hours-trading | Extended-Hours Trading | CORE | A01
+financial-instrument | Financial Instrument | CORE | A01
+fund-size | Fund Size (AUM) | CORE | A01
+futures-contract | Futures Contract | CORE | A01
+futures-based-etf | Futures-Based ETF | CORE | A01
+index-fund | Index Fund | CORE | A01
+index-inclusion-effect | Index Inclusion Effect | CORE | A01
+ipo | Initial Public Offering (IPO) | CORE | A01
+isin-domicile | ISIN / Fund Domicile | CORE | A01
+leveraged-etf | Leveraged ETF | CORE | A01
+limit-order | Limit Order | CORE | A01
+liquidity | Liquidity | CORE | A01
+liquidity-floor | Liquidity Floor | CORE | A01
+long-position | Long Position | CORE | A01
+market | Market | CORE | A01
+market-capitalization | Market Capitalization | CORE | A01
+market-index | Market Index | CORE | A01
+market-order | Market Order | CORE | A01
+market-on-open-order | Market-on-Open Order | CORE | A01
+nav-discount | NAV Discount | CORE | A01
+option | Option | CORE | A01
+order | Order | CORE | A01
+sp-500 | S&P 500 | CORE | A01
+sector-etf | Sector ETF | CORE | A01
+short-selling | Short Selling | CORE | A01
+spot-price | Spot Price | CORE | A01
+stock | Stock | CORE | A01
+tax-wrapper | Tax Wrapper | CORE | A01
+thematic-etf | Thematic ETF | CORE | A01
+trading-halt | Trading Halt | CORE | A01
+ucits | UCITS Fund | CORE | A01
+withholding-tax | Withholding Tax | CORE | A01
+two-hundred-day-sma | 200-Day Moving Average | CORE | A02
+absolute-momentum | Absolute Momentum | CORE | A02
+bear-market | Bear Market | CORE | A02
+benchmark | Benchmark | CORE | A02
+classification-scheme | Classification Scheme | CORE | A02
+correction | Correction | CORE | A02
+dual-momentum | Dual Momentum | CORE | A02
+exponential-moving-average | Exponential Moving Average (EMA) | CORE | A02
+gics | GICS | CORE | A02
+global-benchmark | Global Benchmark | CORE | A02
+scoreboard-green | Green (Scoreboard) | METHOD | A02
+heatmap-strength | Heatmap Strength | METHOD | A02
+industry | Industry | CORE | A02
+industry-momentum | Industry Momentum | CORE | A02
+industry-proxy | Industry Proxy | METHOD | A02
+local-benchmark | Local Benchmark | CORE | A02
+market-breadth | Market Breadth | CORE | A02
+market-regime | Market Regime | CORE | A02
+momentum | Momentum | CORE | A02
+ma-slope | Moving-Average Slope | CORE | A02
+scoreboard-neutral | Neutral (Scoreboard) | METHOD | A02
+newly-green | Newly Green | METHOD | A02
+parabolic-move | Parabolic Move | CORE | A02
+pullback-mode | Pullback Mode | METHOD | A02
+scoreboard-red | Red (Scoreboard) | METHOD | A02
+regime-filter | Regime Filter | CORE | A02
+relative-strength | Relative Strength (RS) | CORE | A02
+rotation | Rotation | CORE | A02
+rotation-mirror | Rotation Mirror | METHOD | A02
+rs-composite | RS Composite Score | METHOD | A02
+rs-deterioration | RS Deterioration | METHOD | A02
+rs-trend | RS Trend | METHOD | A02
+scoreboard | Scoreboard | METHOD | A02
+scoreboard-heatmap | Scoreboard Heatmap | METHOD | A02
+scoreboard-status | Scoreboard Status | METHOD | A02
+sector | Sector | CORE | A02
+simple-moving-average | Simple Moving Average (SMA) | CORE | A02
+top-rs-group | Top RS Group | METHOD | A02
+trend | Trend | CORE | A02
+business-cycle | Business Cycle | CORE | A03
+coincident-indicator | Coincident Indicator | CORE | A03
+cycle-assessment-confidence | Cycle Assessment Confidence | CORE | A03
+cycle-phase-score | Cycle Phase Score | CORE | A03
+cyclical-sector | Cyclical Sector | CORE | A03
+cyclical-defensive-spread | Cyclical–Defensive Spread | CORE | A03
+defensive-sector | Defensive Sector | CORE | A03
+early-cycle | Early Cycle | CORE | A03
+growth-style | Growth (Style) | CORE | A03
+growth-sector | Growth Sector | CORE | A03
+inflation | Inflation | CORE | A03
+lagging-indicator | Lagging Indicator | CORE | A03
+late-cycle | Late Cycle | CORE | A03
+leading-indicator | Leading Indicator | CORE | A03
+shiller-pe | Long-Term Average P/E | CORE | A03
+mid-cycle | Mid Cycle | CORE | A03
+phase-bias | Phase Bias | CORE | A03
+pmi | Purchasing Managers' Index (PMI) | CORE | A03
+rate-cycle | Rate Cycle | MACRO | A03
+recession | Recession | CORE | A03
+sahm-rule | Sahm Rule | CORE | A03
+sector-leadership-map | Sector Leadership Map | CORE | A03
+style-regime | Style Regime | CORE | A03
+transition-phase | Transition / Mixed Phase | CORE | A03
+valuation-spread | Valuation Spread | CORE | A03
+value-style | Value (Style) | CORE | A03
+value-is-dead-thesis | Value Is Dead (Thesis) | MACRO | A03
+accumulation | Accumulation | CORE | A04
+average-volume | Average Volume | CORE | A04
+base | Base | CORE | A04
+breakout-volume | Breakout Volume | METHOD | A04
+congressional-trade | Congressional Trade | CORE | A04
+distribution | Distribution | CORE | A04
+evidence-strength | Evidence Strength | METHOD | A04
+fading-volume-rally | Fading-Volume Rally | METHOD | A04
+follow-the-money | Follow the Money | METHOD | A04
+fund-flow | Fund Flow | CORE | A04
+heartbeat | Heartbeat | METHOD | A04
+insider-transaction | Insider Transaction | CORE | A04
+institutional-holding-13f | Institutional Holding (13F) | CORE | A04
+institutional-money | Institutional Money | CORE | A04
+institutional-tailwind | Institutional Tailwind | METHOD | A04
+leverage-liquidation-cascade | Leverage Liquidation Cascade | CORE | A04
+low-volume-noise | Low-Volume Noise | METHOD | A04
+major-base | Major Base | METHOD | A04
+net-selling | Net Selling | CORE | A04
+percentile-rank | Percentile Rank | CORE | A04
+price-formation | Price Formation | CORE | A04
+resistance | Resistance | CORE | A04
+sector-kill-switch | Sector Kill Switch | METHOD | A04
+selling-the-book | Selling the Book | CORE | A04
+short-heartbeat | Short Heartbeat | METHOD | A04
+smart-money-evidence | Smart-Money Evidence | METHOD | A04
+staircase-uptrend | Staircase Uptrend | CORE | A04
+standard-deviation | Standard Deviation | CORE | A04
+support | Support | CORE | A04
+swing-point | Swing High / Swing Low | CORE | A04
+volume-day-direction | Up-Day / Down-Day Volume | METHOD | A04
+volume | Volume | CORE | A04
+volume-multiple | Volume Multiple | CORE | A04
+volume-spike | Volume Spike | METHOD | A04
+ten-x-checklist | 10x Checklist | METHOD | A05
+basket | Basket | METHOD | A05
+capex-to-ocf | Capex-to-Operating-Cash-Flow Ratio | METHOD | A05
+capex | Capital Expenditure (Capex) | CORE | A05
+cash-burn | Cash Burn | CORE | A05
+cash-conversion | Cash Conversion | CORE | A05
+cash-conversion-cycle | Cash Conversion Cycle | CORE | A05
+cash-runway | Cash Runway | CORE | A05
+catalyst | Catalyst | CORE | A05
+custom-industry-basket | Custom Industry Basket | METHOD | A05
+danger-zone-flag | Danger-Zone Flag | METHOD | A05
+debt-to-equity | Debt-to-Equity | CORE | A05
+dilution | Dilution | CORE | A05
+dividend-yield | Dividend Yield | CORE | A05
+earnings-consistency | Earnings Consistency | CORE | A05
+earnings-per-share | Earnings per Share (EPS) | CORE | A05
+external-score | External Score | CORE | A05
+financial-leverage | Financial Leverage | CORE | A05
+forward-pe | Forward P/E | CORE | A05
+free-cash-flow | Free Cash Flow (FCF) | CORE | A05
+fcf-yield | Free-Cash-Flow Yield | CORE | A05
+gross-margin | Gross Margin | CORE | A05
+growth-scorecard | Growth Scorecard | METHOD | A05
+guidance | Guidance | CORE | A05
+industry-first-selection | Industry-First Selection | METHOD | A05
+industry-relative-strength | Industry-Relative Strength | CORE | A05
+insider-turnaround | Insider Turnaround | METHOD | A05
+interest-coverage | Interest Coverage | CORE | A05
+ipo-trap | IPO Trap | METHOD | A05
+levered-fcf-margin | Levered FCF Margin | CORE | A05
+market-penetration | Market Penetration | CORE | A05
+moat | Moat | CORE | A05
+net-debt | Net Debt | CORE | A05
+net-margin | Net Margin | CORE | A05
+operating-cash-flow | Operating Cash Flow | CORE | A05
+operating-margin | Operating Margin | CORE | A05
+peer-group | Peer Group | CORE | A05
+picks-and-shovels | Picks and Shovels | METHOD | A05
+pe-ratio | Price-to-Earnings Ratio (P/E) | CORE | A05
+price-to-sales | Price-to-Sales (P/S) | CORE | A05
+pricing-power | Pricing Power | CORE | A05
+profitability-inflection | Profitability Inflection | METHOD | A05
+pure-play | Pure Play | CORE | A05
+quality-factor | Quality Factor | CORE | A05
+quality-scorecard | Quality Scorecard | METHOD | A05
+quality-stock | Quality Stock | METHOD | A05
+re-rating | Re-Rating | CORE | A05
+record-quarter | Record Quarter | METHOD | A05
+remaining-performance-obligations | Remaining Performance Obligations (RPO) | CORE | A05
+research-report | Research Report | METHOD | A05
+return-on-equity | Return on Equity (ROE) | CORE | A05
+roic | Return on Invested Capital (ROIC) | CORE | A05
+revenue-inflection | Revenue Inflection | METHOD | A05
+rs-rating | RS Rating | CORE | A05
+scorecard | Scorecard | METHOD | A05
+scorecard-lens | Scorecard Lens | METHOD | A05
+scorecard-pillar | Scorecard Pillar | METHOD | A05
+scorecard-score | Scorecard Score | METHOD | A05
+buyback | Share Buyback | CORE | A05
+share-count | Share Count | CORE | A05
+survival-check | Survival Check | METHOD | A05
+ten-bagger | Ten-Bagger | CORE | A05
+thematic-ladder | Thematic Ladder | METHOD | A05
+three-filter-screen | Three-Filter Screen | METHOD | A05
+toll-booth-business | Toll-Booth Business | METHOD | A05
+total-addressable-market | Total Addressable Market (TAM) | CORE | A05
+tracked-basket | Tracked Basket | CORE | A05
+valuation | Valuation | CORE | A05
+value-investing | Value Investing | CORE | A05
+watchlist | Watchlist | CORE | A05
+zombie-company | Zombie Company | CORE | A05
+breakout | Breakout | CORE | A06
+breakout-buy-order | Breakout Buy Order | METHOD | A06
+breakout-setup | Breakout Setup | METHOD | A06
+buy-stop-limit-order | Buy-Stop-Limit Order | CORE | A06
+close-confirmed-entry | Close-Confirmed Entry | METHOD | A06
+earnings-blackout | Earnings Blackout | METHOD | A06
+entry-checklist | Entry Checklist | METHOD | A06
+falling-knife | Falling Knife | CORE | A06
+false-breakout | False Breakout | CORE | A06
+heartbeat-breakout | Heartbeat Breakout | METHOD | A06
+linked-exit-order | Linked Exit Order | CORE | A06
+no-chase-threshold | No-Chase Threshold | METHOD | A06
+rising-50-sma | Rising 50-SMA | METHOD | A06
+second-chance-entry | Second-Chance Entry | METHOD | A06
+setup-distance | Setup Distance | METHOD | A06
+technical-setup | Technical Setup | METHOD | A06
+timing-the-market | Timing the Market | CORE | A06
+triple-confirmation | Triple Confirmation | METHOD | A06
+wait-for-confirmation | Wait for Confirmation | METHOD | A06
+weak-breakout | Weak Breakout | METHOD | A06
+yellow-line | Yellow Line | METHOD | A06
+alert-based-exit | Alert-Based Exit | METHOD | A07
+averaging-down | Averaging Down | CORE | A07
+breakdown | Breakdown | METHOD | A07
+breakeven-stop | Breakeven Stop | CORE | A07
+buyer-area | Buyer Area | METHOD | A07
+exit-liquidity | Exit Liquidity | CORE | A07
+exit-plan | Exit Plan | METHOD | A07
+exit-precedence | Exit Precedence | METHOD | A07
+extension | Extension | METHOD | A07
+knocked-out | Knocked Out | METHOD | A07
+partial-exit | Partial Exit | CORE | A07
+profit-taking | Profit Taking | METHOD | A07
+protective-stop | Protective Stop | METHOD | A07
+purple-line | Purple Line | METHOD | A07
+quick-win | Quick Win | METHOD | A07
+remainder-exit | Remainder Exit | METHOD | A07
+stop-ratchet | Stop Ratchet | METHOD | A07
+stop-loss-order | Stop-Loss Order | CORE | A07
+structure-stop-raise | Structure Stop Raise | METHOD | A07
+three-covenants | Three Covenants | METHOD | A07
+three-step-selling-system | Three-Step Selling System | METHOD | A07
+trailing-stop | Trailing Stop | CORE | A07
+trend-exit | Trend Exit | METHOD | A07
+unprotected-position | Unprotected Position | METHOD | A07
+asymmetric-bet | Asymmetric Bet | METHOD | A08
+atr-percent | ATR Percent (ATR%) | CORE | A08
+average-true-range | Average True Range (ATR) | CORE | A08
+cagr | CAGR | CORE | A08
+drawdown | Drawdown | CORE | A08
+fourth-outcome | Fourth Outcome | METHOD | A08
+fractional-kelly | Fractional Kelly | CORE | A08
+fractional-share | Fractional Share | CORE | A08
+gap | Gap | CORE | A08
+inverse-volatility-weighting | Inverse-Volatility Weighting | CORE | A08
+kelly-criterion | Kelly Criterion | CORE | A08
+loss-recovery-asymmetry | Loss-Recovery Asymmetry | CORE | A08
+margin-trading | Margin Trading | CORE | A08
+one-to-one-zone | One-to-One Zone | METHOD | A08
+overnight-gap-test | Overnight-Gap Test | METHOD | A08
+portfolio-equity | Portfolio Equity | CORE | A08
+position-size | Position Size | CORE | A08
+position-tier | Position Tier | METHOD | A08
+risk-per-position | Risk per Position | METHOD | A08
+risk-based-position-sizing | Risk-Based Position Sizing | METHOD | A08
+sharpe-ratio | Sharpe Ratio | CORE | A08
+single-position-impact | Single-Position Impact | CORE | A08
+stomach-test | Stomach Test | METHOD | A08
+stop-distance | Stop Distance | CORE | A08
+three-outcomes | Three Outcomes | METHOD | A08
+total-open-risk | Total Open Risk | METHOD | A08
+volatility | Volatility | CORE | A08
+volatility-class | Volatility Class | METHOD | A08
+win-rate | Win Rate | CORE | A08
+asset-allocation | Asset Allocation | CORE | A09
+barbell | Barbell | CORE | A09
+buy-and-hold | Buy and Hold | CORE | A09
+buy-block | Buy Block | METHOD | A09
+cash-erosion | Cash Erosion | METHOD | A09
+cash-like-instrument | Cash-Like Instrument | CORE | A09
+concentration-audit | Concentration Audit | METHOD | A09
+concentration-limit | Concentration Limit | METHOD | A09
+concentration-risk | Concentration Risk | CORE | A09
+correlation | Correlation | CORE | A09
+country-exposure | Country Exposure | CORE | A09
+diversification | Diversification | CORE | A09
+emergency-buffer | Emergency Buffer | METHOD | A09
+equal-weighting | Equal Weighting | CORE | A09
+fund-composition | Fund Composition | CORE | A09
+hedge | Hedge | CORE | A09
+hidden-concentration | Hidden Concentration | METHOD | A09
+index-concentration | Index Concentration | CORE | A09
+index-fund-trap | Index Fund Trap | METHOD | A09
+investable-cash | Investable Cash | METHOD | A09
+look-through-exposure | Look-Through Exposure | METHOD | A09
+oil-exposure-score | Oil Exposure Score | MACRO | A09
+opportunity-cost-of-holding | Opportunity Cost of Holding | METHOD | A09
+portfolio | Portfolio | CORE | A09
+position | Position | CORE | A09
+rebalancing | Rebalancing | CORE | A09
+theme-exposure | Theme Exposure | METHOD | A09
+two-engine-portfolio | Two-Engine Portfolio | METHOD | A09
+ten-year-yield | 10-Year Treasury Yield | CORE | A10
+after-tax-real-yield | After-Tax Real Yield | CORE | A10
+allocation-holding | Allocation Holding | METHOD | A10
+basis-point | Basis Point | CORE | A10
+bond | Bond | CORE | A10
+bond-auction | Bond Auction | CORE | A10
+bond-price-yield-inverse | Bond Price-Yield Inverse | CORE | A10
+coupon | Coupon | CORE | A10
+credit-default-swap | Credit Default Swap (CDS) | CORE | A10
+credit-rating | Credit Rating | CORE | A10
+credit-spread | Credit Spread | CORE | A10
+duration | Duration | CORE | A10
+high-yield-bond | High-Yield Bond | CORE | A10
+investment-grade | Investment Grade | CORE | A10
+long-bond-yield | Long-Bond Yield | CORE | A10
+maturity | Maturity | CORE | A10
+municipal-bond | Municipal Bond | CORE | A10
+option-adjusted-spread | Option-Adjusted Spread (OAS) | CORE | A10
+percentage-point | Percentage Point | CORE | A10
+project-finance | Project Finance | CORE | A10
+real-yield | Real Yield | CORE | A10
+risk-free-rate | Risk-Free Rate | CORE | A10
+risk-reward-staircase | Risk-Reward Staircase | METHOD | A10
+tax-equivalent-yield | Tax-Equivalent Yield | CORE | A10
+treasury-bill | Treasury Bill (T-bill) | CORE | A10
+treasury-security | Treasury Security | CORE | A10
+ucits-equivalent | UCITS Equivalent | CORE | A10
+yield | Yield | CORE | A10
+yield-curve | Yield Curve | CORE | A10
+ai-bubble-thesis | AI Bubble (Thesis) | MACRO | A11
+ai-debt | AI Debt | MACRO | A11
+central-bank | Central Bank | MACRO | A11
+central-bank-balance-sheet | Central-Bank Balance Sheet | MACRO | A11
+central-bank-gold-buying | Central-Bank Gold Buying | MACRO | A11
+circular-financing | Circular Financing | MACRO | A11
+crowding-out | Crowding Out | MACRO | A11
+de-dollarization | De-Dollarization | MACRO | A11
+debasement | Debasement | MACRO | A11
+debasement-trade | Debasement Trade | MACRO | A11
+dollar-weaponization | Dollar Weaponization | MACRO | A11
+dot-plot | Dot Plot | MACRO | A11
+dual-mandate | Dual Mandate | MACRO | A11
+fed-funds-rate | Fed Funds Rate | MACRO | A11
+fed-put | Fed Put | MACRO | A11
+interest-bill | Federal Interest Bill | MACRO | A11
+federal-reserve | Federal Reserve (Fed) | MACRO | A11
+financial-repression | Financial Repression | MACRO | A11
+five-waves-of-capital-flow | Five Waves of Capital Flow | MACRO | A11
+fomc | FOMC | MACRO | A11
+forward-guidance | Forward Guidance | MACRO | A11
+gold-asset | Gold | MACRO | A11
+gold-custody | Gold Custody | MACRO | A11
+gold-window | Gold Window | MACRO | A11
+hard-asset | Hard Asset | MACRO | A11
+higher-for-longer | Higher for Longer | MACRO | A11
+hyperscaler | Hyperscaler | MACRO | A11
+hyperscaler-capex | Hyperscaler Capex | MACRO | A11
+invalidation-sign | Invalidation Sign | MACRO | A11
+liquidity-macro | Liquidity (Macro) | MACRO | A11
+macro-observation | Macro Observation | MACRO | A11
+macro-scenario | Macro Scenario | MACRO | A11
+macro-theme | Macro Theme | MACRO | A11
+macro-thesis | Macro Thesis | MACRO | A11
+margin-debt | Margin Debt | MACRO | A11
+measure-type | Measure Type | MACRO | A11
+national-debt | National Debt | MACRO | A11
+observation-conflict | Observation Conflict | MACRO | A11
+opportunity-cost-non-yielding | Opportunity Cost of Non-Yielding Assets | MACRO | A11
+petrodollar | Petrodollar | MACRO | A11
+policy-rate | Policy Rate | MACRO | A11
+quantitative-easing | Quantitative Easing (QE) | MACRO | A11
+quantitative-tightening | Quantitative Tightening (QT) | MACRO | A11
+rate-divergence | Rate Divergence | MACRO | A11
+reserve-currency | Reserve Currency | MACRO | A11
+safe-haven-asset | Safe-Haven Asset | MACRO | A11
+silver-asset | Silver | MACRO | A11
+stealth-printing | Stealth Printing | MACRO | A11
+strategic-petroleum-reserve | Strategic Petroleum Reserve (SPR) | MACRO | A11
+technology-adoption-curve | Technology Adoption Curve | MACRO | A11
+treasury-buyback | Treasury Buyback | MACRO | A11
+treasury-general-account | Treasury General Account (TGA) | MACRO | A11
+ninety-day-plan | 90-Day Plan | METHOD | A12
+crowded-trade | Crowded Trade | METHOD | A12
+daily-automation | Daily Automation | METHOD | A12
+emotional-trap | Emotional Trap | METHOD | A12
+holding-and-hoping | Holding and Hoping | METHOD | A12
+investor-vs-trader | Investor vs Trader | METHOD | A12
+learning-levels | Learning Levels | METHOD | A12
+monthly-review | Monthly Review | METHOD | A12
+paper-fill-model | Paper Fill Model | CORE | A12
+paper-trading | Paper Trading | CORE | A12
+price-alert | Price Alert | CORE | A12
+skill-gap-assessment | Skill Gap Assessment | METHOD | A12
+speedboat-advantage | Speedboat Advantage | METHOD | A12
+three-moves | Three Moves | METHOD | A12
+three-step-system | Three-Step System | METHOD | A12
+trade-journal | Trade Journal | CORE | A12
+trading-plan | Trading Plan | METHOD | A12
+trigger-sheet | Trigger Sheet | METHOD | A12
+two-halves-of-loss | Two Halves of Loss | METHOD | A12
+volume-alert | Volume Alert | METHOD | A12
+weekly-review | Weekly Review | METHOD | A12
+backtest | Backtest | CORE | A13
+prf-beginner-index | Beginner Index Protocol (PRF-beginner-index) | PROFILE | A13
+fixed-allocation-sizing | Fixed-Allocation Sizing | PROFILE | A13
+prf-momentum-rotation | Momentum Rotation (PRF-momentum-rotation) | PROFILE | A13
+momentum-score | Momentum Score | PROFILE | A13
+salami-profit-taking | Salami Profit-Taking | PROFILE | A13
+strategy-profile | Strategy Profile | CORE | A13
+top-n-rotation | Top-N Rotation | PROFILE | A13
