@@ -13,7 +13,7 @@ This folder is the domain-specification harness for spec-driven development of a
 ## Layout
 
 ```
-spec/
+specs/
   README.md                ← you are here: conventions, reading order, source index
   decisions.md             ← binding decisions that settle source conflicts (D-…)
   open-points.md           ← open-points register (0 open; all closed by D-R… or reviewable D-DEF… defaults)
@@ -79,14 +79,14 @@ spec/
 - Parameter:      dotted snake_case, e.g. `exit.trend_ma_length`  (declared once, in the aspect that owns it)
 - Process:        PR-<ASPECT>-<NN>
 - Example/fixture: EX-<ASPECT>-<NN>
-- Decision:       D-C01 .. D-C29, D-H, D-X, D-S14, D-L1..D-L5, D-OPEN-1..4, D-R01 .. D-R45, D-DEF-01 .. D-DEF-42 (reviewable defaults) (see spec/decisions.md)
-- Source:         S01..S30 (see spec/README.md source index)
+- Decision:       D-C01 .. D-C29, D-H, D-X, D-S14, D-L1..D-L5, D-OPEN-1..4, D-R01 .. D-R45, D-DEF-01 .. D-DEF-42 (reviewable defaults) (see specs/decisions.md)
+- Source:         S01..S30 (see specs/README.md source index)
 - Persona:        PER-01
 - Context:        CTX-A .. CTX-E
 
 Normative keywords follow RFC 2119 (MUST, MUST NOT, SHOULD, MAY). Every rule is marked *hard* (the system enforces it) or *soft* (a guideline, warning or default).
 
-## Aspect spec template (spec/aspect/Axx-<slug>.md)
+## Aspect spec template (specs/aspect/Axx-<slug>.md)
 ```
 ---
 id: A07

@@ -8,6 +8,16 @@ This guide describes the planned commands once implementation tasks are complete
 - `uv`
 - A licensed canonical snapshot directory, or the repository acceptance fixture
 
+## Local Configuration
+
+```bash
+cp .env.example .env
+```
+
+Add `MASSIVE_API_KEY` to `.env` when using the Massive REST provider. The application loads this
+file for local development without overriding variables already exported by the process. The
+`yfinance` adapter requires no key. `.env` is ignored by Git and must never be committed.
+
 ## Install
 
 ```bash

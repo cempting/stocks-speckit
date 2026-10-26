@@ -99,6 +99,10 @@ src/market_leadership/
 ├── infrastructure/
 │   ├── parquet_provider.py        # validated canonical snapshot input
 │   ├── parquet_repository.py      # atomic snapshot persistence and retrieval
+│   ├── massive_provider.py        # authenticated Massive REST adapter
+│   ├── yfinance_provider.py       # explicit no-key development adapter
+│   ├── mcp_provider_catalog.py    # optional MCP capability discovery
+│   ├── market_data_cache.py       # canonical source-response cache
 │   └── fixture_provider.py        # deterministic acceptance-data adapter
 └── ui/
     ├── navigation.py              # WorkflowSpec and st.Page construction

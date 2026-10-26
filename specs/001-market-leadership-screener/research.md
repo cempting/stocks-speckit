@@ -45,18 +45,26 @@ offers less control over dependency construction and navigation policy.
 
 **Decision**: The first release consumes canonical, versioned snapshot directories made of Parquet
 tables plus a JSON manifest. A `MarketDataProvider` protocol reads source data for the offline build;
-a `SnapshotRepository` protocol atomically publishes and loads calculated snapshots. The initial
-production adapter is local Parquet, with a fixture adapter for acceptance tests.
+a `SnapshotRepository` protocol atomically publishes and loads calculated snapshots. Configured
+runtime adapters share the same contract: Massive REST is preferred when `MASSIVE_API_KEY` is
+available, while `yfinance` provides an explicitly selected no-key adapter for development and
+personal-use deployments. Massive MCP is used for endpoint discovery and live response inspection,
+not as a credential path for the deployed Streamlit application. Local Parquet remains the
+application's immutable input boundary, with a fixture adapter for acceptance tests.
 
-**Rationale**: Provider licensing and upstream APIs are not specified. A canonical file contract
-prevents vendor assumptions while preserving source attribution. Parquet is compact, columnar,
-typed, and supported by pandas/PyArrow. Immutable dated snapshots make weekly results reproducible
-and let the UI remain read-only.
+**Rationale**: A canonical file contract prevents vendor assumptions while preserving source
+attribution. Massive provides an authenticated, documented API and official Python client suitable
+for production ingestion. `yfinance` covers the benchmark and sector ETF price history needed for
+development without credentials, but its unofficial upstream interface, personal-use terms, and
+lack of an availability contract make it an explicit alternative rather than a silent production
+fallback. Parquet is compact, columnar, typed, and supported by pandas/PyArrow. Immutable dated
+snapshots make weekly results reproducible and let the UI remain read-only.
 
 **Alternatives considered**: Direct vendor calls in Streamlit would make reruns slow and tests
 nondeterministic. SQLite is viable but adds schema migration and concurrency concerns before the app
 needs writes or relational queries. CSV weakens types and increases load cost. Pickle is unsafe for
-untrusted data and less portable.
+untrusted data and less portable. Automatically switching from Massive to `yfinance` after an
+upstream error is rejected because it can change data semantics without an explicit operator choice.
 
 ## Domain Representation and Validation
 
@@ -122,4 +130,4 @@ when global data is absent.
   synchronization (accessed 2026-10-26).
 - pandas I/O documentation: Parquet round trips, column selection, and PyArrow support (accessed
   2026-10-26).
-- Repository authority: `spec/decisions.md`, A01, A02, A04, A05, and the feature specification.
+- Repository authority: `specs/decisions.md`, A01, A02, A04, A05, and the feature specification.
