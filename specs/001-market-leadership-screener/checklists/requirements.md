@@ -1,8 +1,8 @@
-# Specification Quality Checklist: Market Leadership Screener
+# Specification Quality Checklist: Market Screening
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-10-26
-**Feature**: [Market Leadership Screener specification](../spec.md)
+**Created**: 2026-10-27
+**Feature**: [Market Screening specification](../spec.md)
 
 ## Content Quality
 
@@ -31,6 +31,7 @@
 
 ## Notes
 
-- Planning-readiness gaps were resolved on 2026-10-26 with explicit acceptance scenarios for FR-013,
-  FR-014, and FR-016.
-- All checklist items pass; the specification is ready for `/speckit-plan`.
+- Updated on 2026-10-27 to focus the MVP on multi-market discovery, sector-to-industry drill-down,
+  leadership momentum, breadth, concentration, and separately labelled observed fund-flow evidence.
+- Saved watchlists, watchlist alerts, and portfolio tracking are explicitly postponed.
+- All checklist items pass; the updated specification is ready for `/speckit-plan`.

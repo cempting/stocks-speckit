@@ -34,10 +34,10 @@ database.
 
 **Purpose**: Initialize the Python package, tools, and deterministic acceptance data.
 
-- [ ] T001 Initialize the Python 3.12 `uv` project, runtime dependencies, and lockfile in `pyproject.toml` and `uv.lock`
-- [ ] T002 Create the package and test directory skeleton with `src/market_leadership/__init__.py` and `tests/unit/domain/test_models.py`
-- [ ] T003 Define dated controlled acceptance inputs and expected outputs in `tests/fixtures/acceptance/market_data.json` and `tests/fixtures/acceptance/expected.json`
-- [ ] T004 Configure Ruff, Pyright, pytest, and test discovery in `pyproject.toml`
+- [X] T001 Initialize the Python 3.12 `uv` project, runtime dependencies, and lockfile in `pyproject.toml` and `uv.lock`
+- [X] T002 Create the package and test directory skeleton with `src/market_leadership/__init__.py` and `tests/unit/domain/test_models.py`
+- [X] T003 Define dated controlled acceptance inputs and expected outputs in `tests/fixtures/acceptance/market_data.json` and `tests/fixtures/acceptance/expected.json`
+ [X] T004 Configure Ruff, Pyright, pytest, and test discovery in `pyproject.toml`
 
 ---
 
@@ -48,11 +48,11 @@ composition before story implementation.
 
 **Critical**: No user story work begins until this phase is complete.
 
-- [ ] T005 [P] Write domain-record and enum contract tests in `tests/unit/domain/test_models.py`
+- [X] T005 [P] Write domain-record and enum contract tests in `tests/unit/domain/test_models.py`
 - [ ] T006 [P] Write manifest validation tests for every required field, declared format, SHA-256 pattern, and `additionalProperties: false` rule in `tests/contract/test_snapshot_manifest.py`
 - [ ] T007 [P] Write shared provider conformance tests for as-of filtering, deterministic ordering, typed empty results, duplicate rejection, same-date FX behavior, source traceability, and canonical schemas in `tests/contract/test_market_data_provider.py`
 - [ ] T008 [P] Write registry tests for one default, unique stable keys and paths, deterministic order, and replacement of any one workflow in `tests/app/test_navigation.py`
-- [ ] T009 Implement frozen, slotted domain records and enums in `src/market_leadership/domain/models.py`: hierarchy levels `SECTOR`, `INDUSTRY_GROUP`, `INDUSTRY`, `SUB_INDUSTRY`; instrument kinds `STOCK`, `FUND`, `INDEX`; proxy types `FUND`, `INDEX`, `EQUAL_WEIGHT_BASKET`, `NONE`; slope states `RISING`, `FLAT`, `FALLING`, `UNDEFINED`; regimes `BULLISH`, `SIDEWAYS`, `BEARISH`, `INSUFFICIENT`; and release asset category `EQUITY`; keep Company distinct from each listed Instrument
+- [X] T009 Implement frozen, slotted domain records and enums in `src/market_leadership/domain/models.py`: hierarchy levels `SECTOR`, `INDUSTRY_GROUP`, `INDUSTRY`, `SUB_INDUSTRY`; instrument kinds `STOCK`, `FUND`, `INDEX`; proxy types `FUND`, `INDEX`, `EQUAL_WEIGHT_BASKET`, `NONE`; slope states `RISING`, `FLAT`, `FALLING`, `UNDEFINED`; regimes `BULLISH`, `SIDEWAYS`, `BEARISH`, `INSUFFICIENT`; and release asset category `EQUITY`; keep Company distinct from each listed Instrument
 - [ ] T010 Define `MarketDataProvider`, `MarketDataProviderCatalog`, and `SnapshotRepository` protocols with explicit typed requests, provider-capability candidates, selection reasons, and results in `src/market_leadership/application/ports.py`
 - [ ] T011 Implement the deterministic reference adapter with typed empty results, stable ordering, and source availability dates in `src/market_leadership/infrastructure/fixture_provider.py`
 - [ ] T012 Implement canonical Parquet input validation and `SnapshotNotFound`, `SchemaMismatch`, `IntegrityError`, and `SourceUnavailable` errors in `src/market_leadership/infrastructure/parquet_provider.py`
@@ -248,6 +248,40 @@ dispatch is introduced.
 
 ---
 
+## Phase 9: International Market Selection (US1 Extension)
+
+**Goal**: Let the user select one supported equity market at a time, including an international
+market, while keeping its local benchmark, currency, trading calendar, and sector results distinct.
+The existing US discovery remains the default. Selecting several markets simultaneously and pooled
+or cross-market comparison are deferred.
+
+**Independent Test**: Select the US market and an enabled international market separately using a
+dated fixture. Verify that each selection displays its own benchmark, currency, calendar, regime,
+observation date, and sector results, with no cross-market ranking or silent currency conversion.
+
+### Market Selection Decision
+
+- [ ] T085 [US1] Choose and document at least one initial international equity market with provider coverage for its local benchmark and sector representations in `specs/001-market-leadership-screener/research.md`
+
+### Tests for International Market Selection
+
+- [ ] T086 [P] [US1] Test market-definition validation, unique stable IDs, ISO currency, required benchmark and calendar, and deterministic market ordering in `tests/unit/domain/test_markets.py`
+- [ ] T087 [P] [US1] Test market-specific benchmark sentiment, sector returns, currency, calendar, as-of date, and missing-data behavior with dated fixtures in `tests/integration/test_discover_sectors.py`
+- [ ] T088 [P] [US1] Test single-market selection, US default, context labels, selection changes, and unchanged US results in `tests/app/test_discovery.py`
+
+### Implementation for International Market Selection
+
+- [ ] T089 [US1] Define validated market records and an ordered supported-market catalog containing the US and the initial international market definitions in `src/market_leadership/domain/markets.py`
+- [ ] T090 [US1] Refactor sector discovery to accept one market definition and return its market ID, local benchmark, currency, calendar, regime, observation date, and market-specific sector proxies in `src/market_leadership/application/discover_sectors.py`
+- [ ] T091 [US1] Extend deterministic fixture histories for each registered market using its declared symbols and official observation sessions without converting local results to another currency in `src/market_leadership/infrastructure/fixture_provider.py`
+- [ ] T092 [US1] Add a single-select market control to the discovery page, preserve the US default and existing provider/date/refresh controls, and render selected-market benchmark, currency, calendar, and regime context in `src/market_leadership/app.py`
+- [ ] T093 [US1] Document how to add a supported international market, its required benchmark/currency/calendar/sector-proxy metadata, and the current single-market selection limit in `specs/001-market-leadership-screener/quickstart.md`
+
+**Checkpoint**: Verify US discovery remains unchanged and each enabled international market is
+analyzed against only its own local benchmark and data context.
+
+---
+
 ## Dependencies and Execution Order
 
 ### Phase Dependencies
@@ -259,6 +293,9 @@ dispatch is introduced.
 - **US3**: Depends on US1 industry results and US2 hierarchy context.
 - **US4**: Depends on US1 and US3 result views; evidence remains independently testable.
 - **US5**: Depends on frozen outputs from US1 and US2; it must not change their semantics.
+- **International Market Selection (US1 extension)**: Depends on the existing US discovery baseline
+  (T043-T049) and shared provider contracts; it can proceed without US2-US5 and selects one market
+  per discovery view. Simultaneous multi-market comparison remains deferred.
 - **Polish**: Follows all stories selected for delivery.
 
 ### Within Each User Story
@@ -377,3 +414,22 @@ T078: Test category dispatch in tests/integration/test_asset_category_dispatch.p
 - `[US1]` through `[US5]` map tasks to the prioritized user stories in `spec.md`.
 - Commit after each task or coherent task group; do not mix unrelated refactors into a task.
 - Stop at every checkpoint and preserve the smallest executable increment.
+
+## International Market Extension Execution
+
+- **Dependencies**: T085-T093 follow the US discovery baseline (T043-T049) and shared provider
+  contracts, but do not depend on US2-US5. This increment selects one market at a time.
+- **Parallel work**: T086-T088 can be implemented independently; T089 establishes the market
+  catalog contract before T090-T092 integrate it into the use case, fixture provider, and UI.
+- **Parallel example**:
+
+  ```text
+  T086: Test market definitions in tests/unit/domain/test_markets.py
+  T087: Test local market discovery context in tests/integration/test_discover_sectors.py
+  T088: Test single-market selection in tests/app/test_discovery.py
+  ```
+
+- **Implementation order**: Complete T085, write and fail T086-T088, implement T089-T092, then
+  document onboarding in T093. Keep the US default and defer simultaneous-market comparison.
+- **Scope note**: T085-T093 are an incremental US1 extension. The current spec's simultaneous-market
+  acceptance scenarios remain deferred and should be reconciled before implementation.
