@@ -20,7 +20,7 @@ This glossary is the controlled vocabulary of the spec and the vocabulary of the
 - **Kind** is one of: concept, entity, instrument, indicator, signal, metric, rule-concept, process, role, event, thesis, pattern, order-type, classification.
 - Terms are grouped by primary aspect; secondary aspects, parameters, formulas, related terms and decision references are in the YAML.
 - Synonyms are accepted input wordings (from sources); deprecated synonyms MUST NOT be used in new text.
-- No value is open: every former open point is decided (`D-R…`) or set by a reviewable default (`D-DEF-…`, pending user review; see ../decisions.md).
+- No value is open: every former open point is decided (`D-R…`) or set by a reviewable default (`D-DEF-…`, pending user review; see ../../specs/decisions.md).
 - Sources `[]` with the note 'standard term, added for completeness' means the term is not defined in the sources.
 
 ## Counts

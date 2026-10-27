@@ -8,7 +8,14 @@ date: 2026-10-26
 
 # Domain specification: Financial markets, trading & investing
 
-This folder is the domain-specification harness for spec-driven development of an app with four capabilities: a **screener / rotation analyzer**, a **portfolio & risk tracker**, a **learning / coaching app** and a **rule-based trading assistant**. It describes the domain (vocabulary, entities, rules, processes, worked examples) without prescribing an implementation. It was distilled from 30 source documents (see the source index at the end). Their boilerplate (disclosures, bios, promotions, exercises) was stripped first. The content is educational domain modelling, not financial advice.
+This folder contains the normative domain specifications used for spec-driven development of an app
+with four capabilities: a **screener / rotation analyzer**, a **portfolio & risk tracker**, a
+**learning / coaching app** and a **rule-based trading assistant**. Supporting domain references,
+including the glossary and persona, live under `../docs/`. The material describes vocabulary,
+entities, rules, processes, and worked examples without prescribing an implementation. It was
+distilled from 30 source documents (see the source index at the end). Their boilerplate
+(disclosures, bios, promotions, exercises) was stripped first. The content is educational domain
+modelling, not financial advice.
 
 ## Layout
 
@@ -17,13 +24,15 @@ specs/
   README.md                ← you are here: conventions, reading order, source index
   decisions.md             ← binding decisions that settle source conflicts (D-…)
   open-points.md           ← open-points register (0 open; all closed by D-R… or reviewable D-DEF… defaults)
+  aspect/
+    contexts/CTX-A…E-*.md  ← 5 bounded-context overviews (purpose, relations, invariants)
+    A01…A13-*.md           ← 13 aspect specs (557 rules in total)
+
+docs/
   glossary/
     glossary.yaml          ← machine-readable vocabulary for the DSL (429 terms, v0.4.0)
     glossary.md            ← generated human-readable view of glossary.yaml
     term_ids.txt           ← slug | term | layer | primary aspect
-  aspect/
-    contexts/CTX-A…E-*.md  ← 5 bounded-context overviews (purpose, relations, invariants)
-    A01…A13-*.md           ← 13 aspect specs (557 rules in total)
   persona/
     PER-01-active-rule-based-trader.md
   tools/gen_glossary.py    ← regenerates glossary.md / term_ids.txt and validates glossary.yaml
@@ -31,10 +40,10 @@ specs/
 
 ## Reading order
 
-1. `glossary/glossary.md`: learn the vocabulary first.
+1. `../docs/glossary/glossary.md`: learn the vocabulary first.
 2. `decisions.md`: understand which source conflicts were settled, and how.
 3. `aspect/contexts/`: the big picture in five bounded contexts.
-4. `persona/PER-01-…`: who uses this and what they need to achieve.
+4. `../docs/persona/PER-01-…`: who uses this and what they need to achieve.
 5. The aspect specs, in the order of the method: A02 scoreboard → A04 money flow → A05 selection → A06 entry → A08 sizing → A07 exit → A09 portfolio → A12 routine. Then A01, A03, A10, A11 and A13 as reference.
 
 ## Layers
@@ -114,11 +123,11 @@ Keep each rule atomic and testable. Never invent parameter values: use the decis
 
 ## How to use this in spec-driven development
 
-- **DSL vocabulary:** generate types and enums from `glossary.yaml` (`kind`, `layer`, `parameters`, `formula`). Rules refer to terms only by slug.
+- **DSL vocabulary:** generate types and enums from `../docs/glossary/glossary.yaml` (`kind`, `layer`, `parameters`, `formula`). Rules refer to terms only by slug.
 - **Configuration schema:** the parameter tables (section 4 of each aspect) form the configuration surface. Owner prefixes are `market.*`, `instrument.*` and `classification.*` (A01); `scoreboard.*` (A02); `cycle.*` (A03); `volume.*` (A04); `selection.*` and `fundamentals.*` (A05); `entry.*` (A06); `exit.*` (A07); `sizing.*` and `risk.*` (A08); `portfolio.*` and `cash.*` (A09); `bonds.*` (A10); `macro.*` (A11); `routine.*` (A12); `profile.*` (A13). Strategy profiles override these.
 - **Acceptance tests:** each `EX-…` fixture (Given / When / Then with concrete numbers) maps 1:1 to an executable test. Hard rules are invariants for property-based tests.
 - **Traceability:** every rule cites its sources (S01–S30) and decisions (D-…). Section 10 of each aspect holds the trace table.
-- **Change process:** all open points are closed; `D-DEF-…` defaults await user review. To change one, or to settle a new open point → add a `D-…` entry to `decisions.md` → update the aspect (parameter, rule, example) → regenerate the glossary with `python3 tools/gen_glossary.py` if terms changed.
+- **Change process:** all open points are closed; `D-DEF-…` defaults await user review. To change one, or to settle a new open point → add a `D-…` entry to `decisions.md` → update the aspect (parameter, rule, example) → regenerate the glossary with `uv run --with pyyaml python ../docs/tools/gen_glossary.py` if terms changed.
 
 ## Source index
 

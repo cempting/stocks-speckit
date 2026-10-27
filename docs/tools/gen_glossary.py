@@ -1,6 +1,7 @@
 import yaml,re,collections,sys,os
-SPEC=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-Y=os.path.join(SPEC,"glossary/glossary.yaml"); M=os.path.join(SPEC,"glossary/glossary.md")
+ROOT=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DOCS=os.path.join(ROOT,"docs"); SPEC=os.path.join(ROOT,"specs")
+Y=os.path.join(DOCS,"glossary/glossary.yaml"); M=os.path.join(DOCS,"glossary/glossary.md")
 d=yaml.safe_load(open(Y)); terms=d['terms']; ids={t['id'] for t in terms}
 TITLES={'A01':'Market structure & instruments','A02':'Market regime & scoreboard','A03':'Business cycle & macro indicators','A04':'Money flow & volume','A05':'Security selection','A06':'Entry rules','A07':'Exit & selling','A08':'Risk & position sizing','A09':'Portfolio construction','A10':'Fixed income','A11':'Macro themes','A12':'Process, routine & psychology','A13':'Strategy profiles'}
 if len(sys.argv)>1 and sys.argv[1]=="add":
@@ -62,7 +63,7 @@ This glossary is the controlled vocabulary of the spec and the vocabulary of the
 - **Kind** is one of: concept, entity, instrument, indicator, signal, metric, rule-concept, process, role, event, thesis, pattern, order-type, classification.
 - Terms are grouped by primary aspect; secondary aspects, parameters, formulas, related terms and decision references are in the YAML.
 - Synonyms are accepted input wordings (from sources); deprecated synonyms MUST NOT be used in new text.
-- No value is open: every former open point is decided (`D-R…`) or set by a reviewable default (`D-DEF-…`, pending user review; see ../decisions.md).
+- No value is open: every former open point is decided (`D-R…`) or set by a reviewable default (`D-DEF-…`, pending user review; see ../../specs/decisions.md).
 - Sources `[]` with the note 'standard term, added for completeness' means the term is not defined in the sources.
 
 ## Counts
@@ -85,5 +86,5 @@ idx.sort(key=lambda x:x[0].lower())
 out+=["","## Alphabetical index","","Display names and synonyms, mapped to slugs.",""]+[f"- {n}{k} → `{i}`" for n,i,k in idx]
 out+=["",dep.rstrip(),""]
 open(M,'w').write("\n".join(out))
-open(os.path.join(SPEC,"glossary/term_ids.txt"),"w").write("\n".join(f"{t['id']} | {t['term']} | {t['layer']} | {t['aspects'][0]}" for t in terms)+"\n")
+open(os.path.join(DOCS,"glossary/term_ids.txt"),"w").write("\n".join(f"{t['id']} | {t['term']} | {t['layer']} | {t['aspects'][0]}" for t in terms)+"\n")
 print("terms",len(terms),dict(lc))
