@@ -18,3 +18,11 @@ def test_explicit_massive_provider_is_respected(monkeypatch) -> None:
     settings = load_settings()
 
     assert settings.default_provider == "massive"
+
+
+def test_market_data_cache_path_can_be_configured(monkeypatch) -> None:
+    monkeypatch.setenv("MARKET_DATA_CACHE_PATH", "/tmp/market-cache")
+
+    settings = load_settings()
+
+    assert settings.market_data_cache_path == "/tmp/market-cache"

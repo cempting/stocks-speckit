@@ -10,7 +10,8 @@ cp .env.example .env
 ```
 
 Set `MASSIVE_API_KEY` in `.env` to enable the Massive REST provider. `yfinance` does not require an
-API key. Never commit `.env`.
+API key. Live provider responses are persisted under `.cache/market-data` by default; set
+`MARKET_DATA_CACHE_PATH` to use another local directory. Never commit `.env`.
 
 ## Run locally
 

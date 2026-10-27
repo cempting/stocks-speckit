@@ -141,12 +141,13 @@ st.markdown(
 @st.cache_data(ttl=3600, show_spinner=False)
 def load_discovery(
     provider_id: str,
+    cache_path: str,
     as_of: date,
     refresh_version: int,
     cache_schema_version: int,
 ) -> DiscoveryResult:
     del cache_schema_version  # Its value participates in Streamlit's cache key.
-    provider = build_provider(provider_id)
+    provider = build_provider(provider_id, cache_path)
     return discover_sectors(provider, as_of=as_of, force=refresh_version > 0)
 
 
@@ -204,6 +205,7 @@ try:
     with st.spinner(f"Loading {selected_provider} market data..."):
         discovery = load_discovery(
             selected_provider,
+            settings.market_data_cache_path,
             requested_as_of,
             st.session_state.refresh_version,
             DISCOVERY_CACHE_SCHEMA_VERSION,
