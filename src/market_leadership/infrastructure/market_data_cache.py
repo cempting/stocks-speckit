@@ -101,7 +101,7 @@ class CachedMarketDataProvider:
             if list(records.columns) != _DATA_COLUMNS:
                 raise _CacheMiss
             return _from_records(records, requested_symbols)
-        except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
+        except (AttributeError, OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
             raise _CacheMiss from None
 
     @staticmethod
