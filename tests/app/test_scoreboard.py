@@ -59,16 +59,17 @@ def _text(app: AppTest) -> str:
 
 
 def test_completed_week_sector_scoreboard_is_default_and_locally_ranked(weekly_app) -> None:
-    assert any("Weekly Sector Leadership" in title.value for title in weekly_app.title)
+    assert any("Discovery" in title.value for title in weekly_app.title)
     markets = next(widget for widget in weekly_app.multiselect if widget.label == "Markets")
-    markets.set_value(["US", "JP", "GB"]).run(timeout=20)
+    assert markets.options == ["US"]
+    markets.set_value(["US"]).run(timeout=20)
     assert not weekly_app.exception
-    assert len(weekly_app.dataframe) == 3
+    assert len(weekly_app.dataframe) == 1
     context = _text(weekly_app)
-    for benchmark, currency in (("SPX", "USD"), ("N225", "JPY"), ("UKX", "GBP")):
-        assert benchmark in context and currency in context
+    assert "SPX" in context and "USD" in context
+    assert "N225" not in context and "UKX" not in context
     assert "2026-10-23" in context
-    assert [metric.value for metric in weekly_app.metric] == ["BULLISH", "SIDEWAYS", "BEARISH"]
+    assert [metric.value for metric in weekly_app.metric] == ["BULLISH"]
     for table in weekly_app.dataframe:
         columns = table.value.columns
         assert {
@@ -86,9 +87,6 @@ def test_completed_week_sector_scoreboard_is_default_and_locally_ranked(weekly_a
             "Missing evidence",
         }.issubset(columns)
         assert table.value["Rank"].notna().all()
-    markets.set_value(["JP"]).run(timeout=20)
-    assert len(weekly_app.dataframe) == 1
-    assert "SPX" not in _text(weekly_app)
 
 
 def test_sector_drilldown_keeps_local_and_parent_context(weekly_app) -> None:
@@ -128,6 +126,20 @@ def test_empty_market_selection_has_no_pooled_results(weekly_app) -> None:
     assert any("Select" in message.value for message in weekly_app.info)
 
 
+def test_non_us_fixture_markets_are_not_user_selectable(weekly_app) -> None:
+    markets = next(widget for widget in weekly_app.multiselect if widget.label == "Markets")
+    assert "JP" not in markets.options and "GB" not in markets.options
+
+
+def test_weekly_sector_select_exposes_navigation_to_industry_discovery(weekly_app) -> None:
+    sector = next(widget for widget in weekly_app.selectbox if widget.label == "Sector")
+    sector.set_value("Information Technology").run(timeout=20)
+    assert not weekly_app.exception
+    assert "market_leadership.industry_handoff" in weekly_app.session_state
+    assert weekly_app.session_state["market_leadership.industry_handoff"]["sector_node_ids"]
+    assert any("Industry Discovery" in link.label for link in weekly_app.page_link)
+
+
 def test_missing_one_market_snapshot_keeps_valid_market_panel(monkeypatch, tmp_path) -> None:
     root = tmp_path / "snapshots"
     monkeypatch.setenv("MARKET_LEADERSHIP_SNAPSHOT_DIR", str(root))
@@ -141,12 +153,12 @@ def test_missing_one_market_snapshot_keeps_valid_market_panel(monkeypatch, tmp_p
     )
     app = AppTest.from_file(APP_PATH).run(timeout=20)
     markets = next(widget for widget in app.multiselect if widget.label == "Markets")
-    markets.set_value(["US", "JP"]).run(timeout=20)
+    markets.set_value(["US"]).run(timeout=20)
 
     assert not app.exception
     assert len(app.dataframe) == 1
     assert "SPX" in _text(app)
-    assert any("JP" in message.value and "weekly" in message.value for message in app.info)
+    assert "US" in _text(app)
 
 
 def test_invalid_weekly_snapshot_shows_error_without_false_ranking(monkeypatch, tmp_path) -> None:

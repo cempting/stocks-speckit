@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+*.pyc
 *.py[codz]
 *$py.class
 
@@ -154,7 +155,9 @@ activemq-data/
 .envrc
 .streamlit/secrets.toml
 .venv
+.venv/
 env/
+venv/
 venv/
 ENV/
 env.bak/

@@ -90,6 +90,37 @@ non-price sources with display/derived-data rights before enabling those adapter
 document and approve the numerical "material" cap-versus-equal-weight disagreement policy before
 its acceptance test and implementation; the spec establishes the label but not its threshold.
 
+## Industry Proxy Source Review (2026-10-28)
+
+**Candidate discovery**: Official SSGA product pages describe XBI as tracking the Biotechnology
+segment/sub-industry and KRE as tracking the Regional Banks segment/sub-industry. The same issuer
+describes XOP as spanning Integrated Oil & Gas, Oil & Gas Exploration & Production, and Oil & Gas
+Refining & Marketing, so XOP is not an adequate one-industry proxy. These pages are candidate
+screening evidence only; they do not supply a complete point-in-time industry crosswalk or license
+for this application's use. Details and links are in
+[`contracts/us-industry-proxies.md`](contracts/us-industry-proxies.md).
+
+**Classification and membership**: MSCI and S&P publish GICS information under licensing. Their
+public methodology pages are not authorization to redistribute the classification hierarchy or
+historical company assignments. SEC filings/API provide company filing facts but not a complete,
+ready-made dated industry membership and daily point-in-time market-cap dataset. Calculating the
+largest industry stock requires both reliable dated membership and cap evidence; present-day
+holdings or market caps cannot substitute for historical as-of values.
+
+**Market-data rights**: The repository's Massive and yfinance adapters are explicit personal/development
+paths. The checked Massive market-data terms and Yahoo terms do not establish third-party hosted
+display or derived-data rights for this application. No deployment-specific vendor agreement was
+provided for this review. A public factsheet establishes neither those rights nor price-feed rights.
+
+**Decision / gate**: Do not enable a live industry catalog yet. XBI and KRE are limited examples for
+future verification; XOP is rejected for a one-industry match. No ETF is registered in production
+catalog data, no stock membership/capitalization source is authorized, and no UI claims live
+industry coverage. Industry Discovery can deliver the weekly fixture-backed path and an explicit
+live-unavailable state. Re-open live enablement only after an owner records source, scope, effective
+dates, availability, market-data rights, classification/membership rights, and derived-display
+permission for each enabled industry. This is a fail-closed source decision, not a finding that
+public or personal-use sources are inherently unusable.
+
 ## Domain Representation and Validation
 
 **Decision**: Use frozen, slotted dataclasses and enums for domain results and request records;

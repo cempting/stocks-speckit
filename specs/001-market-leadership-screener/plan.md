@@ -15,12 +15,14 @@ in pure Python modules, coordinate them through small application use cases and 
 and expose them through independently testable Streamlit workflows in one navigation composition root.
 
 The Phase 2 foundation provides direct US daily price/volume ingestion, a persistent source cache,
-daily input snapshots, and optional immutable input-snapshot viewing. Phase 3 adds controlled
-US/JP/GB local comparison. Phase 4 publishes fixture-backed completed weekly sector/industry
-snapshots; the latest completed weekly SECTOR scoreboard is now the UI default, while the existing
-US live discovery remains separately navigable. These fixture workflows do not imply licensed live
-non-US ingestion; constituent participation, flows, and further live non-price contracts remain
-deferred.
+and daily input snapshots. Phase 3 adds controlled US/JP/GB local comparison. Phase 4 publishes
+fixture-backed completed weekly sector/industry snapshots and provides separate sector and
+industry discovery workflows. Industry discovery filters by one or more stable US parent-sector
+IDs and preserves the source mode when launched from sector discovery. Weekly industry inspection
+uses only completed weekly artifacts. Live industry proxies remain disabled unless dated ETF or
+membership/capitalization inputs and market-data display/derived-data rights are verified. These
+fixture workflows do not imply live non-US ingestion; constituent participation, flows, and other
+live non-price contracts remain deferred.
 
 ## Technical Context
 
@@ -50,7 +52,7 @@ the affected result; UI modules do not calculate domain outcomes; verify source 
 non-price or additional-market ingestion is advertised
 
 **Scale/Scope**: Up to 20 markets for acceptance/performance; sector and industry classifications,
-five user stories, immutable read-only snapshots, no stock research workflow
+five user stories, immutable read-only snapshots, no company-level research workflow
 
 ## Constitution Check
 
@@ -102,8 +104,9 @@ src/market_leadership/
 │   ├── ports.py                   # MarketDataProvider and SnapshotRepository protocols
 │   ├── queries.py                 # typed filter/search/sort request records
 │   ├── build_snapshot.py          # deterministic offline calculation pipeline
-│   ├── browse_scoreboard.py       # scoreboard query use case
-│   ├── inspect_industry.py        # industry, participation and provenance use case
+│   │   ├── browse_scoreboard.py       # scoreboard query use case
+│   ├── discover_industries.py     # live industry price discovery when source gate passes
+│   ├── inspect_industry.py        # weekly industry, participation and provenance use case
 │   └── flows.py                   # observed fund-flow normalization and overlap
 ├── infrastructure/
 │   ├── parquet_provider.py        # validated canonical snapshot input
@@ -117,6 +120,7 @@ src/market_leadership/
     ├── state.py                   # session-local filter and drill-down state
     ├── workflows/
     │   ├── scoreboard.py
+    │   ├── industry_discovery.py
     │   ├── industry_detail.py
     │   └── methodology.py
     └── components/
@@ -142,6 +146,13 @@ domain code. Components render supplied view data and never determine status or 
 workflow registry controls pages only. The equity package accepts only `EQUITY` instruments; other
 asset categories and stock research remain out of scope. Phase 2 input manifests remain unchanged;
 a separately versioned calculated weekly snapshot contract precedes its implementation.
+
+**Industry discovery decision**: Keep weekly calculated industry snapshots backward-compatible.
+The new live-only single-stock proxy is a distinct domain type and never enters the weekly fund,
+index, or basket representation contract. ETF matching requires issuer/index evidence for an
+industry-specific exposure; a broad or multi-industry fund does not qualify as one industry's proxy.
+The UI can display weekly results and fail closed for live industries until sources satisfy T085 in
+`tasks.md`; a source name or public factsheet alone does not grant live display rights.
 
 ## Requirement Ownership
 

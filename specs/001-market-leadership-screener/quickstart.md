@@ -1,10 +1,12 @@
 # Quickstart: Market Leadership Screener
 
 This guide covers controlled US/JP/GB weekly sector-and-industry snapshots, US daily-history
-discovery and input snapshots, and the earlier acceptance-fixture comparison. The weekly SECTOR
-scoreboard is the app default; the US daily-history workflow remains available from **US Sector
-Discovery** in navigation. Live non-US data, constituent participation and observed flows are not
-implemented. Weekly source inputs are controlled fixtures, not proof of vendor display rights.
+discovery and input snapshots, and the earlier acceptance-fixture comparison. The default **Discovery**
+page has three explicit modes: Weekly leadership, US live daily, and US acceptance comparison.
+**Industry Discovery** is a separate page, defaults to US weekly industries, and can be opened
+directly or from a selected sector. The UI exposes US only; JP/GB fixture calculations remain
+available to tests/builds and do not imply live coverage or display rights. Live industry data,
+constituent participation and observed flows are not enabled.
 
 ## Prerequisites
 
@@ -104,13 +106,16 @@ MARKET_LEADERSHIP_SNAPSHOT_DIR=.data/snapshots \
   uv run streamlit run src/market_leadership/app.py
 ```
 
-The default weekly page reads the latest completed SECTOR snapshot independently per selected market.
-Select **Sector** in a local panel to inspect that sector's INDUSTRY snapshot, including returns
-relative to both its parent sector and the local benchmark. It renders no upstream requests. Rankings,
-score and rank changes appear only when their required history exists; absent data is labelled
-insufficient. These fixture-backed results describe past relative performance, not forecasts.
+The default Discovery page opens in **Weekly leadership** mode and reads the latest completed US
+SECTOR snapshot. Select **Sector** and follow **Open Industry Discovery** to open the separate page
+filtered to that stable parent-sector ID. The Industry Discovery page can also be opened directly
+and accepts multiple US sectors; it renders a separate local ranking context per parent, never a
+pooled cross-sector ranking. Weekly mode reads only the immutable weekly snapshot and makes no
+upstream request. Rankings and deltas appear only when their required history exists; absent
+evidence is labelled insufficient. These fixture-backed results describe past relative performance,
+not forecasts.
 
-The separate US Sector Discovery page requests adjusted daily history for SPY and the 11 US sector proxies. It persists
+Choose **US live daily** in Discovery to request adjusted daily history for SPY and the 11 US sector proxies. It persists
 canonical source responses in the configured Parquet cache and reuses entries only when the cached
 schema, checksum, and per-symbol date coverage are valid. Runtime requests also resolve the latest
 completed XNYS session before cache lookup, so non-trading days reuse the correct source entry.
@@ -121,20 +126,20 @@ the bar is not used as a daily observation. Discovery displays the latest usable
 date, flags results as stale when it precedes the requested completed session, and aligns relative
 returns to that SPY date. Invalid prices in earlier bars still fail validation.
 
-Choose **Published snapshot** from **Data source** to load the latest published daily input snapshot
-from `MARKET_LEADERSHIP_SNAPSHOT_DIR` (default `.data/snapshots`). That mode displays the snapshot
-ID and as-of date, makes no upstream requests on page reruns, and does not offer a live refresh
-button. If no input snapshot has been published, the page displays a build instruction instead of
-switching providers. **Live provider** remains the default within the US discovery page; its
-snapshot mode does not calculate weekly leadership rankings.
+From a selected live sector, follow **Open live Industry Discovery** to open the separate page
+with that parent selected. Live industry results are currently unavailable: source research found
+some candidate ETF exposures but did not verify an authorized point-in-time industry catalog,
+historical membership and market-cap input, or deployment rights for displaying derived data. No
+live provider request is made by this unavailable mode. See
+[`contracts/us-industry-proxies.md`](contracts/us-industry-proxies.md) before enabling a catalog.
 
-Choose **Acceptance fixture** from **Data source** to compare US, JP and GB local benchmark regimes
-and three-month local-relative sector proxy outcomes. Select one or several markets using **Markets**;
-each gets a separate panel showing its benchmark, currency, calendar, return basis, observation date,
-source and coverage. The fixture is a controlled development/acceptance sample, not licensed live
-JP/GB ingestion or a calculated weekly ranking. Missing local history is labelled insufficient
-without concealing other markets; stale observations are labelled stale. This mode never calls a live
-provider or change the US live discovery workflow's own default.
+Choose **US acceptance comparison** to view the controlled US benchmark-regime and three-month
+local-relative sector sample. It is not a live feed or calculated weekly ranking and does not
+expose JP/GB in the user interface. The full US/JP/GB acceptance data and weekly snapshots remain
+available to automated tests and offline builds.
+
+The user-facing daily **Published snapshot** mode was removed. Daily input snapshots and their
+build/read contracts remain supported; they are not weekly industry rankings.
 
 ## Validate the Remaining Release Workflow (after T049+ implementation)
 

@@ -52,6 +52,24 @@ Representation: `proxy_id`, `market_id`, `node_id`, `proxy_type` (`FUND`, `INDEX
 Validation: document each fund, official index, or constituent basket's composition basis, effective
 dates, source and qualification. A representation unavailable for required history makes its
 classification price result insufficient; no unverified liquidity or purity threshold is implied.
+The weekly snapshot representation types remain `FUND`, `INDEX`, `EQUAL_WEIGHT_BASKET`, and `NONE`.
+Live single-stock industry proxies are modeled separately and MUST NOT be written into or used to
+reinterpret the `weekly-1.0.0` contract.
+
+### LiveIndustryProxyCandidate
+
+`market_id`, `sector_node_id`, `industry_node_id`, `symbol`, `name`, `kind` (`ETF` or `STOCK`),
+`source_id`, `composition_basis`, `effective_from`, `effective_to?`, `available_on`,
+`rights_verified`, `qualified`, `member_verified`, `market_cap?`, `market_cap_as_of?`.
+
+Validation: candidate identifiers, source and composition basis are non-empty; effective end does
+not precede effective start; ETF candidates do not carry constituent market-cap evidence; STOCK
+market cap, when present, is positive. ETF candidates require verified, industry-specific
+issuer/index exposure and rights. STOCK candidates require verified dated membership, a positive
+market capitalization observed on the requested date, and source availability no later than that
+date. Select one qualified ETF before stock candidates; otherwise select the largest qualified
+stock, breaking equal market-cap ties by ascending symbol. Missing qualified evidence yields
+`NO_QUALIFIED_REPRESENTATION`. This live-only entity is not part of weekly snapshot storage.
 
 ## Observation Entities
 

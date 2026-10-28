@@ -12,19 +12,21 @@ from market_leadership.infrastructure.snapshot_errors import IntegrityError, Sch
 from market_leadership.ui.components.ranking_table import render_ranking_table
 from market_leadership.ui.components.regime_summary import render_regime_summary
 from market_leadership.ui.workflows.industry_detail import render_industry_detail
+from market_leadership.ui.navigation import workflow_page
 
 
-def render_scoreboard() -> None:
-    st.set_page_config(page_title="Weekly Sector Leadership", layout="wide")
-    st.title("Weekly Sector Leadership")
+def render_scoreboard(*, configure_page: bool = True, show_title: bool = True) -> None:
+    if configure_page:
+        st.set_page_config(page_title="Weekly Sector Leadership", layout="wide")
+    if show_title:
+        st.title("Weekly Sector Leadership")
     st.caption(
-        "Controlled fixture-backed weekly results · local markets only · "
-        "not live JP/GB data or investment advice"
+        "Controlled fixture-backed weekly US results · not live industry data or investment advice"
     )
     selected = tuple(
         st.multiselect(
             "Markets",
-            options=("US", "JP", "GB"),
+            options=("US",),
             default=("US",),
             key="selected_weekly_markets",
         )
@@ -76,11 +78,25 @@ def render_scoreboard() -> None:
             if len(selected_row) != 1:
                 st.error(f"{board.market_id}: sector selection is ambiguous.")
                 continue
+            sector_node_id = str(selected_row.iloc[0]["node_id"])
+            st.session_state["market_leadership.industry_handoff"] = {
+                "market_id": board.market_id,
+                "mode": "weekly",
+                "sector_node_ids": [sector_node_id],
+                "as_of": board.as_of.isoformat(),
+            }
+            industry_page = workflow_page("industry-discovery")
+            if industry_page is not None:
+                st.page_link(
+                    industry_page,
+                    label=f"Open Industry Discovery for {selected_sector}",
+                    icon=":material/schema:",
+                )
             try:
                 detail = inspect_industry(
                     repository,
                     market_id=board.market_id,
-                    sector_node_id=str(selected_row.iloc[0]["node_id"]),
+                    sector_node_id=sector_node_id,
                 )
             except (IntegrityError, SchemaMismatch, ValueError):
                 st.error(f"{board.market_id}: industry context could not be validated.")

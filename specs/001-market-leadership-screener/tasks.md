@@ -127,6 +127,110 @@ status, tie order, prior-week deltas, sector default, industry drill-down and mi
 
 ---
 
+## Phase 4a: User Story 2 - Unified Sector Discovery (P1; extends US1)
+
+**Goal**: Replace the two navigation pages with one default Discovery workflow. Offer explicit
+Weekly leadership (fixture-backed calculated weekly snapshots), US live daily sectors, and
+US acceptance comparison modes; do not conflate their metrics or data sources. Remove only the
+user-facing **Published snapshot** daily-input mode, not the weekly snapshot store, builder, or
+daily-input publication APIs. The visible market selector is US-only in every mode until authorized
+live non-US sources are available. Keep JP/GB fixture data, multi-market use cases, and their
+non-UI acceptance tests intact so other markets can be enabled later without redesign. Do not
+silently replace a missing weekly result with a live or acceptance result.
+
+**Independent test**: Open the app and see one default Discovery page and US weekly sector
+rankings with industry drill-down. Switch to US live daily sectors and US acceptance comparison
+explicitly; verify the different dates, bases, and source labels and that live fetch/refresh occurs
+only in live mode. JP/GB and Published snapshot are absent from all user-facing options, but the
+underlying US/JP/GB fixture comparison and weekly calculations still pass. With no weekly snapshot,
+show an actionable missing-weekly state without fetching upstream or displaying a substitute rank.
+
+**ID note**: T001–T075 are retained verbatim (including unfinished T049–T075). New IDs start at
+T076 rather than renumbering history; execute this phase after T048 and before pending US3–US5 and
+release tasks despite the append-only ID sequence.
+
+### Design alignment
+
+- [ ] T076 [US2] Record the interim US-only visible-market policy, three explicit modes, no daily Published snapshot UI, unchanged weekly snapshot contract, and future non-US enablement gate in `specs/001-market-leadership-screener/spec.md` and `specs/001-market-leadership-screener/plan.md`; distinguish interim UI scope from the existing multi-market acceptance requirement
+
+### Tests first (confirm failing before implementation)
+
+- [ ] T077 [P] [US2] Test one default Discovery registry entry at the existing `discovery` URL, workflow replacement, and no separate `scoreboard` navigation entry in `tests/app/test_navigation.py`; document `/scoreboard` as retired rather than implying it redirects
+- [ ] T078 [P] [US2] Test unified app default, weekly US-only selector (JP/GB unavailable), local weekly ranking and industry drill-down, explicit mode changes without leaking prior sector state, and actionable missing/invalid weekly snapshot states without live or fixture fallback in `tests/app/test_scoreboard.py`
+- [ ] T079 [P] [US2] Test US-only live daily and acceptance comparison modes, explicit fixture/non-weekly labels, no Published snapshot option, source-specific dates/provider/refresh controls, live error and stale states, and no upstream fetch outside live mode in `tests/app/test_market_selection.py`; retain US/JP/GB multi-market fixture acceptance through `tests/integration/test_compare_markets.py` rather than exposing JP/GB in the UI
+
+### Implementation (after T077–T079 fail as intended)
+
+- [ ] T080 [US2] Extract a callable US daily/acceptance renderer from `src/market_leadership/ui/workflows/discovery_page.py` without its own navigation registration; remove only the Published snapshot UI branch, keep live provider/cache/refresh and fixture comparison behavior, limit visible fixture selection to US, and keep source failures explicit
+- [ ] T081 [US2] Add the explicit Weekly leadership (default), US live daily, and US acceptance comparison modes to `src/market_leadership/ui/workflows/scoreboard.py`; reuse the T080 renderer, expose only US in the market selector, label weekly snapshots as controlled fixtures, preserve industry drill-down and independent missing-weekly/error states, and ensure mode changes never trigger an implicit provider request or ranking fallback
+- [ ] T082 [US2] Register one default Discovery workflow at URL `discovery` in `src/market_leadership/bootstrap.py` and `src/market_leadership/app.py`; remove the redundant `scoreboard` page entry and preserve workflow replacement semantics
+- [ ] T083 [US2] Update the mode and market-availability instructions, weekly build steps, retired daily Published snapshot UI and route migration in `specs/001-market-leadership-screener/quickstart.md` and `specs/001-market-leadership-screener/contracts/workflow.md`; retain daily-input and weekly CLI/storage documentation
+
+**Checkpoint**: One explicitly sourced US-only Discovery page; no misleading live JP/GB option,
+no daily Published snapshot UI, and multi-market fixture calculations remain independently tested.
+
+---
+
+## Phase 4b: User Story 2 - Dedicated Industry Discovery (P1; extends US1)
+
+**Goal**: Provide a separately navigable Industry Discovery page, modeled on sector discovery,
+with direct entry and selection of one or more parent sectors (the requested "vectors"). A sector
+selection in the unified Discovery workflow opens this page prefiltered to that sector and the
+same evidence mode: fixture-backed weekly sector → weekly industry, US live daily sector → live
+US industry. Weekly and live dates, return bases, and metrics must never be silently combined.
+Keep the existing weekly US/JP/GB calculation and fixture tests; only US is user-facing until
+authorized non-US live sources are available.
+
+For live US industries, research dated industry-to-ETF matches and permitted display/derived-data
+rights first. Prefer a qualified ETF with documented industry composition; otherwise use the
+largest **as-of-date market-cap** stock from verified dated industry membership, explicitly
+labelled a single-company proxy, not an industry-wide or diversified fund. Missing verified
+membership, size, rights, matching price history, or proxy qualification leaves that industry
+insufficient, not guessed or silently excluded. This is a new, live-only representation policy;
+do not reinterpret existing `weekly-1.0.0` snapshots or advertise live weekly rankings.
+
+**Independent test**: Open Industry Discovery directly, select one or several US parent sectors,
+and verify only their dated industries appear with correct sector ancestry and independently
+labelled source/basis. Click a sector in weekly Discovery and arrive at weekly industries for its
+completed week; click a live sector and arrive at live US industries for the requested/usable
+daily observation. Verify a vetted ETF wins over the largest eligible constituent, stock fallback
+is explicit, and no-qualified-proxy or stale/misaligned data is insufficient without suppressing
+other industries. Navigation back, switching modes, invalid sector IDs, missing snapshots, and
+provider failures must not leak selections or fabricate results.
+
+**ID note**: Append T084–T098 without renumbering historical T001–T083. Execute this phase after
+T076–T083 and before pending US3–US5 UI integration and release checks.
+
+### Design and source gate
+
+- [ ] T084 [US2] Specify direct-entry and click-through Industry Discovery acceptance, US-only visible scope, multi-sector parent-ID filtering, mode-matched weekly/live navigation, and the live-only single-stock proxy exception in `specs/001-market-leadership-screener/spec.md`, `specs/001-market-leadership-screener/plan.md`, `specs/001-market-leadership-screener/data-model.md`, and `specs/001-market-leadership-screener/contracts/workflow.md`; explicitly preserve weekly snapshot compatibility and clarify that live returns are not weekly ranks
+- [ ] T085 [US2] Research dated US industry taxonomy/membership, candidate industry ETFs and their actual constituent exposure, as-of market-cap sources, identifier mappings, source availability and permitted live display/derived-data rights in `specs/001-market-leadership-screener/research.md` and `specs/001-market-leadership-screener/contracts/us-industry-proxies.md`; record a reproducible ETF qualification policy and per-industry source/effective date, reject broad or mismatched funds, and block live enablement for any industry without verified rights and dated membership/capitalization rather than inventing a symbol or using present-day size retrospectively
+
+### Tests first (confirm failing before implementation)
+
+- [ ] T086 [P] [US2] Test dated qualified industry ETF precedence, single-stock fallback to largest verified as-of-date member by market cap, deterministic ties, invalid/expired/misclassified candidates, missing size/rights and explicit no-qualified-proxy reasons in `tests/unit/domain/test_industry_proxies.py`; a stock proxy must never be labelled diversified or silently enter the existing weekly representation contract
+- [ ] T087 [P] [US2] Test live US industry catalog provenance, taxonomy/sector ancestry, dated membership/capitalization, effective dates, source availability, duplicate/conflicting candidates, unsupported non-US and license/coverage rejection in `tests/contract/test_industry_catalog.py`; do not accept today's membership or capitalization as historical evidence
+- [ ] T088 [P] [US2] Test live industry discovery over one/multiple parent sectors with the same eligible ending US benchmark and parent-sector observations, adjusted 1w/1m/3m/6m/12m absolute/local-relative returns, separately labelled parent-relative evidence, stock-fallback caveat and per-industry stale/insufficient isolation in `tests/integration/test_discover_industries.py`; live mode must not invent composite ranks, weekly status or snapshot data
+- [ ] T089 [P] [US2] Test weekly industry browse with one/multiple parent sector IDs, unchanged existing local rank scope, matching sector/industry week, benchmark/currency/return basis, empty/missing/misaligned snapshots and invalid/foreign parent IDs in `tests/integration/test_browse_industries.py`
+- [ ] T090 [P] [US2] Test directly opened Industry Discovery weekly default, US-only multi-sector selector, mode-specific source labels, sector filter reset, missing data, invalid handoff and operational errors in `tests/app/test_industry_discovery.py`; unmatched industries must remain visible as insufficient
+- [ ] T091 [P] [US2] Test click-through from both weekly and US live sector discovery into the separate Industry Discovery page, preselected stable parent ID, retained source mode/date/market context, valid back-navigation and no cross-mode session-state leakage in `tests/app/test_sector_to_industry.py`
+
+### Implementation (after T086–T091 fail as intended)
+
+- [ ] T092 [US2] Model the **live-only** ETF/single-`STOCK` industry candidate and ETF-first, dated/as-of selection in `src/market_leadership/domain/industry_proxies.py`; keep `src/market_leadership/domain/models.py` and `src/market_leadership/domain/proxies.py` weekly fund/index/basket types unchanged, require verified industry membership plus dated positive market cap for stock fallback, and emit typed insufficiency rather than silently selecting an unqualified proxy
+- [ ] T093 [US2] Implement the researched, rights-gated dated US industry candidate catalog and provider capability boundary in `src/market_leadership/application/ports.py` and `src/market_leadership/infrastructure/industry_catalog.py`; use only T085-verified mappings/metadata, fail closed for absent/expired membership or cap evidence and unsupported markets, and do not claim a live ETF or stock when source permission is unverified
+- [ ] T094 [US2] Implement on-demand US live industry discovery through existing daily-history request/cache adapters in `src/market_leadership/application/discover_industries.py`; filter by selected sector node IDs before loading candidates, align ETF/stock, parent-sector and SPY observations to a shared eligible session, reuse domain return calculations, preserve per-industry insufficiency, and expose explicit proxy type, source, age, parent-relative and local-relative bases without calculating a fake weekly score
+- [ ] T095 [P] [US2] Extend weekly industry inspection for one or more valid parent sector node IDs in `src/market_leadership/application/inspect_industry.py`; reuse the published INDUSTRY snapshot, retain each row's original market/hierarchy rank and local/parent context, reject mismatched sector/industry weeks and never merge weekly rows with live results
+- [ ] T096 [US2] Build the separate US-only Industry Discovery workflow and its direct-entry/mode-specific parent-sector selection in `src/market_leadership/ui/workflows/industry_discovery.py` and `src/market_leadership/ui/state.py`; use T094/T095 application results, show weekly fixture versus live ETF/stock sources and dates clearly, display insufficient rows and source failures, and scope/reset handoff state so changing mode cannot reuse an incompatible sector or date
+- [ ] T097 [US2] Make sector selections open mode-matched Industry Discovery and register its stable `industry-discovery` URL without changing the existing default `discovery` route in `src/market_leadership/ui/workflows/scoreboard.py`, `src/market_leadership/ui/workflows/discovery_page.py`, `src/market_leadership/bootstrap.py`, and `src/market_leadership/app.py`; keep direct entry and back-navigation working and avoid retaining a duplicate inline industry ranking as the only drill-down
+- [ ] T098 [US2] Document direct-entry and sector-click journeys, weekly fixture and live proxy limitations, representative-stock caveat, research/rights gate, missing-data states and no live non-US support in `specs/001-market-leadership-screener/quickstart.md` and `specs/001-market-leadership-screener/contracts/workflow.md`; retain existing weekly artifact/build instructions
+
+**Checkpoint**: Direct and sector-linked US Industry Discovery works for matched weekly and live
+modes, with dated proxy provenance and explicit insufficiency. Live industry capability cannot be
+declared complete without the T085 source and rights gate.
+
+---
+
 ## Phase 5: User Story 3 - Assess Participation and Momentum Quality (P2)
 
 **Goal**: Add optional dated constituent breadth, cap/equal-weight disagreement, and explicitly
@@ -209,27 +313,38 @@ five sorts, one-step reset and empty state; provenance fields are present or exp
 
 ## Dependency Graph and Parallel Work
 
-- T001–T026 (completed) → US1 T027–T034 → US2 T035–T048 → US3 T049–T058
-  and US4 T059–T065 → US5 T066–T073 → release T074–T075.
+- T001–T026 (completed) → US1 T027–T034 → US2 T035–T048 → unified Discovery
+  T076–T083 → Industry Discovery T084–T098 → US3 T049–T058 and US4 T059–T065
+  → US5 T066–T073 → release T074–T075.
 - US1 market definitions/fixture context precede US2 ranking. US2 weekly price rankings are required
-  before US3/US4 evidence integration; US3 and US4 can proceed independently after US2. US5
-  depends on US2 for filters and on US3/US4 for complete provenance and definitions.
-- In each story, independent `[P]` tests may be written concurrently; confirm they fail for absent
+  before unified Discovery; its mode-matched sector entry and T085 source/rights research precede
+  live Industry Discovery. The separate industry page is required before pending US3/US4 UI integration.
+  US3 and US4 can proceed independently after that page. US5 depends on US2 and the unified page
+  and Industry Discovery for filters and on US3/US4 for complete provenance and definitions.
+- In each story, independent `[P]` tests may be written concurrently; T077–T079 can run in
+  parallel after T076, followed by T080 → T081 → T082 → T083. After T084/T085, T086–T091
+  are independent test files; T095 can be implemented alongside T092–T094 before T096 → T097
+  → T098. Confirm tests fail for absent
   behavior before implementation. Independent implementation files T032 (US1), T042/T043 (US2),
   T055/T056 (US3) can follow their own failing tests in parallel; the integration task follows
   all producers. No task marked `[P]` relies on another unfinished task in its phase.
 
 ## Implementation Strategy and Requirement Coverage
 
-MVP: finish US1 fixture-backed market selection, then US2 release weekly SECTOR scoreboard and
-industry drill-down. US3/US4 add optional, non-ranking evidence; US5 adds filters and trust before
-release. Preserve the existing daily input path throughout. Validate each checkpoint with its
+MVP: US1 fixture-backed market selection, US2 weekly SECTOR scoreboard, unified US-only Discovery
+(T076–T083), then separately navigable, mode-matched Industry Discovery (T084–T098). Live industry
+results are gated on verified source rights and dated ETF/stock representation; if those cannot be
+established, report the live increment blocked rather than substituting fixture results. US3/US4
+add optional, non-ranking evidence; US5 adds filters and trust before release. Preserve the existing
+daily input path and multi-market
+application contracts throughout even though daily Published snapshot and non-US fixtures are not
+user-facing. Validate each checkpoint with its
 focused contract/unit/integration/AppTest files and then the full suite.
 
 | Requirements | Tests and implementation |
 |---|---|
-| FR-001–FR-006 | US1 T027–T034; US2 T035, T038–T048 |
-| FR-007–FR-014 | US2 T035–T048 |
+| FR-001–FR-006 | US1 T027–T034; US2 T035, T038–T048 and unified T076–T083 (non-US fixtures retained but hidden pending live sources) |
+| FR-007–FR-014 | US2 T035–T048; unified T078/T081 and industry T084–T098 preserve mode-matched sector-to-industry UX |
 | FR-015–FR-018 | US2 T037/T044; US3 T049–T058 |
 | FR-019–FR-021 | US4 T059–T065 |
 | FR-022–FR-023 | US5 T066/T068/T070/T071 |

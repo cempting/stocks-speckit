@@ -33,7 +33,8 @@ The composition root builds an ordered tuple of descriptors and converts each de
 
 | Key | Responsibility | Required use case |
 |-----|----------------|-------------------|
-| `scoreboard` | Default latest completed weekly SECTOR rankings by selected market, regimes, filters and drill-down | Browse scoreboard |
+| `scoreboard` | Latest completed weekly SECTOR rankings by selected market, regimes, filters and industry navigation | Browse scoreboard |
+| `industry-discovery` | Direct and sector-linked industry filter by one or more US parent sectors in an explicitly selected weekly or live evidence mode | Browse weekly industries / request live industry evidence |
 | `industry-detail` | Parent-sector/local-market comparisons, participation, trading activity, observed flows and provenance | Inspect industry |
 | `methodology` | Definitions, basis, provenance guidance, and non-advice warning | Read snapshot metadata |
 
@@ -41,6 +42,13 @@ Until the weekly workflow passes acceptance, the existing live US daily-history 
 development/Phase 2 default; published daily input snapshots remain an optional mode. Multi-market
 fixture comparisons are not claims of live JP/GB ingestion. Clear filters restores the selected
 markets' weekly SECTOR view, retaining market selection.
+Industry Discovery accepts stable parent-sector node IDs, not display names, as handoff state. The
+page validates each ID against the selected evidence mode before rendering. Weekly handoffs retain
+the completed week and read only weekly snapshots; live handoffs retain the live daily mode and
+observation context. A missing, stale, unauthorized, or mismatched live source is shown as
+insufficient/unavailable; it never falls back to a weekly result or a different provider. Direct
+entry defaults to weekly US industry snapshots and permits selecting multiple parent sectors,
+rendered as separate ranking contexts rather than one combined ranking.
 
 ## Component Contract
 
@@ -52,5 +60,6 @@ record and mark unavailable fields explicitly.
 ## AppTest Evidence
 
 Each workflow must have tests for initial render, primary interaction, empty state, insufficient-data
-state, and safe operational failure. Registry tests assert one default, unique paths, deterministic
+state, and safe operational failure. Sector-to-industry links preserve the selected evidence mode,
+market, parent node ID and observation date, then validate them on entry. Registry tests assert one default, unique paths, deterministic
 order, and successful construction when any single workflow is replaced by a test workflow.

@@ -22,6 +22,24 @@ and observed fund-flow evidence. Postpone watchlists and portfolio tracking."
 - Q: During Phase 2, should the discovery page read published input snapshots by default, or keep requesting live data on page visits? → A: Keep live-data discovery as the default, with an optional snapshot mode.
 - Q: How many equity markets must have working live daily-history ingestion at the Phase 2 checkpoint? → A: US only; additional markets later.
 
+### Session 2026-10-28
+
+- Q: In industry discovery, what does selecting a sector or set of vectors mean? → A: Select one
+  or several parent sectors to filter industries.
+- Q: How should a sector selection navigate to industry discovery? → A: Use a separate,
+  directly navigable Industry Discovery page, prefiltered to the selected sector and matching the
+  source mode used by the sector view.
+- Q: Which industry representation should live US discovery use? → A: Prefer a verified ETF whose
+  documented index exposure matches the industry; otherwise use the largest as-of-date market-cap
+  stock among verified, dated members. Label stock results as single-company proxies. If membership,
+  market-cap, source rights, or matching history is unavailable, show insufficient evidence.
+- Q: How should non-US markets appear in industry discovery? → A: Keep their fixture support in
+  application tests, but do not expose them in the UI until live source coverage and rights are
+  verified.
+- Q: What is the live-source status for the initial industry increment? → A: Research official ETF
+  exposures and source terms; do not enable a live representation or derived market-data display
+  without verified dated inputs and the required rights.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Select and Compare Markets (Priority: P1)
@@ -81,6 +99,15 @@ relative-strength components, composite scores, statuses, rankings, changes, and
    laggards from score and rank changes without those descriptions becoming forecasts.
 7. **Given** an entry with insufficient required history, **When** the scoreboard is displayed,
    **Then** it has no leadership status or rank and shows the missing evidence.
+8. **Given** the user opens Industry Discovery directly, **When** one or several US parent sectors
+   are selected, **Then** only their dated industries are displayed and each retains its parent,
+   market, benchmark, observation date, return basis, source, and rank scope.
+9. **Given** the user selects a sector from a weekly or live sector view, **When** Industry
+   Discovery opens, **Then** it is filtered to that stable sector ID and uses the same evidence
+   mode; the weekly and live observations are never combined.
+10. **Given** live industry representation evidence or its rights are missing, **When** the live
+   industry mode is opened, **Then** the affected industries remain explicitly insufficient and
+   no broad ETF, guessed symbol, or current market-cap observation is substituted.
 
 ---
 
@@ -265,6 +292,22 @@ and verify filtering, reset behavior, definitions, provenance, dates, and interp
   concentration, inferred trading activity, observed fund flow, proxy, and insufficient data.
 - **FR-027**: The product MUST state that discovery results describe historical evidence and are
   neither forecasts, personalized financial advice, nor trade instructions.
+- **FR-028**: Users MUST be able to open a separate Industry Discovery page directly and select one
+  or several US parent sectors to filter the displayed industries. Each selected parent remains a
+  separate ranking context; results MUST NOT be pooled across parent sectors.
+- **FR-029**: Selecting a sector from a weekly or live sector view MUST open Industry Discovery
+  prefiltered by its stable classification node ID and in the matching weekly or live evidence mode.
+  The mode, observation date, market, benchmark, currency, return basis and source MUST remain
+  explicit; the product MUST NOT mix weekly snapshot results with live daily results.
+- **FR-030**: A live industry ETF representation MUST have an issuer/index source documenting
+  matching industry exposure, effective dates, and permitted use. A live single-stock
+  representation MUST be the largest positive market-cap member for the requested observation
+  date, using verified effective-dated membership and market-cap evidence available by that date;
+  it MUST be labelled as a single-company proxy, not an industry-wide or diversified fund.
+- **FR-031**: When no qualified representation or authorized source exists, the affected industry
+  MUST be displayed as insufficient with a reason. The product MUST NOT infer classification,
+  use present-day membership/capitalization retrospectively, silently omit the industry, or
+  fabricate a weekly leadership rank from live daily evidence.
 
 ### Requirement Acceptance Coverage
 

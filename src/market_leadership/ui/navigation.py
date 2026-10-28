@@ -1,8 +1,11 @@
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from typing import Any
 
 import streamlit as st
+
+WORKFLOW_PAGES_STATE_KEY = "market_leadership.workflow_pages"
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +46,22 @@ def to_pages(workflows: Sequence[WorkflowSpec]) -> list[st.Page]:
         )
         for workflow in validate_workflows(workflows)
     ]
+
+
+def register_workflow_pages(
+    workflows: Sequence[WorkflowSpec],
+) -> list[st.Page]:
+    ordered = validate_workflows(workflows)
+    pages = to_pages(ordered)
+    st.session_state[WORKFLOW_PAGES_STATE_KEY] = {
+        workflow.key: page for workflow, page in zip(ordered, pages, strict=True)
+    }
+    return pages
+
+
+def workflow_page(key: str) -> Any | None:
+    pages = st.session_state.get(WORKFLOW_PAGES_STATE_KEY, {})
+    return pages.get(key)
 
 
 def replace_workflow(

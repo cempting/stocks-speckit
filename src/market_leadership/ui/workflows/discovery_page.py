@@ -17,20 +17,19 @@ from market_leadership.application.market_sessions import latest_completed_us_se
 from market_leadership.bootstrap import (
     build_fixture_market_context,
     build_request_provider,
-    build_snapshot_repository,
 )
 from market_leadership.config import load_settings
 from market_leadership.infrastructure.snapshot_errors import (
     SchemaMismatch,
-    SnapshotNotFound,
     SourceUnavailable,
 )
-from market_leadership.ui.cache import load_published_discovery
+from market_leadership.ui.navigation import workflow_page
 from market_leadership.ui.performance_table import (
     performance_table_height,
     style_performance_table,
 )
 from market_leadership.ui.sector_chart import build_sector_chart
+from market_leadership.ui.workflows.scoreboard import render_scoreboard
 
 DISCOVERY_CACHE_SCHEMA_VERSION = 2
 
@@ -253,32 +252,41 @@ def render_fixture_comparison(comparison: MarketComparison) -> None:
             st.warning(overview.global_unavailable_reason)
 
 
+st.title("Discovery")
+experience_mode = st.segmented_control(
+    "Discovery mode",
+    options=("Weekly leadership", "US live daily", "US acceptance comparison"),
+    default="Weekly leadership",
+    key="discovery_experience_mode",
+    selection_mode="single",
+)
+if experience_mode == "Weekly leadership":
+    render_scoreboard(configure_page=False, show_title=False)
+    st.stop()
+
 settings = load_settings()
 selected_provider: str | None = None
 requested_as_of: date | None = None
-selected_markets: tuple[str, ...] = ()
 force_refresh = False
 
 (
     title_column,
-    source_column,
     provider_column,
     date_column,
     refresh_column,
     theme_column,
-) = st.columns([2.1, 1, 1, 1, 0.8, 0.8])
-with source_column:
-    source_mode = st.selectbox(
-        "Data source",
-        ["Live provider", "Published snapshot", "Acceptance fixture"],
-        key="discovery_source_mode",
-    )
+) = st.columns([2.1, 1, 1, 0.8, 0.8])
+source_mode = (
+    "Live provider"
+    if experience_mode == "US live daily"
+    else "Acceptance fixture"
+)
 with title_column:
     if source_mode == "Acceptance fixture":
         st.title("Market Comparison")
-        st.caption("Controlled US/JP/GB sample · not live market data")
+        st.caption("Controlled US sample · not live market data")
     else:
-        st.title("US Sector Discovery")
+        st.title("US Sector Discovery · Live Daily")
         st.caption("GICS sector leadership through liquid US-listed proxies")
 with provider_column:
     if source_mode == "Live provider":
@@ -291,23 +299,13 @@ with provider_column:
             else 0,
             format_func=lambda value: "Massive" if value == "massive" else value.title(),
         )
-    elif source_mode == "Acceptance fixture":
-        selected_markets = tuple(
-            st.multiselect(
-                "Markets",
-                options=("US", "JP", "GB"),
-                default=("US",),
-                key="selected_fixture_markets",
-            )
-        )
 with date_column:
-    if source_mode in ("Live provider", "Acceptance fixture"):
-        market_today = datetime.now(ZoneInfo("America/New_York")).date()
-        requested_as_of = st.date_input(
-            "As of",
-            value=date(2026, 10, 23) if source_mode == "Acceptance fixture" else market_today,
-            max_value=market_today,
-        )
+    market_today = datetime.now(ZoneInfo("America/New_York")).date()
+    requested_as_of = st.date_input(
+        "As of",
+        value=date(2026, 10, 23) if source_mode == "Acceptance fixture" else market_today,
+        max_value=market_today,
+    )
 with refresh_column:
     if source_mode == "Live provider":
         st.write("")
@@ -332,14 +330,11 @@ with theme_column:
         st.rerun()
 
 if source_mode == "Acceptance fixture":
-    if not selected_markets:
-        st.info("Select at least one fixture market to compare local outcomes.")
-        st.stop()
     if requested_as_of is None:
         raise RuntimeError("Fixture observation date is unavailable")
     try:
         comparison = compare_markets(
-            selected_markets,
+            ("US",),
             market_data=build_fixture_market_context(),
             as_of=requested_as_of,
         )
@@ -350,29 +345,17 @@ if source_mode == "Acceptance fixture":
     st.stop()
 
 try:
-    if source_mode == "Published snapshot":
-        with st.spinner("Loading published daily-history snapshot..."):
-            reference, discovery = load_published_discovery(
-                build_snapshot_repository(settings),
-                settings.snapshot_dir,
-            )
-        snapshot_label = f" · SNAPSHOT {reference.snapshot_id}"
-    else:
-        if selected_provider is None or requested_as_of is None:
-            raise RuntimeError("Live data controls are unavailable")
-        with st.spinner(f"Loading {selected_provider} market data..."):
-            discovery = load_discovery(
-                selected_provider,
-                settings.source_cache_path,
-                requested_as_of,
-                force_refresh=force_refresh,
-                cache_schema_version=DISCOVERY_CACHE_SCHEMA_VERSION,
-                retry_limit=settings.retry_limit,
-            )
-        snapshot_label = ""
-except SnapshotNotFound:
-    st.warning("No published daily-history snapshot is available. Build one with the snapshot CLI.")
-    st.stop()
+    if selected_provider is None or requested_as_of is None:
+        raise RuntimeError("Live data controls are unavailable")
+    with st.spinner(f"Loading {selected_provider} market data..."):
+        discovery = load_discovery(
+            selected_provider,
+            settings.source_cache_path,
+            requested_as_of,
+            force_refresh=force_refresh,
+            cache_schema_version=DISCOVERY_CACHE_SCHEMA_VERSION,
+            retry_limit=settings.retry_limit,
+        )
 except Exception as error:
     st.error("Market data could not be loaded. The previous cached result was not replaced.")
     st.exception(error)
@@ -467,9 +450,30 @@ st.dataframe(
 source_label = (
     f"SOURCE {discovery.provider_id.upper()} · REQUESTED {discovery.as_of.isoformat()}"
     f" · SPY OBSERVED {benchmark_date.isoformat() if benchmark_date else 'UNAVAILABLE'}"
-    f" · ADJUSTED DAILY BARS{snapshot_label}"
+    " · ADJUSTED DAILY BARS"
 )
 st.markdown(f'<p class="source-line">{source_label}</p>', unsafe_allow_html=True)
+selected_industry_sector = st.selectbox(
+    "Explore industries for sector",
+    options=[sector.name for sector in discovery.sectors],
+    index=None,
+    placeholder="Select a sector",
+    key="live_industry_parent_sector",
+)
+if selected_industry_sector is not None:
+    st.session_state["market_leadership.industry_handoff"] = {
+        "market_id": "US",
+        "mode": "live",
+        "sector_names": [selected_industry_sector],
+        "as_of": benchmark_date.isoformat() if benchmark_date else None,
+    }
+    industry_page = workflow_page("industry-discovery")
+    if industry_page is not None:
+        st.page_link(
+            industry_page,
+            label=f"Open live Industry Discovery for {selected_industry_sector}",
+            icon=":material/schema:",
+        )
 st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
 st.subheader("Sector tape")
 st.caption("Latest 260 sessions · adjusted close and SMA50 · official-session volume")
