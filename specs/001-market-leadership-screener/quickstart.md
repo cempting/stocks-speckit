@@ -87,6 +87,10 @@ schema, checksum, and per-symbol date coverage are valid. Runtime requests also 
 completed XNYS session before cache lookup, so non-trading days reuse the correct source entry.
 The Refresh data button bypasses the source-cache hit. This workflow uses direct Massive REST or
 `yfinance`; it does not depend on MCP.
+If yfinance returns an incomplete trailing bar (for example, volume without a closing price),
+the bar is not used as a daily observation. Discovery displays the latest usable SPY observation
+date, flags results as stale when it precedes the requested completed session, and aligns relative
+returns to that SPY date. Invalid prices in earlier bars still fail validation.
 
 Choose **Published snapshot** from **Data source** to load the latest published daily input snapshot
 from `MARKET_LEADERSHIP_SNAPSHOT_DIR` (default `.data/snapshots`). That mode displays the snapshot

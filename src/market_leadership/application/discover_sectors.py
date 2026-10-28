@@ -44,6 +44,7 @@ class DiscoveryResult:
     provider_id: str
     sentiment: MarketSentiment
     sectors: tuple[SectorDiscovery, ...]
+    benchmark_as_of: date | None
 
 
 def _empty_history() -> pd.DataFrame:
@@ -78,6 +79,14 @@ def discover_sectors_from_history(
     as_of: date,
 ) -> DiscoveryResult:
     benchmark_history = history.get(BENCHMARK, _empty_history())
+    benchmark_history = benchmark_history.loc[
+        pd.DatetimeIndex(benchmark_history.index).date <= as_of
+    ].sort_index()
+    benchmark_as_of = (
+        pd.DatetimeIndex(benchmark_history.index)[-1].date()
+        if not benchmark_history.empty
+        else None
+    )
     sentiment = calculate_market_sentiment(benchmark_history, BENCHMARK)
     benchmark_closes = cast(pd.Series, benchmark_history["close"])
     sectors: list[SectorDiscovery] = []
@@ -86,10 +95,16 @@ def discover_sectors_from_history(
         raw_history = history.get(symbol, _empty_history())
         chart_history = with_sma50(raw_history)
         try:
+            if benchmark_as_of is None:
+                raise InsufficientHistoryError("No benchmark close is available")
+            if benchmark_as_of not in pd.DatetimeIndex(chart_history.index).date:
+                raise InsufficientHistoryError(
+                    f"No sector close is available on benchmark date {benchmark_as_of}"
+                )
             performance = calculate_performance(
                 cast(pd.Series, chart_history["close"]),
                 benchmark_closes,
-                as_of=as_of,
+                as_of=benchmark_as_of,
             )
             reason = None
         except InsufficientHistoryError as error:
@@ -110,6 +125,7 @@ def discover_sectors_from_history(
         provider_id=provider_id,
         sentiment=sentiment,
         sectors=tuple(sectors),
+        benchmark_as_of=benchmark_as_of,
     )
 
 

@@ -2,8 +2,10 @@ from datetime import date
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from market_leadership.application.discover_sectors import (
+    SECTOR_PROXIES,
     discover_sectors,
     discover_sectors_from_snapshot,
 )
@@ -79,3 +81,21 @@ def test_snapshot_prices_can_drive_discovery_without_provider_calls() -> None:
     assert discovery.sentiment.benchmark == "SPY"
     assert len(discovery.sectors) == 11
     assert all(sector.performance is None for sector in discovery.sectors)
+
+
+def test_missing_latest_benchmark_close_does_not_mix_return_end_dates() -> None:
+    history = {symbol: _history() for symbol in ("SPY", *(ticker for _, ticker in SECTOR_PROXIES))}
+    history["SPY"] = history["SPY"].iloc[:-1]
+    history["XLB"] = history["XLB"].iloc[:-2]
+
+    result = discover_sectors(StubProvider(history), as_of=date(2026, 10, 23))
+
+    assert result.benchmark_as_of == date(2026, 10, 22)
+    materials = next(sector for sector in result.sectors if sector.symbol == "XLB")
+    assert materials.performance is None
+    assert "2026-10-22" in materials.insufficient_reason
+    financials = next(sector for sector in result.sectors if sector.symbol == "XLF")
+    assert financials.performance is not None
+    assert financials.performance.absolute["1w"] == pytest.approx(
+        history["XLF"].loc["2026-10-22", "close"] / history["XLF"].loc["2026-10-15", "close"] - 1
+    )

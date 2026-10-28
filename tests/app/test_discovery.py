@@ -103,6 +103,33 @@ def test_snapshot_mode_loads_published_input_without_upstream_calls(monkeypatch,
     assert len(app.dataframe[0].value) == 11
 
 
+def test_missing_latest_spy_close_is_flagged_stale_in_live_discovery(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("MARKET_DATA_PROVIDER", "fixture")
+    monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path))
+    fixture = FixtureProvider()
+
+    class IncompleteProvider:
+        provider_id = "fixture"
+
+        def fetch_daily_history(self, symbols, *, start, end, force=False):
+            result = fixture.fetch_daily_history(symbols, start=start, end=end, force=force)
+            result["SPY"] = result["SPY"].iloc[:-1]
+            return result
+
+    monkeypatch.setattr(
+        "market_leadership.bootstrap._build_provider_adapter",
+        lambda provider_id, retry_limit: IncompleteProvider(),
+    )
+    app_path = Path(__file__).parents[2] / "src/market_leadership/app.py"
+    app = AppTest.from_file(app_path).run(timeout=20)
+
+    assert not app.exception
+    assert any("SPY close is unavailable" in warning.value for warning in app.warning)
+    assert len(app.dataframe) == 1
+    assert set(app.dataframe[0].value["Status"]) == {"Stale"}
+    assert any("SPY OBSERVED" in item.value for item in app.markdown)
+
+
 def test_snapshot_mode_reports_missing_snapshot_without_upstream_call(
     monkeypatch, tmp_path
 ) -> None:

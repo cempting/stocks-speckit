@@ -117,9 +117,12 @@ class YFinanceProvider:
         normalized = symbol_frame.rename(columns=lambda column: str(column).lower())
         if not {"close", "volume"}.issubset(normalized.columns):
             raise ValueError(f"Daily history for {symbol} lacks canonical columns")
-        result = normalized.loc[:, ["close", "volume"]].copy()
+        result = normalized.loc[:, ["close", "volume"]].dropna(how="all").sort_index().copy()
+        complete = result.notna().all(axis=1)
+        if complete.any():
+            result = result.loc[: result.index[complete][-1]]
         result.index = pd.DatetimeIndex(result.index).tz_localize(None)
-        return result.sort_index()
+        return result
 
     @staticmethod
     def _empty_history() -> pd.DataFrame:

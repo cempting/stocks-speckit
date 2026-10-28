@@ -13,6 +13,7 @@ from market_leadership.application.discover_sectors import (
     DiscoveryResult,
     discover_sectors_from_history,
 )
+from market_leadership.application.market_sessions import latest_completed_us_session
 from market_leadership.bootstrap import (
     build_fixture_market_context,
     build_request_provider,
@@ -379,6 +380,14 @@ except Exception as error:
 
 st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
 st.markdown("#### S&P 500 sentiment")
+benchmark_date = discovery.benchmark_as_of
+benchmark_current = benchmark_date == latest_completed_us_session(discovery.as_of)
+if not benchmark_current:
+    observation = benchmark_date.isoformat() if benchmark_date is not None else "unavailable"
+    st.warning(
+        f"SPY close is unavailable for the requested completed session. "
+        f"Latest usable SPY close: {observation}. Results are stale or insufficient."
+    )
 sentiment = discovery.sentiment
 metric_columns = st.columns(4)
 metric_columns[0].metric("Regime", sentiment.regime)
@@ -429,7 +438,13 @@ for sector in discovery.sectors:
             "3 months": metrics["3m"] * 100 if metrics else None,
             "6 months": metrics["6m"] * 100 if metrics else None,
             "12 months": metrics["12m"] * 100 if metrics else None,
-            "Status": "Current" if metrics else "Insufficient history",
+            "Status": (
+                "Current"
+                if metrics and benchmark_current
+                else "Stale"
+                if metrics
+                else "Insufficient history"
+            ),
         }
     )
 
@@ -451,6 +466,7 @@ st.dataframe(
 
 source_label = (
     f"SOURCE {discovery.provider_id.upper()} · REQUESTED {discovery.as_of.isoformat()}"
+    f" · SPY OBSERVED {benchmark_date.isoformat() if benchmark_date else 'UNAVAILABLE'}"
     f" · ADJUSTED DAILY BARS{snapshot_label}"
 )
 st.markdown(f'<p class="source-line">{source_label}</p>', unsafe_allow_html=True)
