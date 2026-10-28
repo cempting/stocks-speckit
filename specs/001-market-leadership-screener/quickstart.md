@@ -1,190 +1,108 @@
-# Quickstart: Market Leadership Screener
+# Quickstart and Validation: Progressive Stock Screener
 
-This guide covers controlled US/JP/GB weekly sector-and-industry snapshots, US daily-history
-discovery and input snapshots, and the earlier acceptance-fixture comparison. The default **Discovery**
-page has three explicit modes: Weekly leadership, US live daily, and US acceptance comparison.
-**Industry Discovery** is a separate page, defaults to US weekly industries, and can be opened
-directly or from a selected sector. The UI exposes US only; JP/GB fixture calculations remain
-available to tests/builds and do not imply live coverage or display rights. Live industry data,
-constituent participation and observed flows are not enabled.
+**Status**: Post-implementation validation guide for [plan.md](plan.md).
+The repository still contains the prior routed application. Writing this guide does
+not implement the tabs, new detector, source coverage or financial scorecards.
 
-## Prerequisites
+## Prerequisites and Setup
 
-- Python 3.12
-- `uv`
-- The existing US daily-history fixture or an authorized daily-history source. The US/JP/GB
-  controlled fixture is for acceptance testing only, not a live feed or proof of display rights.
+- Python 3.12 and `uv`; use the existing constrained manifest and lockfile.
+- Authorized personal/development access to the selected yfinance source for an
+  optional live smoke test. Hosted display/derived-use rights require separate approval.
+- Controlled synthetic fixtures for complete membership, technical histories and
+  financial publication periods. They do not prove live-provider coverage.
 
-## Local Configuration
+From the repository root:
 
 ```bash
-cp .env.example .env
+uv sync --locked --all-groups
+uv run streamlit run src/market_leadership/app.py
 ```
 
-Add `MASSIVE_API_KEY` to `.env` when using the Massive REST provider. The application loads this
-file for local development without overriding variables already exported by the process. The
-`yfinance` adapter requires no key. `.env` is ignored by Git and must never be committed.
+The new path requires no database, Massive key, snapshot build, persistent Parquet
+cache or MCP server. Do not treat legacy provider/snapshot environment settings as
+new-path source selection. Avoid public deployment until rights are verified.
 
-Set `MARKET_DATA_PROVIDER` to `massive` or `yfinance` to choose the provider offered by the
-discovery page; `yfinance` is the default. Massive is shown only when `MASSIVE_API_KEY` is present.
-The page does not silently switch providers after a request fails. `MARKET_DATA_SOURCE_CACHE_PATH`
-selects the persistent Parquet source-cache location; it defaults to `MARKET_DATA_CACHE_PATH`.
-`MARKET_DATA_RETRY_LIMIT` configures bounded retries for transient upstream failures.
-Source-cache schema version 4 identifies the US daily-history currency basis as USD and rejects
-nonpositive closes or negative volumes. Older cache entries remain on disk but are not reused;
-the first matching request fetches and publishes a new generation.
+## Automated Evidence
 
-## Build a Daily-History Input Snapshot
+Write the relevant tests failing-first, implement, then run the smallest affected
+test selection before the full applicable suite:
 
 ```bash
-uv run python -m market_leadership.application.build_snapshot \
-  --provider fixture \
-  --start 2026-10-01 \
-  --as-of 2026-10-23 \
-  --symbols SPY XLB \
-  --snapshot-id daily-2026-10-23 \
-  --output .data/snapshots
-```
-
-`--as-of` is an upper bound: weekends and exchange holidays resolve to the previous XNYS
-session, and an open session resolves to the previous completed one. Future dates and start
-dates after the required session are rejected. The manifest records the resolved session, and
-each symbol must contain its observation or publication fails. `--force-refresh` bypasses the
-selected provider's persistent source-cache hit. A new snapshot ID is required for every
-publication: existing snapshots are immutable, and an upstream failure leaves them untouched.
-The published `prices` Parquet file and manifest are a canonical *input* snapshot, not a calculated
-industry scoreboard. Live ingestion
-requires explicit `--provider yfinance` or `--provider massive`; Massive requires `MASSIVE_API_KEY`.
-
-## Build Calculated Weekly Fixture Snapshots
-
-Publish a separate completed-week artifact for each market and level:
-
-```bash
-uv run python -m market_leadership.application.build_snapshot \
-  --weekly --provider fixture --market US --level SECTOR \
-  --as-of 2026-10-28 --snapshot-id us-sector-2026-10-23 --output .data/snapshots
-uv run python -m market_leadership.application.build_snapshot \
-  --weekly --provider fixture --market US --level INDUSTRY \
-  --as-of 2026-10-28 --snapshot-id us-industry-2026-10-23 --output .data/snapshots
-```
-
-Repeat with `--market JP` and `--market GB` and distinct snapshot IDs to populate those markets.
-The date is a cutoff, not a promise that its week is complete. For this fixture the latest completed
-local week is 2026-10-23; a Friday cutoff before that week's completion selects the previous week.
-Market holidays may yield a different last session for each market. Weekly artifacts live under
-`.data/snapshots/weekly/` with their own `weekly-1.0.0` manifest and immutable IDs. They contain
-calculated local rankings and never reinterpret Phase 2 `prices` inputs as weekly results. A missing
-or invalid weekly artifact leaves the scoreboard empty or shows an error; it never fetches a live
-provider or silently uses a daily input snapshot. Only the controlled fixture provider can publish
-weekly inputs until source rights and dated non-price contracts are verified.
-
-## Install
-
-```bash
-uv sync --all-groups
-```
-
-`uv` creates `.venv`, verifies `uv.lock`, and installs the application and development tools.
-
-## Verify Before Running
-
-```bash
-uv run ruff format --check .
-uv run ruff check .
+uv run pytest tests/unit/domain tests/contract tests/integration tests/app
+uv run ruff format --check src tests
+uv run ruff check src tests
 uv run pyright
-uv run pytest
 ```
 
-The current suite covers implemented Phase 1–4 behavior. Future participation, observed flows and
-filter/trust tests in `tasks.md` must be written failing-first before enabling those capabilities.
+These are existing tool/directory conventions, not a claim that revised-feature tests
+already exist. Track newly introduced and pre-existing diagnostic failures separately;
+this plan grants no waiver of required quality gates. Preserve existing legacy
+snapshot compatibility tests. Keep live requests mocked by default; live smoke tests
+must be opt-in and explicitly labelled.
 
-## Run the App
+## End-to-End Controlled Scenarios (after implementation)
 
-```bash
-MARKET_LEADERSHIP_SNAPSHOT_DIR=.data/snapshots \
-  uv run streamlit run src/market_leadership/app.py
-```
+Use an injected/mocked yfinance boundary and clock in automated tests, not an
+undocumented production provider selector. Prepare at least five valid peers plus
+missing/invalid cases and a known full available membership list.
 
-The default Discovery page opens in **Weekly leadership** mode and reads the latest completed US
-SECTOR snapshot. Select **Sector** and follow **Open Industry Discovery** to open the separate page
-filtered to that stable parent-sector ID. The Industry Discovery page can also be opened directly
-and accepts multiple US sectors; it renders a separate local ranking context per parent, never a
-pooled cross-sector ranking. Weekly mode reads only the immutable weekly snapshot and makes no
-upstream request. Rankings and deltas appear only when their required history exists; absent
-evidence is labelled insufficient. These fixture-backed results describe past relative performance,
-not forecasts.
+| Scenario | Actions and required result |
+|---|---|
+| Three-stage entry | Exactly Sectors and Industries, Industry Stocks, Stock Detail; later stages explain prerequisites; rendering/tab switches make no unsolicited remote call |
+| Industry returns | Load industries; default five-session interval; change to one. Exact adjusted endpoints, gaining/declining/neutral labels and shared competition ranks agree with fixtures |
+| Universe coverage | Test index union, exchange/cap intersection and sector union; 300M/2B/10B boundaries; unknown caps; unsupported index never becomes an unrestricted universe |
+| Representation | Qualified ETF before verified largest member; stable-ID cap ties; no broad ETF or incomplete-cap largest claim; missing qualification leaves a visible unranked industry |
+| Stocks and selection | Choose industry, load stocks; all available members accessible, including beyond a full page; sorting precedes paging; only checkbox cells editable |
+| Technical AND | Independently enable each rule and combinations; SMA equality fails; volume exactly 2x preceding-20 mean passes; insufficient evidence does not pass |
+| Consolidation and spike | Prior-session quiet run plus current spike can both match; latest/previous versus older runs differ; compare 4/5-session, multi-month and multi-year cases |
+| Charts | Sector/industry/stock uses its own history; at most latest corridor by default, older inspectable; displayed dates, width and duration match detector output; no-interval differs from insufficient |
+| Financial blocks | Load scorecards; check all three 0-100 blocks, six raw metrics, periods/publication evidence and peer counts against exact expected values |
+| Stable peers | Filter/select/page stocks without changing universe/industry/cutoff: retained-stock scores and financial remote-call counts unchanged |
+| Missing facts | Bad equity/prior denominator, wrong periods/currency, missing quarters/publication or post-cutoff revisions produce specific insufficiency, not zeros/reweighted blocks |
+| Private state | Rerun and change parent/universe/criteria; retain valid IDs, clear only invalid dependents with explanation; two sessions do not share selections |
+| Freshness and failure | Repeat fresh interactions: zero repeated remote calls. Advance clock beyond TTL, fail targeted refresh: old evidence explicitly stale/error, independent results remain, no success-shaped fallback |
+| Complete access | Every matching stock has scorecard access regardless of checkbox/page; membership/loaded/failed/missing counts reconcile |
 
-Choose **US live daily** in Discovery to request adjusted daily history for SPY and the 11 US sector proxies. It persists
-canonical source responses in the configured Parquet cache and reuses entries only when the cached
-schema, checksum, and per-symbol date coverage are valid. Runtime requests also resolve the latest
-completed XNYS session before cache lookup, so non-trading days reuse the correct source entry.
-The Refresh data button bypasses the source-cache hit. This workflow uses direct Massive REST or
-`yfinance`; it does not depend on MCP.
-If yfinance returns an incomplete trailing bar (for example, volume without a closing price),
-the bar is not used as a daily observation. Discovery displays the latest usable SPY observation
-date, flags results as stale when it precedes the requested completed session, and aligns relative
-returns to that SPY date. Invalid prices in earlier bars still fail validation.
+Numerical references: [financial scoring](contracts/fundamental-scoring.md),
+[consolidation](contracts/consolidation.md), [data/cache](contracts/market-data-provider.md)
+and [workflow](contracts/workflow.md).
 
-From a selected live sector, follow **Open live Industry Discovery** to open the separate page
-with that parent selected. Live industry results are currently unavailable: source research found
-some candidate ETF exposures but did not verify an authorized point-in-time industry catalog,
-historical membership and market-cap input, or deployment rights for displaying derived data. No
-live provider request is made by this unavailable mode. See
-[`contracts/us-industry-proxies.md`](contracts/us-industry-proxies.md) before enabling a catalog.
+## Performance and User Acceptance
 
-Choose **US acceptance comparison** to view the controlled US benchmark-regime and three-month
-local-relative sector sample. It is not a live feed or calculated weekly ranking and does not
-expose JP/GB in the user interface. The full US/JP/GB acceptance data and weekly snapshots remain
-available to automated tests and offline builds.
+For SC-005, use 2,500 synthetic stocks with loaded source payloads and precomputed
+history/peer results, including multiple pages and mixed criterion states. Record the
+hardware/browser/runtime, dataset fingerprint, loaded counts and test actions.
+Warm the app, then measure at least 100 representative filter/sort/selection interactions
+from user action to updated visible result. Report p95 (nearest-rank 95th observation
+for 100 samples) and the request counter; require <=2 seconds and no remote request
+for unchanged fresh inputs. Server-only calculation timing is not sufficient.
 
-The user-facing daily **Published snapshot** mode was removed. Daily input snapshots and their
-build/read contracts remain supported; they are not weekly industry rankings.
+Measure cold loads separately with progress/coverage and failure disclosure; do not
+fold remote waits into a misleading cached-only result or claim cold-load SLAs.
+Test real dataframe/editor/chart behavior in a browser where AppTest lacks coverage.
 
-## Validate the Remaining Release Workflow (after T049+ implementation)
+For SC-001/002/008, recruit representative first-time users and record task outcomes:
+at least 90% identify strongest/weakest eligible industry within 60 seconds; at least
+90% complete industry-to-filtered-stock-to-three-block inspection within three minutes;
+at least 90% interpret corridor dates/width, insufficiency and nonpredictive meaning.
+Fixtures/timing do not replace these observed user checks.
 
-Using `tests/fixtures/acceptance/market_data.json` and `expected.json`, exercise US, JP and GB
-selection individually and together. Check each local regime, benchmark, currency, latest completed
-weekly date and top/bottom sectors independently; never display a pooled ranking. The controlled
-fixture now includes dated 1w/1m/3m/6m/12m close histories, 50-session composite inputs,
-sector/industry classifications, and representation sources. Publish the preceding completed
-weekly snapshot first to see score/rank deltas. Extend it with constituent evidence and observed
-flow records for later phases. Verify source rights and provider contracts separately before
-enabling non-US live ingestion.
+## Optional Live Smoke and Release Decision
 
-Confirm sector is the default level, industries retain their parent and market, filter reset retains
-selected markets, and stale/missing breadth or observed flows do not change price rank. Verify
-observed flow is distinct from inferred trading activity and all outcomes expose basis, dates,
-sources and coverage. Run the same `uv run pytest` and quality-gate commands above after each phase.
-See [contracts/deferred-evidence.md](contracts/deferred-evidence.md) for phase-specific inputs and
-[data-model.md](data-model.md) for insufficiency rules.
+Verify only source-authorized capabilities. Confirm actual quote/session dates and
+cache reuse, not a claim of real-time exchange data. Explicitly inspect limitations:
 
-## Run Focused Tests
+- Complete eligible industry membership and optional dated index coverage are not
+  established by top-company lists or the existence of a screener.
+- yfinance's reviewed statement history and missing publication/vintage metadata may
+  leave Growth/Cash Flow or all cutoff-dependent blocks insufficient.
+- Split-comparable volume and qualification/display rights need independent evidence.
 
-```bash
-uv run pytest tests/unit/domain
-uv run pytest tests/contract
-uv run pytest tests/integration
-uv run pytest tests/app
-```
+Record source scope, dates, coverage and rights before enabling affected live results.
+Unavailable capabilities must stay visibly unavailable; mocked green tests do not
+certify them. See [research.md](research.md) for feasibility limits.
 
-During implementation, write the smallest failing test first, implement its owning unit, rerun that
-test, then run the complete suite before closing the task.
-
-## Add or Replace a Workflow
-
-1. Add a function under `src/market_leadership/ui/workflows/` that follows
-   [contracts/workflow.md](contracts/workflow.md).
-2. Add its `WorkflowSpec` in `bootstrap.py`, or replace the existing descriptor with the same key.
-3. Add an `AppTest` covering initial, interaction, empty, insufficient, and error states.
-4. Run the workflow tests and full suite. No domain or infrastructure module should change solely to
-   register the workflow.
-
-## Add a Data Provider
-
-1. Implement only declared supported capabilities from
-   [contracts/market-data-provider.md](contracts/market-data-provider.md), respecting the
-   [deferred input contracts](contracts/deferred-evidence.md).
-2. Run the conformance suite for those capabilities; verify source and display rights separately.
-3. Register the adapter in the offline builder composition root.
-4. Keep vendor credentials outside snapshots, logs, and Streamlit session state.
+Next generate revised tasks specifically for feature 001 while preserving historical
+IDs. The active-feature pointer currently targets 002; do not run an unqualified
+task-generation command and accidentally replace feature 002's work.

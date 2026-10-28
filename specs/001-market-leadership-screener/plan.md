@@ -1,73 +1,82 @@
-# Implementation Plan: Market Leadership Screener
+# Implementation Plan: Progressive Stock Screener
 
-**Branch**: `001-market-leadership-screener` | **Date**: 2026-10-26 | **Spec**: [spec.md](spec.md)
+**Feature**: `001-market-leadership-screener` | **Date**: 2026-10-28
+**Working branch**: `main` | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/speckit-plan` command; its definition describes the execution workflow.
+**Scope confirmation**: Continue planning feature 001 despite the active-feature pointer moving
+to feature 002 during this session. Leave that pointer, feature 002, and the branch untouched.
+This plan does not incorporate feature 002's eight-metric layout.
 
 ## Summary
 
-Build a weekly equity market-leadership screener that compares selected markets without pooling
-their local rankings, ranks sectors before industry drill-down, and distinguishes participation,
-inferred trading activity, and observed flows in versioned market-data snapshots. Keep calculations
-in pure Python modules, coordinate them through small application use cases and provider protocols,
-and expose them through independently testable Streamlit workflows in one navigation composition root.
+Replace the primary routed discovery journey with one Streamlit app containing
+`st.tabs(["Sectors and Industries", "Industry Stocks", "Stock Detail"])`. Rank industries
+by one or five completed trading-session returns; inspect all available industry stocks
+with optional AND-combined technical criteria; compare Quality, Growth, and Cash Flow.
+Keep the agreed **0-100 industry-peer percentile scale**, two metrics per block, and no
+overall grade. The user's follow-up confirmation supersedes the proposed 1-100/A-F scale.
 
-The Phase 2 foundation provides direct US daily price/volume ingestion, a persistent source cache,
-and daily input snapshots. Phase 3 adds controlled US/JP/GB local comparison. Phase 4 publishes
-fixture-backed completed weekly sector/industry snapshots and provides separate sector and
-industry discovery workflows. Industry discovery filters by one or more stable US parent-sector
-IDs and preserves the source mode when launched from sector discovery. Weekly industry inspection
-uses only completed weekly artifacts. Live industry proxies remain disabled unless dated ETF or
-membership/capitalization inputs and market-data display/derived-data rights are verified. These
-fixture workflows do not imply live non-US ingestion; constituent participation, flows, and other
-live non-price contracts remain deferred.
+Use yfinance as the single on-demand runtime financial-data source. Use `st.cache_data`
+for successful remote payloads and expensive deterministic calculations, and
+`st.session_state` for private selections and loaded view state. No database, snapshot
+build, Parquet cache, backend service, or new provider framework is required.
+
+Live capability is conditional, not assumed: exhaustive dated industry/index membership,
+corporate-action-comparable volume, publication dates and sufficient financial history
+are not established by yfinance alone. Unsupported data produces visible insufficiency.
+Controlled fixtures prove calculations but do not certify live coverage or display rights.
 
 ## Technical Context
 
-**Language/Version**: Python 3.12
+**Language/Version**: Python `>=3.12,<3.13`, matching the existing manifest.
 
-**Primary Dependencies**: Streamlit 1.62.x, pandas 3.x, NumPy 2.x, PyArrow 23.x; `uv` manages
-the project and lockfile
+**Primary Dependencies**: Existing constraints: Streamlit `>=1.50,<2`, yfinance
+`>=0.2.66,<1`, pandas `>=2.2,<3`, NumPy `>=2.2,<3`, Altair `>=5.5,<6`,
+exchange-calendars `>=4.11,<5`. Use `uv.lock`; no dependency change in planning.
+Do not depend on newer reactive-tab APIs absent from the minimum Streamlit version.
 
-**Storage**: Read-only, versioned Parquet snapshot directories with a JSON manifest; no user
-database in this feature
+**Storage**: Process-local, nonpersistent Streamlit data cache; private session state.
+Static source-qualification metadata and controlled test fixtures are not a financial
+database. Existing snapshot files remain compatible but outside the new runtime path.
 
-**Testing**: pytest for unit, contract, and integration tests; Streamlit `AppTest` for workflows;
-Ruff and Pyright as static quality gates
+**Testing**: pytest for pure calculations, adapter contracts, integration and deterministic
+timing cases; Streamlit AppTest for state and widget flows; browser checks for table
+interaction, charts, tabs and user-visible timing. Existing Ruff and strict Pyright gates.
 
-**Target Platform**: Local or hosted Streamlit server on macOS/Linux with a modern desktop or
-mobile browser
+**Target Platform**: Local Streamlit on macOS/Linux and desktop browser. Hosted deployment
+requires explicit source/display/derived-use permission; it is not authorized by this plan.
 
-**Project Type**: Single Python package with a Streamlit web UI and an offline snapshot-build
-entrypoint
+**Project Type**: One Python package, one Streamlit entrypoint, small calculation/data/UI helpers.
 
-**Performance Goals**: Filter, sort, and hierarchy interactions complete within two seconds for
-20 markets at the 95th percentile, measured against controlled data
+**Performance Goals**: SC-005: p95 at most two seconds for filter/sort/selection interactions
+over 2,500 already-loaded stocks. Measure end-to-end rendering, not only a formula helper.
+No cold-load latency or real-time-feed guarantee. Report remote progress and coverage.
 
-**Constraints**: Weekly completed-market scoreboards with daily evidence inputs; local comparisons
-are authoritative; no trade execution or forecast behavior; missing evidence fails closed only for
-the affected result; UI modules do not calculate domain outcomes; verify source rights before live
-non-price or additional-market ingestion is advertised
+**Constraints**: US common stocks; optional supported dated index filters; one source;
+completed regular sessions; explicit errors/coverage; no silent top-N, provider fallback,
+annual-for-TTM substitution, imputed publication dates, or retrospective current membership.
 
-**Scale/Scope**: Up to 20 markets for acceptance/performance; sector and industry classifications,
-five user stories, immutable read-only snapshots, no company-level research workflow
+**Scale/Scope**: Three stories, FR-001 through FR-024, SC-001 through SC-008.
+Load selected industries on demand, not the whole market's price history/fundamentals at startup.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design.*
+Design compliance is distinct from passing implementation tests or qualifying a live source.
 
-| Principle | Pre-design gate | Post-design evidence | Result |
-|-----------|-----------------|----------------------|--------|
-| Deliberate design | Requirements and domain decisions identify formulas, dates, thresholds, and failure modes. | Research records choices and rejected alternatives; contracts define inputs and errors. | PASS |
-| Small, cohesive units | Domain, orchestration, adapters, and UI need distinct owners. | Source tree gives calculations, use cases, providers, workflows, and components one responsibility each. | PASS |
-| Tests as evidence | Every behavior needs deterministic controlled data. | Failing-first unit, contract, integration, and `AppTest` tasks map to FR-001–FR-027. | PASS |
-| Lean, extensible architecture | Two demonstrated replacement needs exist: workflows and market-data sources. | Existing narrow ports and explicit registry address those needs; no dynamic plugin system or service tier is added. | PASS |
-| Maintainability | Domain decisions require visible provenance and explicit state. | Immutable domain records, versioned snapshot manifests, typed boundaries, and reason codes preserve intent. | PASS |
-| Engineering constraints | External data, filesystem access, dates, and Streamlit state must be isolated. | Provider/repository ports isolate I/O; evaluation dates are inputs; shared cached data is separate from session filter state. | PASS |
+| Gate under constitution v2.0.0 | Before research | Post-design evidence | Design result |
+|---|---|---|---|
+| Deliberate design | Formulas and acceptance outcomes specified | Research, model and contracts resolve choices and failures | PASS |
+| Cohesive units | UI, I/O and numerical policy need separate tests | Small helpers in the existing package; no new service layers | PASS |
+| Tests as required evidence | Tests-first implementation required | Requirement/test matrix and quickstart define exact controlled cases | PASS; execution pending |
+| Simple Streamlit-first architecture | Three tabs requested | Single app, explicit loads, no new route registry | PASS |
+| Maintainability | Stable IDs, explicit inputs and reasons required | Typed records, versioned detector, cutoff and source fingerprints | PASS |
+| Single free source and rights | yfinance selected, not silently supplemented | Unsupported capabilities fail closed; hosted rights are a release gate | PASS as design; source approval pending |
+| Cache and state isolation | Remote reruns must reuse data | TTL/key/refresh contract; private parent-child state transitions | PASS |
+| Migration safeguards | Prior work cannot be reinterpreted | Legacy schemas unchanged; contracts indexed; tasks history retained | PASS |
 
-No constitution exception is required.
+No architecture exception is requested. Missing live evidence must not be bypassed to claim
+feature completion. No unanswered product design choice remains; source qualification and
+measured acceptance remain explicit implementation/release dependencies.
 
 ## Project Structure
 
@@ -75,96 +84,109 @@ No constitution exception is required.
 
 ```text
 specs/001-market-leadership-screener/
-├── plan.md              # This file (/speckit-plan command output)
-├── research.md          # Phase 0 output (/speckit-plan command)
-├── data-model.md        # Phase 1 output (/speckit-plan command)
-├── quickstart.md        # Phase 1 output (/speckit-plan command)
-├── contracts/           # Phase 1 output (/speckit-plan command)
-└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
+  spec.md
+  plan.md
+  research.md
+  data-model.md
+  quickstart.md
+  contracts/
+    README.md
+    workflow.md
+    market-data-provider.md
+    fundamental-scoring.md
+    consolidation.md
+    legacy/                       # preserved prior workflow/provider contracts
+    ...                           # unchanged historical snapshot schemas/contracts
+  tasks.md                        # historical; regenerate separately, preserving task IDs
 ```
 
-### Source Code (repository root)
+### Source Code (planned changes, not implementation claims)
 
 ```text
-pyproject.toml
-uv.lock
 src/market_leadership/
-├── app.py                         # Streamlit entrypoint; one st.navigation call
-├── bootstrap.py                   # composition root and explicit workflow registry
-├── config.py                      # environment and snapshot-path configuration
-├── domain/
-│   ├── models.py                  # immutable identifiers and result records
-│   ├── regimes.py                 # normalized slope and market-regime rules
-│   ├── relative_strength.py       # returns, components, and composite
-│   ├── rankings.py                # statuses, tie-breaking, rank and score changes
-│   ├── proxies.py                 # documented representation and qualification
-│   ├── participation.py           # constituent breadth and concentration
-│   └── trading_activity.py        # price/volume-derived confirmation
-├── application/
-│   ├── ports.py                   # MarketDataProvider and SnapshotRepository protocols
-│   ├── queries.py                 # typed filter/search/sort request records
-│   ├── build_snapshot.py          # deterministic offline calculation pipeline
-│   │   ├── browse_scoreboard.py       # scoreboard query use case
-│   ├── discover_industries.py     # live industry price discovery when source gate passes
-│   ├── inspect_industry.py        # weekly industry, participation and provenance use case
-│   └── flows.py                   # observed fund-flow normalization and overlap
-├── infrastructure/
-│   ├── parquet_provider.py        # validated canonical snapshot input
-│   ├── parquet_repository.py      # atomic snapshot persistence and retrieval
-│   ├── massive_provider.py        # authenticated Massive REST adapter
-│   ├── yfinance_provider.py       # explicit no-key development adapter
-│   ├── market_data_cache.py      # canonical source-response cache
-│   └── fixture_provider.py        # deterministic acceptance-data adapter
-└── ui/
-    ├── navigation.py              # WorkflowSpec and st.Page construction
-    ├── state.py                   # session-local filter and drill-down state
-    ├── workflows/
-    │   ├── scoreboard.py
-    │   ├── industry_discovery.py
-    │   ├── industry_detail.py
-    │   └── methodology.py
-    └── components/
-        ├── filters.py
-        ├── ranking_table.py
-        ├── regime_summary.py
-        ├── evidence_panel.py
-        └── provenance.py
-
+  app.py                          # three-tab composition; replaces primary st.navigation
+  domain/
+    screening.py                  # universe sets, session returns, ranks, tri-state criteria
+    consolidation.py              # Wilder indicators and versioned interval detection
+    fundamentals.py                # pure raw-fact validation, percentiles and block scores
+    industry_proxies.py            # adapt existing qualification/selection where compatible
+  infrastructure/
+    yfinance_provider.py           # extend existing boundary with OHLC/actions/facts/universe
+  ui/
+    cache.py                      # new-path st.cache_data wrappers; legacy loaders isolated
+    state.py                      # namespaced selections, loaded-view intents, invalidation
+    screener.py                   # three stage-rendering functions, not a routing framework
 tests/
-├── fixtures/                      # dated controlled snapshots and expected outputs
-├── unit/domain/                   # formulas, boundaries, ties, and state transitions
-├── contract/                      # provider and snapshot schema conformance
-├── integration/                   # use cases over fixture and Parquet adapters
-└── app/                           # Streamlit AppTest workflow tests
+  unit/domain/                    # financial and technical boundary fixtures
+  contract/                       # mocked yfinance payloads, completeness and failure contracts
+  integration/                    # cache/cutoff/cohort invariance and migration guards
+  app/                            # AppTest plus targeted browser acceptance where needed
 ```
 
-**Structure Decision**: Use one installable `src` package. The domain owns calculation policy and
-has no Streamlit or filesystem imports. Application use cases depend only on domain code and ports.
-Infrastructure implements those ports. UI workflows are small function-based pages assembled in
-`bootstrap.py`; swapping a workflow changes one registry entry and does not alter navigation or
-domain code. Components render supplied view data and never determine status or eligibility. The
-workflow registry controls pages only. The equity package accepts only `EQUITY` instruments; other
-asset categories and stock research remain out of scope. Phase 2 input manifests remain unchanged;
-a separately versioned calculated weekly snapshot contract precedes its implementation.
+**Structure Decision**: Reuse the installable package and entrypoint. Helpers are needed to
+keep I/O, numerical rules and rendering independently testable, not to introduce a provider
+framework. No new application orchestration layer is needed. Inspect existing proxy,
+session-calendar, chart and error helpers before adapting them.
 
-**Industry discovery decision**: Keep weekly calculated industry snapshots backward-compatible.
-The new live-only single-stock proxy is a distinct domain type and never enters the weekly fund,
-index, or basket representation contract. ETF matching requires issuer/index evidence for an
-industry-specific exposure; a broad or multi-industry fund does not qualify as one industry's proxy.
-The UI can display weekly results and fail closed for live industries until sources satisfy T085 in
-`tasks.md`; a source name or public factsheet alone does not grant live display rights.
+The existing price adapter retains only close/volume; it cannot yet support OHLC-based
+ADX/ATR/corridors. Extend the new request path without breaking legacy close/volume
+consumers. The old calendar-offset performance helper and normalized-slope regime rule
+do not implement session returns or the specified ADX detector; do not silently reuse
+their different semantics.
 
-## Requirement Ownership
+## Data Flow and Delivery Order
 
-| Requirements | Owning implementation | Primary evidence |
-|--------------|-----------------------|------------------|
-| FR-001–FR-006 | market/classification inputs, `regimes`, browse use case, scoreboard workflow | US/JP/GB fixture, boundary tests, selection `AppTest` |
-| FR-007–FR-014 | `relative_strength`, `rankings`, `proxies`, weekly snapshot, industry inspection | basis, ties, missing history and drill-down tests |
-| FR-015–FR-018 | `participation`, `trading_activity`, inspection use case | membership/weight/volume coverage and divergence tests |
-| FR-019–FR-021 | observed-flow contract, `flows`, evidence panel | normalization/overlap, stale and separation tests |
-| FR-022–FR-023 | browse query, session filter state, filter components | filter/sort/reset/empty `AppTest` |
-| FR-024–FR-027 | provenance records, methodology workflow, evidence panels | contract and interpretation `AppTest` |
+1. Establish canonical records and controlled fixtures; write failing calculation tests.
+2. Implement pure screening, consolidation and financial scoring utilities independently.
+   The scoring utility accepts raw normalized facts and the full eligible peer cohort;
+   it never fetches data or imports Streamlit.
+3. Extend the yfinance boundary and cache wrappers with mocked contract tests first.
+   Record verified capabilities; return unsupported states for unmet source requirements.
+4. Wire explicit **Load industries**, **Load stocks**, **Load scorecards** and targeted
+   refresh intents. Eager tab rendering alone never performs remote requests. Loading
+   scorecards fetches the selected industry's entire pre-technical-filter peer cohort,
+   not merely selected or paged stocks.
+5. Connect dataframe industry selection, selection-only stock editor, scorecard metric
+   columns and subtle consolidation charts; reconcile dependent selections on each change.
+6. Validate migration and all revised acceptance criteria before retiring old primary UI
+   routes. Keep legacy snapshot builders/readers and fixtures functional and separate.
+
+Pure financial and technical modules can be implemented in parallel after shared records
+are settled. UI/cache work depends on those contracts. Source qualification may proceed
+independently but cannot be replaced by fixture success.
+
+## Requirement Ownership and Evidence
+
+| Requirements | Owner | Required evidence |
+|---|---|---|
+| FR-001, FR-009, FR-010, FR-017 | app, screener rendering, session state | Three-tab AppTest; immutable data columns; full pagination; dependent invalidation |
+| FR-002-FR-004 | data boundary and screening | Common-stock classification; union/intersection; cap boundaries; unsupported indices |
+| FR-005-FR-008 | screening and proxy selection | Exact 1/5-session endpoints; shared ranks; dated ETF/stock qualification |
+| FR-011-FR-013 | screening | AND truth states; SMA equality; prior-volume-only rule and invalid parameters |
+| FR-014-FR-016 | consolidation and charts | Reference indicator fixtures; long/short runs; no future information; corridor agreement |
+| FR-018-FR-021 | fundamentals and scorecards | Raw ratios, financial availability, percentile ties, peer invariance and invalid denominators |
+| FR-022-FR-024 | cache/data boundary and UI | Zero repeated calls while fresh; explicit expiry/errors/rights; no advice claims |
+| SC-001, SC-002, SC-008 | user acceptance | At least 90% meet the specified timed/interpretation outcomes |
+| SC-003, SC-004, SC-006, SC-007 | controlled integration acceptance | Exact outputs, coverage and request counts |
+| SC-005 | browser timing with controlled loaded data | 2,500 stocks; p95 <= 2 seconds including visible UI update |
+
+## Migration and Remaining Gates
+
+This design supersedes the old snapshot-first plan, routed workflows, relative-strength
+composites and Massive-selection behavior for the **new path only**. Never reinterpret
+existing weekly artifacts as these returns or scores. Historical schema bytes remain
+unchanged; no migration or deletion of user data is needed.
+
+Regenerate [tasks.md](tasks.md) with an explicit feature-001 path because the active pointer
+currently selects 002. Preserve completed IDs/history; mark obsolete unbuilt scope as
+superseded rather than treating it as implementation evidence. Planning does not generate
+or check off tasks. Feature 002 needs a separate scope reconciliation before combining work.
+
+Live release gates: verified universe/membership scope, qualified representations, adequate
+financial periods/publication metadata, comparable volume, deployment rights, and measured
+acceptance. Unsupported inputs remain visible; do not claim complete live fundamental grading.
 
 ## Complexity Tracking
 
-No constitution violations or justified complexity exceptions.
+No constitution violations or approved exceptions. No database, service tier, new provider
+registry, or additional page-routing layer is proposed.

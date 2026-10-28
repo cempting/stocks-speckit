@@ -1,5 +1,8 @@
 # Deferred Canonical Input Contracts
 
+> Historical backlog for the former weekly product. The phases and user-story numbers
+> below do not describe the revised MVP. See [contract status](README.md).
+
 These are release-target records, **not Phase 2 provider capabilities**. Each contract is introduced
 with failing contract tests before its owning story implementation. Fixture availability never
 implies a licensed, refreshable live source. Before enabling a live adapter, record its data

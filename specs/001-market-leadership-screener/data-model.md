@@ -1,184 +1,195 @@
-# Data Model: Market Leadership Screener
+# Data Model: Progressive Stock Screener
 
-## Modeling Rules
+These are planned typed Python records/dataframes, not database tables or new persisted
+schemas. Use existing identifiers/helpers where their meaning matches. Immutable result
+records and copied cached frames prevent accidental mutation of shared source data.
 
-- Identifiers are stable strings; display names and symbols are not identifiers.
-- Dates are ISO calendar dates. `as_of` is the observation date; `available_on` is the first date the
-  application may use the observation.
-- Historical classification, proxy, and source relationships are effective-dated.
-- Expected missing evidence produces `INSUFFICIENT` plus reason codes, never a guessed value.
-- Company and instrument remain separate so one company may have multiple listings.
+## Common Types and Provenance
 
-## Reference Entities
+Stable IDs identify instruments, sectors and industries; symbols/names are display
+attributes. UTC timestamps describe retrieval/publication; exchange-local dates identify
+completed sessions and fiscal periods. Never infer publication from period end/retrieval.
 
-### Market
+`EvidenceState = sufficient | insufficient | unsupported | error`.
+`CriterionState = pass | fail | insufficient`.
+Operational exceptions are surfaced, not silently mapped to a successful empty result.
 
-`market_id`, `name`, `base_currency`, `timezone`, `calendar_id`, `local_benchmark_id`,
-`classification_scheme_id`, `enabled_from`, `enabled_to`.
+### SourceEvidence
 
-Validation: one active local benchmark and one documented sector/industry scheme; currency is ISO
-4217; the primary listing market governs a multi-listed company. US/JP/GB reference markets in
-`tests/fixtures/acceptance/market_data.json` are controlled acceptance inputs, not live coverage.
+Fields: `source_id`, `dataset`, `retrieved_at`, `observed_at?`, `available_at?`,
+`effective_from?`, `effective_to?`, `expires_at`, `payload_fingerprint`,
+`source_version?`, `coverage_state`, `rights_scope`, `limitations`, `reason_codes`.
 
-### ClassificationNode
+Invariants: source is the one selected runtime provider; retrieval is not evidence of
+historical availability. Unknown dates remain unknown. Freshness describes cache age
+and source age separately. An expired value cannot be displayed as current.
 
-`node_id`, `scheme_id`, `level` (`SECTOR`, `INDUSTRY_GROUP`, `INDUSTRY`, `SUB_INDUSTRY`), `name`,
-`parent_node_id`, `effective_from`, `effective_to`.
+## Universe and Classification
 
-Validation: sector-to-industry ancestry is effective-dated and acyclic; an intermediary
-`INDUSTRY_GROUP` is retained where the scheme uses it. Never apply today's membership to history.
+### Instrument
 
-### Company and Instrument
+`instrument_id`, `company_id?`, `symbol`, `name`, `exchange`, `security_type`,
+`primary_listing`, `currency`, `active_from?`, `active_to?`, `source_evidence`.
 
-Company: `company_id`, `name`, `primary_market_id`, effective-dated `classification_path`.
+Only verified US common-stock listings enter the stock universe. Keep distinct share
+classes/listings distinct; collapse duplicate records for the same instrument. Unverified
+type/exchange/classification is a visible eligibility gap, not an assumed common stock.
+ETF/index instruments may represent a classification but never become member stocks.
 
-Instrument: `instrument_id`, `company_id?`, `asset_category` (`EQUITY` in this release), `kind`
-(`STOCK`, `FUND`, `INDEX`), `symbol`, `exchange`, `currency`, `return_basis`, `name`, `isin?`,
-`active_from`, `active_to`.
+### Classification and Membership
 
-Validation: symbol is unique per exchange and effective period; stocks reference one company; funds
-and indices do not impersonate companies. A future category is dispatched to its separately specified
-model before equity calculations and cannot enter with `asset_category = EQUITY`.
+Classification: `node_id`, `name`, `level` (`sector | industry`), `parent_sector_id?`,
+`taxonomy_id`, `effective_from?`, `effective_to?`, `source_evidence`.
 
-### Benchmark and Representation
+Membership: `industry_id`, `instrument_id`, `effective_from`, `effective_to?`,
+`available_at`, `source_evidence`. IndexMembership adds `index_id`.
 
-Benchmark: `benchmark_id`, `instrument_id`, `scope` (`LOCAL`, `GLOBAL`), `market_id?`, `currency`,
-`return_basis`.
+An industry has one valid parent at a given date; no conflicting overlapping assignments.
+Do not assign a proprietary taxonomy name to unverified provider labels. Effective
+periods and known availability must cover the analysis cutoff; current top-company lists
+or ETF holdings do not constitute full industry membership.
 
-Representation: `proxy_id`, `market_id`, `node_id`, `proxy_type` (`FUND`, `INDEX`,
-`EQUAL_WEIGHT_BASKET`, `NONE`), `instrument_id?`, `member_ids`, `purity_pct?`, `aum_usd?`,
-`adv20_usd?`, `selected_as_of`, `effective_from`, `effective_to`, `qualification_reasons`.
+### UniverseSelection and UniverseResult
 
-Validation: document each fund, official index, or constituent basket's composition basis, effective
-dates, source and qualification. A representation unavailable for required history makes its
-classification price result insufficient; no unverified liquidity or purity threshold is implied.
-The weekly snapshot representation types remain `FUND`, `INDEX`, `EQUAL_WEIGHT_BASKET`, and `NONE`.
-Live single-stock industry proxies are modeled separately and MUST NOT be written into or used to
-reinterpret the `weekly-1.0.0` contract.
+Selection: sorted unique `index_ids`, `exchange_ids`, `cap_bands`, `sector_ids`,
+`analysis_cutoff`, `membership_date`.
 
-### LiveIndustryProxyCandidate
+Result: ordered `instrument_ids`, `industry_members`, `expected_total?`, `returned_count`,
+`eligible_count`, `excluded_count`, `unclassified_count`, `gap_reasons`, `source_evidence`,
+`universe_fingerprint`.
 
-`market_id`, `sector_node_id`, `industry_node_id`, `symbol`, `name`, `kind` (`ETF` or `STOCK`),
-`source_id`, `composition_basis`, `effective_from`, `effective_to?`, `available_on`,
-`rights_verified`, `qualified`, `member_verified`, `market_cap?`, `market_cap_as_of?`.
+Union selected dated index memberships first, then intersect exchanges/cap bands; no
+index selection means the available verified US-common-stock set. Sectors form a union.
+An unsupported selected index is an unavailable request, never equivalent to no filter.
 
-Validation: candidate identifiers, source and composition basis are non-empty; effective end does
-not precede effective start; ETF candidates do not carry constituent market-cap evidence; STOCK
-market cap, when present, is positive. ETF candidates require verified, industry-specific
-issuer/index exposure and rights. STOCK candidates require verified dated membership, a positive
-market capitalization observed on the requested date, and source availability no later than that
-date. Select one qualified ETF before stock candidates; otherwise select the largest qualified
-stock, breaking equal market-cap ties by ascending symbol. Missing qualified evidence yields
-`NO_QUALIFIED_REPRESENTATION`. This live-only entity is not part of weekly snapshot storage.
+MarketCapObservation: `instrument_id`, `value`, `currency`, `valuation_at`,
+`available_at?`, `source_evidence`. Classify USD values: large >=10B; mid >=2B and <10B;
+small >=300M and <2B. Below-300M/unknown are separate; include with no cap-band filter
+but exclude from explicitly selected bands. Unknown total implies no coverage percentage.
 
-## Observation Entities
+### ClassificationRepresentation
 
-### PriceObservation and FxObservation
+`node_id`, `instrument_id?`, `kind` (`industry_etf | single_company | unavailable`),
+`qualification`, `composition_basis`, `effective_from`, `effective_to?`, `available_at`,
+`market_cap_evidence?`, `membership_evidence?`, `source_evidence`, `limitations`.
 
-Price: `instrument_id`, `date`, official-session OHLC, `volume`, `adjusted_close`, `return_basis`,
-`source_id`, `available_on`.
+Select one explicitly qualified industry ETF first. Without one, select the largest
+verified dated industry-member stock with positive comparable cap, tie by instrument
+ID. Incomplete membership/cap coverage cannot establish a largest-member claim.
+Representation identity never defines the member-stock set. Sector chart representations
+also require qualification; an industry corridor is never applied to a different stock.
 
-FX: `base_currency`, `quote_currency`, `date`, `close`, `source_id`, `available_on`.
+## Market Observations and Screening
 
-Validation: one value per key and source version; global conversion uses same-close FX. A missing FX
-observation blocks only the global result.
+### PriceHistory
 
-### FundHolding and Optional LiquidityObservation
+Key: `instrument_id`, `session`. Fields: adjusted `open`, `high`, `low`, `close`,
+`volume`, `price_basis`, `volume_basis`, `corporate_actions`, `source_evidence`,
+`history_start`, `history_truncated`, `requested_cutoff`, `latest_usable_session`.
 
-Liquidity (only where qualified as a documented representation property): `instrument_id`,
-`as_of`, `adv20_usd`, `aum_usd?`, `source_id`, `available_on`.
+Prices must be finite/positive with consistent OHLC bounds. Volume is finite and
+nonnegative; zero/undefined windows do not automatically qualify as healthy quiet volume.
+Sessions are ordered/unique. Do not bridge missing required sessions. Omit an incomplete
+trailing observation explicitly; invalid interior data is an adapter fault. Keep validated
+independent price evidence when volume comparability alone is insufficient.
 
-Holding: `fund_instrument_id`, `held_instrument_id`, `weight_pct`, `as_of`, `source_id`,
-`available_on`.
+### ScreeningCriteria
 
-Validation: weights are non-negative, effective-dated, source-attributed, and reconcile to the
-documented coverage. Phase 2 has no live holdings or liquidity input; approve any additional
-qualification thresholds and source rights before deploying a live representation adapter.
+`period_intervals` (1 or 5, default 5), four enabled flags, positive whole-number
+`volume_lookback` (default 20), finite positive `volume_multiplier` (default 2),
+`cutoff_session`, `detector_version` (`quiet-sideways-v1`).
 
-### ObservedFlowEvidence
+Invalid parameters produce visible validation errors without an upstream call.
+Consolidation uses these same volume parameters, even when the spike filter is disabled.
 
-`flow_id`, `fund_instrument_id`, `represented_node_id`, `event_period_start`, `event_period_end`,
-`available_on`, `net_flow`, `flow_currency`, `assets`, `assets_as_of`, `flow_pct_assets?`,
-`coverage`, `overlap_group?`, `source_id`, `freshness`, `reason_codes`.
+### CriterionResult and ScreeningRow
 
-Validation: `flow_pct_assets = 100 * net_flow / assets` only with positive, temporally compatible
-assets; otherwise normalization is insufficient. Availability cannot precede the event period.
-Overlapping funds are not summed without a documented deduplication and coverage rule. Missing,
-partial or stale flows leave the price ranking untouched. Changes in assets, price and volume are
-never substitutes for observed net flow.
+Criterion: `name`, `state`, `observed_value?`, `comparison_value?`, `required_sessions`,
+`available_sessions`, `reason_codes`.
 
-### SourceRecord
+Row: stock/industry IDs, cap, period return, four criterion results, `matches`,
+`source_evidence`, `consolidation_interval_ids`.
 
-`source_id`, `name`, `dataset`, `license_label`, `retrieved_at`, `version`, `checksum`.
+Enabled criteria AND together. Only all-pass matches; disabled criteria do not exclude.
+No enabled criteria means all available members, even with insufficient technical history.
+Retain diagnostic rows/counts for failures and insufficient evidence.
 
-Every observation and displayed outcome resolves to at least one source record or an explicit
-`SOURCE_UNAVAILABLE` reason.
+### IndustryPerformanceRow
 
-## Calculated Entities
+`industry_id`, `parent_sector_id`, `representation`, `period_intervals`, `start_session`,
+`end_session`, `return_pct?`, `direction?`, `rank?`, `evidence_state`, `source_evidence`.
 
-### MarketRegime
+Return = `100*(end/start - 1)` at exact completed-session endpoints. Positive/negative/zero
+is gaining/declining/neutral. Rank over sufficient industries in the visibly selected
+scope using competition ranks (1, 1, 3); reverse ordering when ascending. Exact ties
+share rank, sort by name/ID. A direction-filtered view retains its declared ranking scope;
+insufficient rows have no return/rank.
 
-`market_id`, `benchmark_id`, `as_of`, `close`, `sma150`, `normalized_slope_pct`,
-`slope_state`, `regime`, `data_quality`, `reason_codes`, `source_ids`.
+### ConsolidationInterval
 
-States: slope is `RISING`, `FLAT`, `FALLING`, or `UNDEFINED`; regime is `BULLISH`, `SIDEWAYS`,
-`BEARISH`, or `INSUFFICIENT`. Greater than +0.025% normalized OLS slope over 20 latest 150-session
-average values is rising; less than -0.025% is falling; equality is flat. An undefined slope with a present close and 150-session average yields `SIDEWAYS`;
-missing current close or average yields `INSUFFICIENT`.
+`interval_id`, `instrument_id`, `detector_version`, `cutoff_session`, `start_session`,
+`end_session`, `duration_sessions`, `approx_calendar_duration`, `lower`, `upper`,
+`width_absolute`, `width_pct`, `median_atr14`, `volume_context`, `ongoing`,
+`observable_history_start`, `start_boundary_truncated`, `reason_codes`.
 
-### ScoreboardSnapshot and ScoreboardEntry
+Interval ID derives from instrument/version/start, not chart position. Duration >=5;
+no maximum. Bounds derive only from interval OHLC available at cutoff. Current criterion
+passes only if the latest qualifying interval ends at cutoff or its immediately preceding
+session. Insufficient detector evidence differs from sufficient evidence with no interval.
+See [detector contract](contracts/consolidation.md).
 
-Snapshot: `snapshot_id`, `market_id`, `level`, `as_of`, `benchmark_id`, `currency_basis`,
-`return_basis`, `entry_ids`, `built_at`, `ruleset_version`, `source_ids`. The `as_of` is the latest
-completed week for that market; do not combine differently dated local weeks into a pooled ranking.
+## Financial Facts and Relative Scores
 
-Entry: `entry_id`, snapshot and node IDs, representation ID and type, absolute and local-relative
-1-week/1-month/3-month/6-month/12-month returns, parent-sector-relative industry returns,
-3/6/12-month strengths, composite, 50-session composite average, prior-week composite,
-week-over-week change, prior rank, rank change, rank, status, momentum state, data sufficiency,
-warning/reason codes, and provenance IDs.
+### FinancialFact
 
-Validation: components use the latest shared eligible observation, matching return basis and local
-benchmark. Composite = `0.4*RS_3m + 0.3*RS_6m + 0.3*RS_12m`; status requires 50-session composite
-history, and only sufficient entries rank. Ties use six-month, three-month, twelve-month, then name.
-An industry belongs to its dated parent sector and is ranked within that market and hierarchy.
+`instrument_id`, `field`, `value?`, `unit`, `currency?`, `period_start`, `period_end`,
+`period_kind`, `accounting_basis`, `available_at?`, `revision_available_at?`,
+`share_adjustment_basis?`, `source_evidence`, `reason_codes`.
 
-### BreadthSnapshot, ConcentrationEvidence, TradingActivityEvidence
+Fields include revenue, net income, common equity, diluted EPS, operating cash flow
+and capex. Distinguish flow periods from point-in-time balances. Preserve reported
+capex sign; normalize to a documented positive outflow for FCF. Do not use absolute
+value blindly. Current/prior TTM flows are non-overlapping comparable windows.
 
-Breadth: `node_id`, `as_of`, `membership_as_of`, `above_sma50_pct?`,
-`above_sma200_pct?`, `included_count`, `eligible_count`, `coverage_pct`, `reason_codes`,
-`source_ids`. Show each percentage only with at least five eligible members and history for at
-least 80% of them; missing evidence affects only breadth.
+### MetricObservation
 
-Concentration: `node_id`, `as_of`, `cap_weighted_return?`, `equal_weight_return?`,
-`comparison_basis`, `weight_coverage`, `source_ids`, `reason_codes`. Material disagreement is
-labelled possible concentration under a documented, versioned threshold, never broad participation
-by assumption.
+`instrument_id`, `metric_id`, `value?`, `unit`, `current_period`, `prior_period?`,
+`valuation_at?`, `input_fact_ids`, `available_at?`, `state`, `reason_codes`.
 
-Trading activity: `node_id`, `as_of`, `indicator`, `value?`, `comparison_period`, `coverage`,
-`source_ids`, `reason_codes`. Every indicator is explicitly **inferred trading activity** and is
-insufficient without aligned close/volume history. No indicator is an observed fund flow.
+Six metrics/formulas follow [the financial contract](contracts/fundamental-scoring.md).
+An invalid denominator or missing publication/vintage evidence invalidates only dependent
+metrics. Genuine negative current values remain negative; missing is never zero.
 
-## UI State
+### PeerCohort and StockScorecard
 
-`FilterState` is session-local and contains selected market IDs, hierarchy level, leadership statuses,
-momentum states, proxy types, sufficiency states, sort field/direction, and selected sector. It is
-not persisted in a shared cache or snapshot. Clearing filters preserves selected markets and
-restores the latest completed weekly SECTOR scoreboard.
+Cohort: `industry_id`, `universe_fingerprint`, sorted member IDs **before** technical
+filters/row selection, `financial_cutoff`, `membership_evidence`, `facts_fingerprint`.
 
-## Relationships
+Scorecard: instrument/cohort IDs; six raw metrics, percentile scores and per-metric
+valid-peer counts; Quality/Growth/Cash Flow block scores; periods, cutoff, sufficiency
+and reasons. Peer-valid N varies per metric, includes the stock, and must be >=5.
+Each block requires both metric percentiles. No overall score and no automatic trade label.
 
-```mermaid
-erDiagram
-    MARKET ||--o{ COMPANY : governs
-    MARKET ||--o{ CLASSIFICATION_NODE : enables
-    COMPANY ||--o{ INSTRUMENT : lists_as
-    CLASSIFICATION_NODE ||--o{ CLASSIFICATION_NODE : contains
-    CLASSIFICATION_NODE ||--o{ REPRESENTATION : represented_by
-    INSTRUMENT ||--o{ PRICE_OBSERVATION : has
-    SCOREBOARD_SNAPSHOT ||--o{ SCOREBOARD_ENTRY : contains
-    CLASSIFICATION_NODE ||--o{ SCOREBOARD_ENTRY : ranked_as
-    CLASSIFICATION_NODE ||--o{ BREADTH_SNAPSHOT : measured_by
-    CLASSIFICATION_NODE ||--o{ OBSERVED_FLOW_EVIDENCE : contextualized_by
-    SOURCE_RECORD ||--o{ PRICE_OBSERVATION : supplies
-```
+The cohort identity excludes technical flags, sorting, paging and selected rows.
+A changed financial cutoff, membership/universe or raw-fact version changes its identity.
+
+## Session State and Transitions
+
+Use the `screener.*` namespace: universe/criteria, selected sector IDs, industry ID,
+selected stock IDs, focused stock ID, stage load intents, page/sort state, editor generation,
+loaded view records and their request signatures/freshness. Store no credentials/shared
+cross-user source cache here. Loaded view records are private display copies, not a database.
+
+| Event | Preserve | Reconcile/invalidate |
+|---|---|---|
+| Ordinary rerun/sort/page | All still-valid stable selections and loaded data | Editor row positions remap to IDs; no remote request |
+| Sector/universe/membership change | Overlapping valid IDs and reusable source cache | Validate industry/stock eligibility; recompute cohort if universe changes |
+| Industry change | Universe, criteria, cache | Clear only stock choices not valid in the new industry; require new stock/scorecard load |
+| Technical criterion change | Membership, full cohort scores, valid selected stocks | Recompute matches; clear excluded stock choices/focus with a message |
+| Period/cutoff change | Valid parent/instrument selections | Invalidate dependent returns/detector results; financial cutoff changes invalidate scores |
+| Successful refresh | Valid selections | Replace affected source/view fingerprints; recompute dependents only |
+| Failed refresh/expiry | Selections and valid independent results | Mark affected old view stale/error; never mark it fresh or a successful empty result |
+
+Widget keys are separate from canonical state where widgets may be recreated. A changed
+editor dataset/page resets editor generation but rehydrates still-valid selected IDs.
+Changing visible tabs never resets parent context or triggers a source request.

@@ -1,5 +1,8 @@
 # Calculated Weekly Leadership Snapshot Contract
 
+> Historical, supported snapshot contract; not an input requirement or scoring rule for
+> the revised progressive screener. See [contract status](README.md). Its schema is unchanged.
+
 This US2 contract is implemented for controlled fixture-backed weekly results with the separate
 [`weekly-1.0.0` manifest](weekly-snapshot-manifest.schema.json), distinct from the Phase 2 daily
 input manifest (`snapshot-manifest.schema.json`). No live non-US or licensed classification source

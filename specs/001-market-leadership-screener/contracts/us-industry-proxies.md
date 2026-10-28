@@ -1,5 +1,11 @@
 # US Live Industry Proxy Contract
 
+> Historical source review and live-only contract, not the current tab workflow.
+> Candidate research remains useful, but the revised [data contract](market-data-provider.md)
+> governs current selection: stable instrument IDs resolve equal market caps, no benchmark
+> comparison is required, and one week means five completed-session intervals. No candidate
+> is enabled merely by retaining this document.
+
 ## Status
 
 **Live industry proxy catalog is not enabled.** The source review below identifies candidate
