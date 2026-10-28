@@ -3,6 +3,8 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
+from market_leadership.infrastructure.provider_validation import canonicalize_daily_history
+
 
 class FixtureProvider:
     provider_id = "fixture"
@@ -28,4 +30,10 @@ class FixtureProvider:
                 {"close": close, "volume": volume},
                 index=index,
             )
-        return result
+        return canonicalize_daily_history(
+            result,
+            symbols,
+            start=start,
+            end=end,
+            source_id=self.provider_id,
+        )

@@ -5,6 +5,11 @@
 The application calculates from canonical records rather than a vendor SDK. Any adapter, including
 local Parquet and deterministic fixtures, must satisfy this contract.
 
+This full-release contract is staged. Phase 2 runtime adapters declare only verified US adjusted
+daily price/volume capability; FX, classifications, holdings, fundamentals, and evidence contracts
+and their live sources are deferred. An adapter must reject unsupported requests rather than claim
+these data types or fabricate valid observations.
+
 ## Protocol
 
 ```python

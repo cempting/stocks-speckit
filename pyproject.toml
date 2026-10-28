@@ -5,6 +5,8 @@ description = "Market leadership discovery screener"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "altair>=5.5,<6",
+  "exchange-calendars>=4.11,<5",
+  "jsonschema[format]>=4.25,<5",
   "massive>=2.9,<3",
   "numpy>=2.2,<3",
   "pandas>=2.2,<3",
@@ -31,11 +33,19 @@ packages = ["src/market_leadership"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "live: tests that call external market-data services",
+]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = [".specify", "specs/tools"]
+extend-exclude = [".specify", "docs/tools"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = ["src"]

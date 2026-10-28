@@ -219,3 +219,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local snapshots and editor/OS temporary files
+.data/
+.DS_Store
+*.tmp
+*.swp

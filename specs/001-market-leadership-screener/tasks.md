@@ -2,26 +2,29 @@
 
 **Input**: Design documents in `specs/001-market-leadership-screener/`
 
-**Generation context**: Add a Streamlit discovery mode for all 11 US GICS sectors. It shows the
+**Generation context**: Phase 2 supports US daily price/volume only. It adds a Streamlit discovery
+mode for all 11 US GICS sectors. It shows the
 current S&P 500 market regime as sentiment, a three/six/twelve-month performance table switchable
 between absolute sector returns and returns relative to the S&P 500, and one chart per sector with
-official-session close, 50-session SMA, and volume. The existing weekly Industry scoreboard remains
-the default required by FR-002.
+official-session close, 50-session SMA, and volume. Weekly calculated sector and industry
+scoreboards, other markets, and non-price data contracts belong to later user-story phases.
 
 Discover providers for required index and stock data points through a configured
 `MarketDataProviderCatalog`. Direct adapters include Massive REST, preferred when
 `MASSIVE_API_KEY` is configured, and an explicitly selected `yfinance` adapter for development and
-personal-use deployments; configured financial-market MCP sources may contribute additional
-providers without becoming the deployed application's credential path. Runtime discovery returns
+personal-use deployments. The deployed application does not use MCP-based market-data services.
+Runtime discovery returns
 every provider whose declared capabilities cover the requested data point, market, identifiers,
 frequency, date range, currency, and return basis, then deterministic policy selects one and records
 the alternatives and selection reason. Provider failures do not silently switch vendors. Persist
 canonical provider responses as Parquet tables with JSON manifest metadata in an atomic source
 cache. Reuse an entry only when its schema and checksum are valid and its coverage reaches the
 request's latest required completed market session; refresh missing, invalid, incompatible, or
-under-covered entries, and always refresh on explicit force. Normal Streamlit reruns read immutable
-published snapshots; upstream calls occur only through the runtime request use case for
-stale/missing data or an explicit refresh action.
+under-covered entries, and always refresh on explicit force. Upstream calls occur only through
+the runtime request use case for stale/missing data or an explicit refresh action.
+Phase 2 discovery defaults to live-provider
+requests through the persistent source cache and offers an explicit optional mode for reading
+immutable daily input snapshots without upstream calls on reruns.
 
 **Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `quickstart.md`, and contracts.
 
@@ -49,32 +52,33 @@ composition before story implementation.
 **Critical**: No user story work begins until this phase is complete.
 
 - [X] T005 [P] Write domain-record and enum contract tests in `tests/unit/domain/test_models.py`
-- [ ] T006 [P] Write manifest validation tests for every required field, declared format, SHA-256 pattern, and `additionalProperties: false` rule in `tests/contract/test_snapshot_manifest.py`
-- [ ] T007 [P] Write shared provider conformance tests for as-of filtering, deterministic ordering, typed empty results, duplicate rejection, same-date FX behavior, source traceability, and canonical schemas in `tests/contract/test_market_data_provider.py`
-- [ ] T008 [P] Write registry tests for one default, unique stable keys and paths, deterministic order, and replacement of any one workflow in `tests/app/test_navigation.py`
+- [X] T006 [P] Write manifest validation tests for every required field, declared format, SHA-256 pattern, and `additionalProperties: false` rule in `tests/contract/test_snapshot_manifest.py`
+- [X] T007 [P] Write shared provider conformance tests for as-of filtering, deterministic ordering, typed empty results, duplicate rejection, same-date FX behavior, source traceability, and canonical schemas in `tests/contract/test_market_data_provider.py`
+- [X] T008 [P] Write registry tests for one default, unique stable keys and paths, deterministic order, and replacement of any one workflow in `tests/app/test_navigation.py`
 - [X] T009 Implement frozen, slotted domain records and enums in `src/market_leadership/domain/models.py`: hierarchy levels `SECTOR`, `INDUSTRY_GROUP`, `INDUSTRY`, `SUB_INDUSTRY`; instrument kinds `STOCK`, `FUND`, `INDEX`; proxy types `FUND`, `INDEX`, `EQUAL_WEIGHT_BASKET`, `NONE`; slope states `RISING`, `FLAT`, `FALLING`, `UNDEFINED`; regimes `BULLISH`, `SIDEWAYS`, `BEARISH`, `INSUFFICIENT`; and release asset category `EQUITY`; keep Company distinct from each listed Instrument
-- [ ] T010 Define `MarketDataProvider`, `MarketDataProviderCatalog`, and `SnapshotRepository` protocols with explicit typed requests, provider-capability candidates, selection reasons, and results in `src/market_leadership/application/ports.py`
-- [ ] T011 Implement the deterministic reference adapter with typed empty results, stable ordering, and source availability dates in `src/market_leadership/infrastructure/fixture_provider.py`
-- [ ] T012 Implement canonical Parquet input validation and `SnapshotNotFound`, `SchemaMismatch`, `IntegrityError`, and `SourceUnavailable` errors in `src/market_leadership/infrastructure/parquet_provider.py`
-- [ ] T013 Implement read-only snapshot loading and atomic snapshot publication in `src/market_leadership/infrastructure/parquet_repository.py`
-- [ ] T014 Implement environment and snapshot-path configuration in `src/market_leadership/config.py`; load the ignored local `.env` with `python-dotenv` for development without overriding process environment variables
-- [ ] T015 Define the frozen `WorkflowSpec` descriptor and `st.Page` conversion in `src/market_leadership/ui/navigation.py`, and assemble the explicit ordered registry with exactly one default in `src/market_leadership/bootstrap.py`; capture dependencies in render callables and do not discover pages dynamically
-- [ ] T016 Add the Streamlit entrypoint with exactly one `st.navigation` call in `src/market_leadership/app.py`
-- [ ] T017 [P] Write catalog and adapter contract tests for Massive REST, `yfinance`, and configured MCP sources covering capability enumeration, all matching providers per requested data point, request mapping, pagination, explicit adjusted-price behavior, canonical schema conversion, deterministic ordering, provenance, typed empty results, retryable failures, and secret-safe errors in `tests/contract/test_runtime_market_data_providers.py`
-- [ ] T018 [P] Write source-cache tests for deterministic request fingerprints, valid fresh hits with zero upstream calls, missing/invalid/schema-incompatible/under-covered misses, checksum rejection, atomic writes, and unconditional `force=True` refresh in `tests/unit/infrastructure/test_market_data_cache.py`
-- [ ] T019 [P] Write runtime request integration tests proving discovery returns all matching providers, selection is deterministic by canonical-schema compatibility then requested coverage then configured priority then provider ID, Massive is preferred only when configured and capable, `yfinance` selection is explicit, a missing or under-covered entry invokes only the selected provider once, a fresh entry invokes the upstream zero times, force invokes the selected provider once, no failure silently changes providers, and refresh failure preserves prior cache while blocking new publication in `tests/integration/test_refresh_market_data.py`
-- [ ] T020 [P] Write Streamlit cache tests proving immutable snapshot loads are keyed by snapshot ID and manifest checksum, a new published checksum invalidates the load, session filters do not affect the shared cache key, normal page reruns invoke MCP zero times, and explicit runtime refresh delegates exactly once to the request use case in `tests/app/test_snapshot_cache.py`
-- [ ] T021 Extend typed configuration with ordered direct provider IDs, optional MCP discovery endpoints and allowed tool/resource names, provider priorities, source-cache path, retry limits, and external `MASSIVE_API_KEY` credential reference in `src/market_leadership/config.py`; do not store credentials in snapshots, cache metadata, logs, or Streamlit state
-- [ ] T022 Implement configured capability discovery and canonical access for Massive REST, `yfinance`, and optional MCP sources in `src/market_leadership/infrastructure/massive_provider.py`, `src/market_leadership/infrastructure/yfinance_provider.py`, `src/market_leadership/infrastructure/mcp_provider_catalog.py`, and `src/market_leadership/infrastructure/mcp_provider.py`; retain all providers matching the requested data point and normalize selected index, stock, price, volume, FX, classification, holdings, fundamentals, and evidence responses without ranking or eligibility logic
-- [ ] T023 Implement an atomic canonical provider source cache in `src/market_leadership/infrastructure/market_data_cache.py`; key entries by provider identity, logical data point, normalized request, schema version, identifiers, date range, frequency, return basis, and currency basis, write canonical records as Parquet plus a JSON manifest, and record retrieval time, coverage start/end, source availability, selected provider, alternatives, selection reason, and SHA-256 checksums
-- [ ] T024 Implement runtime discovery, deterministic provider selection, request, and refresh orchestration in `src/market_leadership/application/request_market_data.py`; return all matching provider candidates, select by canonical-schema compatibility then requested coverage then configured priority then provider ID, reuse only checksum-valid schema-compatible cache covering the latest required session, bypass every hit when `force=True`, preserve but never publish stale data after upstream failure, and never switch providers implicitly after selection
-- [ ] T025 Integrate the runtime request service into snapshot construction, configured provider selection, required-session calculation, and `--force-refresh` in `src/market_leadership/application/build_snapshot.py`, and document direct adapters, MCP discovery, provider selection, runtime refresh, Parquet/manifest storage, and cache behavior in `specs/001-market-leadership-screener/quickstart.md`
-- [ ] T026 Implement immutable `st.cache_data` snapshot loading keyed only by snapshot ID and manifest checksum in `src/market_leadership/ui/cache.py` and wire runtime request dependencies through `src/market_leadership/bootstrap.py`; keep upstream clients and refresh state outside the shared data cache and keep filters, search, sort, and drill-down in session state
+- [X] T010 Define `MarketDataProvider`, `MarketDataProviderCatalog`, and `SnapshotRepository` protocols with explicit typed requests, provider-capability candidates, selection reasons, and results in `src/market_leadership/application/ports.py`
+- [X] T011 Implement the deterministic reference adapter with typed empty results, stable ordering, and source availability dates in `src/market_leadership/infrastructure/fixture_provider.py`
+- [X] T012 Implement canonical Parquet input validation and `SnapshotNotFound`, `SchemaMismatch`, `IntegrityError`, and `SourceUnavailable` errors in `src/market_leadership/infrastructure/parquet_provider.py`
+- [X] T013 Implement read-only snapshot loading and atomic snapshot publication in `src/market_leadership/infrastructure/parquet_repository.py`
+- [X] T014 Implement environment and snapshot-path configuration in `src/market_leadership/config.py`; load the ignored local `.env` with `python-dotenv` for development without overriding process environment variables
+- [X] T015 Define the frozen `WorkflowSpec` descriptor and `st.Page` conversion in `src/market_leadership/ui/navigation.py`, and assemble the explicit ordered registry with exactly one default in `src/market_leadership/bootstrap.py`; capture dependencies in render callables and do not discover pages dynamically
+- [X] T016 Add the Streamlit entrypoint with exactly one `st.navigation` call in `src/market_leadership/app.py`
+- [X] T017 [P] Write catalog and adapter contract tests for Massive REST and `yfinance` covering capability enumeration, all matching providers per requested data point, request mapping, pagination, explicit adjusted-price behavior, canonical schema conversion, deterministic ordering, provenance, typed empty results, retryable failures, and secret-safe errors in `tests/contract/test_runtime_market_data_providers.py`
+- [X] T018 [P] Write source-cache tests for deterministic request fingerprints, valid fresh hits with zero upstream calls, missing/invalid/schema-incompatible/under-covered misses, checksum rejection, atomic writes, and unconditional `force=True` refresh in `tests/unit/infrastructure/test_market_data_cache.py`
+- [X] T019 [P] Write runtime request integration tests proving discovery returns all matching providers, selection is deterministic by canonical-schema compatibility then requested coverage then configured priority then provider ID, Massive is preferred only when configured and capable, `yfinance` selection is explicit, a missing or under-covered entry invokes only the selected provider once, a fresh entry invokes the upstream zero times, force invokes the selected provider once, no failure silently changes providers, and refresh failure preserves prior cache while blocking new publication in `tests/integration/test_refresh_market_data.py`
+- [X] T020 [P] Write Streamlit cache tests proving immutable snapshot loads are keyed by snapshot ID and manifest checksum, a new published checksum invalidates the load, session filters do not affect the shared cache key, normal page reruns make no upstream provider requests, and explicit runtime refresh delegates exactly once to the request use case in `tests/app/test_snapshot_cache.py`
+- [X] T021 Extend typed configuration with ordered direct provider IDs, provider priorities, source-cache path, retry limits, and external `MASSIVE_API_KEY` credential reference in `src/market_leadership/config.py`; do not store credentials in snapshots, cache metadata, logs, or Streamlit state
+- [X] T022 Implement configured capability discovery and canonical US adjusted daily-history access for index and stock price/volume through `yfinance` in `src/market_leadership/infrastructure/yfinance_provider.py`; retain all matching provider candidates and reject unsupported data points explicitly without ranking or eligibility logic
+- [X] T023 Implement an atomic canonical daily-history provider source cache in `src/market_leadership/infrastructure/market_data_cache.py`; key entries by provider identity, logical data point, normalized request, schema version, identifiers, date range, frequency, return basis, and currency basis, write canonical records as Parquet plus a JSON manifest, and record retrieval time, coverage start/end, source availability, selected provider, alternatives, selection reason, and SHA-256 checksums
+- [X] T024 Implement runtime discovery, deterministic provider selection, request, and refresh orchestration in `src/market_leadership/application/request_market_data.py`; return all matching provider candidates, select by canonical-schema compatibility then requested coverage then configured priority then provider ID, reuse only checksum-valid schema-compatible cache covering the latest required session, bypass every hit when `force=True`, preserve but never publish stale data after upstream failure, and never switch providers implicitly after selection
+- [X] T025 Integrate the runtime request service into canonical US daily-history input snapshot construction, configured provider selection, required-session calculation, and `--force-refresh` in `src/market_leadership/application/build_snapshot.py`, and document direct adapters, provider selection, runtime refresh, Parquet/manifest storage, and cache behavior in `specs/001-market-leadership-screener/quickstart.md`; weekly calculated scoreboards are deferred
+- [X] T026 Implement immutable `st.cache_data` daily input snapshot loading keyed only by snapshot ID and manifest checksum in `src/market_leadership/ui/cache.py` and wire runtime request and optional snapshot dependencies through `src/market_leadership/bootstrap.py`; keep live-provider discovery the default, upstream clients and refresh state outside the shared data cache, and Phase 2 UI selections in session state (story-level filters, search, sort, and drill-down are deferred)
 
 **Checkpoint**: Contracts, provider discovery, adapters, Parquet/manifest cache, runtime refresh
 policy, and composition root are ready. Discovery returns all matching providers and explains the
-deterministic selection. A fresh cache causes no upstream call; missing, invalid, incompatible, or
-under-covered data refreshes; force always refreshes; normal reruns read immutable snapshots.
+deterministic selection. A fresh source cache causes no upstream call; missing, invalid,
+incompatible, or under-covered data refreshes; force always refreshes; snapshot-mode reruns read
+immutable daily input snapshots without upstream calls.
 
 ---
 
@@ -117,7 +121,7 @@ Write and confirm these tests fail before implementing the story.
 - [ ] T041 [US1] Implement the default weekly Industry scoreboard workflow through application use cases in `src/market_leadership/ui/workflows/scoreboard.py`
 - [ ] T042 [P] [US1] Test absolute sector returns, S&P 500-relative returns, matching three/six/twelve-month periods and return bases, 50-session SMA values, and insufficient history in `tests/unit/domain/test_sector_performance.py`
 - [ ] T043 [P] [US1] Test discovery queries return all 11 effective US GICS sectors in deterministic name order with S&P 500 sentiment, both performance modes, dated close/SMA50/volume series, and explicit insufficient records in `tests/integration/test_discover_sectors.py`
-- [ ] T044 [P] [US1] Test discovery initial render, absolute-versus-S&P-500 segmented control, all-sector table and charts, selected and alternative runtime data providers, fresh-cache behavior, explicit forced refresh, empty state, insufficient state, and safe MCP failure with Streamlit `AppTest` in `tests/app/test_discovery.py`
+- [ ] T044 [P] [US1] Test discovery initial render, absolute-versus-S&P-500 segmented control, all-sector table and charts, selected and alternative runtime data providers, fresh-cache behavior, explicit forced refresh, empty state, insufficient state, and safe provider failure with Streamlit `AppTest` in `tests/app/test_discovery.py`
 - [ ] T045 [US1] Implement absolute sector returns, S&P 500-relative returns, and 50-session simple moving averages over matching return bases in `src/market_leadership/domain/relative_strength.py`; preserve missing history as insufficient and never forward-fill a missing sector or benchmark close
 - [ ] T046 [US1] Implement a typed US-sector discovery query that selects the 11 effective US `SECTOR` nodes, uses their selected proxies, returns S&P 500 `MarketRegime` as sentiment, and supplies three/six/twelve-month absolute and relative performance plus dated close/SMA50/volume chart series in `src/market_leadership/application/discover_sectors.py`
 - [ ] T047 [P] [US1] Implement a supplied-value-only sector performance table with an absolute-versus-S&P-500 segmented mode control and explicit period, basis, as-of, and insufficiency labels in `src/market_leadership/ui/components/sector_performance_table.py`
@@ -308,7 +312,7 @@ analyzed against only its own local benchmark and data context.
 ### Parallel Opportunities
 
 - Foundational contract tests T005-T008 can run in parallel.
-- MCP catalog, cache, runtime refresh, and Streamlit cache tests T017-T020 can run in parallel; T022 and T023 can proceed together after T010 and T021, while T024 waits for both.
+- Direct-provider catalog, cache, runtime refresh, and Streamlit cache tests T017-T020 can run in parallel; T022 and T023 can proceed together after T010 and T021, while T024 waits for both.
 - US1 tests T027-T032 and T042-T044 can run in parallel; after T009, T033, T034, and T036 touch independent modules, while T047 and T048 can run together after T046 defines their view records.
 - US2 tests T050-T051 can run in parallel.
 - US3 tests T058-T061 can run in parallel; T062 and T063 touch independent domain modules.
@@ -386,9 +390,9 @@ T078: Test category dispatch in tests/integration/test_asset_category_dispatch.p
 
 ## Input-Derived Coverage
 
-- **MCP-001 - Find every runtime-capable provider for a requested data point**: T010, T017, T019, T021-T022, T024, T044, T049
-- **MCP-002 - Request through deterministic provider selection and refresh only when stale/missing or forced**: T018-T020, T023-T026, T044, T049
-- **MCP-003 - Store canonical acquired data in an appropriate typed format**: T006, T018, T023, T025, T082
+- **PROVIDER-001 - Find every runtime-capable provider for a requested data point**: T010, T017, T019, T021-T022, T024, T044, T049
+- **PROVIDER-002 - Request through deterministic provider selection and refresh only when stale/missing or forced**: T018-T020, T023-T026, T044, T049
+- **PROVIDER-003 - Store canonical acquired data in an appropriate typed format**: T006, T018, T023, T025, T082
 
 ## Implementation Strategy
 

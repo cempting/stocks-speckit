@@ -48,9 +48,9 @@ tables plus a JSON manifest. A `MarketDataProvider` protocol reads source data f
 a `SnapshotRepository` protocol atomically publishes and loads calculated snapshots. Configured
 runtime adapters share the same contract: Massive REST is preferred when `MASSIVE_API_KEY` is
 available, while `yfinance` provides an explicitly selected no-key adapter for development and
-personal-use deployments. Massive MCP is used for endpoint discovery and live response inspection,
-not as a credential path for the deployed Streamlit application. Local Parquet remains the
-application's immutable input boundary, with a fixture adapter for acceptance tests.
+personal-use deployments. The deployed Streamlit application uses these direct HTTP/Python adapters
+and does not depend on MCP services. Local Parquet remains the application's immutable input
+boundary, with a fixture adapter for acceptance tests.
 
 **Rationale**: A canonical file contract prevents vendor assumptions while preserving source
 attribution. Massive provides an authenticated, documented API and official Python client suitable

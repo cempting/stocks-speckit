@@ -1,0 +1,85 @@
+{
+  "as_of": "2026-10-23",
+  "markets": [
+    {
+      "market_id": "US",
+      "name": "United States",
+      "base_currency": "USD",
+      "timezone": "America/New_York",
+      "calendar_id": "XNYS",
+      "local_benchmark_id": "SPX",
+      "classification_scheme_id": "GICS-US"
+    },
+    {
+      "market_id": "JP",
+      "name": "Japan",
+      "base_currency": "JPY",
+      "timezone": "Asia/Tokyo",
+      "calendar_id": "XTKS",
+      "local_benchmark_id": "N225",
+      "classification_scheme_id": "GICS-JP"
+    },
+    {
+      "market_id": "GB",
+      "name": "United Kingdom",
+      "base_currency": "GBP",
+      "timezone": "Europe/London",
+      "calendar_id": "XLON",
+      "local_benchmark_id": "UKX",
+      "classification_scheme_id": "GICS-GB"
+    }
+  ],
+  "benchmarks": [
+    {
+      "market_id": "US",
+      "symbol": "SPX",
+      "close": 6800.0,
+      "regime": "BULLISH"
+    },
+    {
+      "market_id": "JP",
+      "symbol": "N225",
+      "close": 51000.0,
+      "regime": "SIDEWAYS"
+    },
+    { "market_id": "GB", "symbol": "UKX", "close": 9400.0, "regime": "BEARISH" }
+  ],
+  "sector_outcomes": [
+    {
+      "market_id": "US",
+      "sector": "Information Technology",
+      "absolute_3m": 0.12,
+      "relative_3m": 0.04
+    },
+    {
+      "market_id": "US",
+      "sector": "Utilities",
+      "absolute_3m": 0.03,
+      "relative_3m": -0.05
+    },
+    {
+      "market_id": "JP",
+      "sector": "Industrials",
+      "absolute_3m": 0.08,
+      "relative_3m": 0.02
+    },
+    {
+      "market_id": "JP",
+      "sector": "Consumer Staples",
+      "absolute_3m": -0.01,
+      "relative_3m": -0.07
+    },
+    {
+      "market_id": "GB",
+      "sector": "Energy",
+      "absolute_3m": 0.02,
+      "relative_3m": 0.09
+    },
+    {
+      "market_id": "GB",
+      "sector": "Financials",
+      "absolute_3m": -0.11,
+      "relative_3m": -0.04
+    }
+  ]
+}

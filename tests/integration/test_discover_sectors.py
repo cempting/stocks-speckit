@@ -3,7 +3,10 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from market_leadership.application.discover_sectors import discover_sectors
+from market_leadership.application.discover_sectors import (
+    discover_sectors,
+    discover_sectors_from_snapshot,
+)
 
 
 class StubProvider:
@@ -61,3 +64,18 @@ def test_discovery_returns_all_sectors_sentiment_metrics_and_charts() -> None:
     real_estate = next(sector for sector in result.sectors if sector.symbol == "XLRE")
     assert real_estate.performance is None
     assert real_estate.insufficient_reason is not None
+
+
+def test_snapshot_prices_can_drive_discovery_without_provider_calls() -> None:
+    history = _history()
+    prices = history.reset_index(names="date")
+    prices.insert(0, "symbol", "SPY")
+
+    discovery = discover_sectors_from_snapshot(
+        {"prices": prices}, source_id="fixture", as_of=date(2026, 10, 23)
+    )
+
+    assert discovery.provider_id == "fixture"
+    assert discovery.sentiment.benchmark == "SPY"
+    assert len(discovery.sectors) == 11
+    assert all(sector.performance is None for sector in discovery.sectors)

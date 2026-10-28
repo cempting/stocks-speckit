@@ -14,6 +14,12 @@ snapshots. Keep calculations in pure Python modules, coordinate them through sma
 cases and provider protocols, and expose them through independently testable Streamlit workflow
 functions registered in one explicit navigation composition root.
 
+The Phase 2 foundation is narrower than the completed release: direct US daily price/volume
+ingestion, a persistent canonical source cache, a daily input snapshot builder, and optional
+immutable input-snapshot viewing. Live-provider discovery remains the Phase 2 UI default. Weekly
+calculated scoreboards, additional markets, and non-price runtime contracts follow in user-story
+phases.
+
 ## Technical Context
 
 **Language/Version**: Python 3.12
@@ -101,8 +107,7 @@ src/market_leadership/
 │   ├── parquet_repository.py      # atomic snapshot persistence and retrieval
 │   ├── massive_provider.py        # authenticated Massive REST adapter
 │   ├── yfinance_provider.py       # explicit no-key development adapter
-│   ├── mcp_provider_catalog.py    # optional MCP capability discovery
-│   ├── market_data_cache.py       # canonical source-response cache
+│   ├── market_data_cache.py      # canonical source-response cache
 │   └── fixture_provider.py        # deterministic acceptance-data adapter
 └── ui/
     ├── navigation.py              # WorkflowSpec and st.Page construction

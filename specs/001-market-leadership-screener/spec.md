@@ -13,6 +13,15 @@ markets, identify gaining and declining sectors and industries, drill into the s
 and assess money-flow momentum using clearly distinguished price, participation, trading-activity,
 and observed fund-flow evidence. Postpone watchlists and portfolio tracking."
 
+## Clarifications
+
+### Session 2026-10-27
+
+- Q: For Phase 2, should non-price data such as classifications, holdings, fundamentals, and fund flows need live provider support, or is a canonical fixture/snapshot contract enough until those sources are available? → A: Narrow Phase 2 to price/volume only; defer other contracts.
+- Q: What must the Phase 2 snapshot and Streamlit checkpoint actually display: only verified daily price/volume inputs, or a calculated weekly sector-and-industry scoreboard? → A: Canonical daily input snapshots and basic loading; weekly scoreboard later.
+- Q: During Phase 2, should the discovery page read published input snapshots by default, or keep requesting live data on page visits? → A: Keep live-data discovery as the default, with an optional snapshot mode.
+- Q: How many equity markets must have working live daily-history ingestion at the Phase 2 checkpoint? → A: US only; additional markets later.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Select and Compare Markets (Priority: P1)
@@ -370,12 +379,24 @@ and verify filtering, reset behavior, definitions, provenance, dates, and interp
 
 ## Assumptions
 
+- Phase 2 foundation is limited to direct daily price and volume ingestion. Canonical contracts for
+  FX, classifications, holdings, fundamentals, and observed flows are deferred; this staging does
+  not remove their applicable release requirements or authorize unsupported provider claims.
+- Phase 2 publishes and loads immutable canonical daily input snapshots. Weekly sector-and-industry
+  scoreboards, rankings, and their UI belong to subsequent user-story implementation; input
+  snapshots alone do not satisfy the completed-weekly-snapshot discovery requirements.
+- In Phase 2, the discovery page defaults to live daily history and offers an explicit mode for
+  reading a published input snapshot. Repeated viewing in snapshot mode makes no external data
+  requests; switching modes does not imply an automatic switch to a different source.
+- Phase 2 live ingestion supports the US market only. Additional live markets require their own
+  benchmark, calendar, currency, classification, and source contracts before being advertised.
 - The first implementation may support only a subset of markets, but the available set is explicit
   and the selection behavior supports both one and several markets.
 - GICS or an equivalently documented sector-and-industry taxonomy is available for each supported
   market; taxonomy differences are not silently merged.
-- The latest completed weekly snapshot is the default analysis point, while daily observations may
-  support moving averages, breadth, volume evidence, and freshness checks.
+- After weekly scoreboards are introduced, the latest completed weekly snapshot is the default
+  analysis point. Daily observations may support moving averages, breadth, volume evidence, and
+  freshness checks.
 - Local-market relative strength is authoritative for local discovery. Global-benchmark comparison is
   optional context and requires an aligned currency basis.
 - Breadth and concentration are supporting evidence and do not replace the core leadership ranking.

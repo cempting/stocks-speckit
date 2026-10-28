@@ -68,6 +68,15 @@ def discover_sectors(
         end=as_of,
         force=force,
     )
+    return discover_sectors_from_history(provider.provider_id, history, as_of=as_of)
+
+
+def discover_sectors_from_history(
+    provider_id: str,
+    history: dict[str, pd.DataFrame],
+    *,
+    as_of: date,
+) -> DiscoveryResult:
     benchmark_history = history.get(BENCHMARK, _empty_history())
     sentiment = calculate_market_sentiment(benchmark_history, BENCHMARK)
     benchmark_closes = cast(pd.Series, benchmark_history["close"])
@@ -98,7 +107,34 @@ def discover_sectors(
 
     return DiscoveryResult(
         as_of=as_of,
-        provider_id=provider.provider_id,
+        provider_id=provider_id,
         sentiment=sentiment,
         sectors=tuple(sectors),
     )
+
+
+def discover_sectors_from_snapshot(
+    tables: dict[str, pd.DataFrame],
+    *,
+    source_id: str,
+    as_of: date,
+) -> DiscoveryResult:
+    prices = tables["prices"]
+    if list(prices.columns) != ["symbol", "date", "close", "volume"]:
+        raise ValueError("snapshot prices must have canonical daily-history columns")
+    if prices[["symbol", "date"]].isna().any().any():
+        raise ValueError("snapshot prices contain missing keys")
+    if prices.duplicated(subset=["symbol", "date"]).any():
+        raise ValueError("snapshot prices contain duplicate symbol/date keys")
+    symbols = (BENCHMARK, *(symbol for _, symbol in SECTOR_PROXIES))
+    histories: dict[str, pd.DataFrame] = {}
+    for symbol in symbols:
+        rows = prices.loc[prices["symbol"] == symbol, ["date", "close", "volume"]].copy()
+        rows["date"] = pd.to_datetime(rows["date"], errors="raise")
+        history = rows.set_index("date").sort_index()
+        history = history.loc[
+            (history.index.date >= as_of - timedelta(days=550)) & (history.index.date <= as_of)
+        ].astype({"close": "float64", "volume": "float64"})
+        history.attrs.update({"source_id": source_id})
+        histories[symbol] = history
+    return discover_sectors_from_history(source_id, histories, as_of=as_of)

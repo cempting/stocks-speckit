@@ -47,7 +47,7 @@ def test_massive_provider_normalizes_adjusted_aggregate_models() -> None:
     result = MassiveProvider(client=Client()).fetch_daily_history(
         ("SPY",),
         start=date(2026, 10, 1),
-        end=date(2026, 10, 23),
+        end=date(2026, 10, 24),
     )
 
     assert list(result["SPY"].columns) == ["close", "volume"]

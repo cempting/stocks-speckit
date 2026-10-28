@@ -1,8 +1,0 @@
-{
-  "servers": {
-    "massive": {
-      "type": "http",
-      "url": "https://mcp.massive.com/"
-    }
-  }
-}
