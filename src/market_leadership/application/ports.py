@@ -43,6 +43,18 @@ class ProviderCapability:
     currencies: frozenset[str]
     return_bases: frozenset[str]
     identifiers: frozenset[str] | None = None
+    excluded_identifiers: frozenset[str] = frozenset()
+    effective_from: date | None = None
+    effective_to: date | None = None
+    available_on: date | None = None
+
+    def __post_init__(self) -> None:
+        if (
+            self.effective_from is not None
+            and self.effective_to is not None
+            and self.effective_to < self.effective_from
+        ):
+            raise ValueError("capability effective end must not precede its start")
 
     def covers(self, request: DataPointRequest) -> bool:
         return (
@@ -52,6 +64,10 @@ class ProviderCapability:
             and request.currency in self.currencies
             and request.return_basis in self.return_bases
             and (self.identifiers is None or set(request.identifiers).issubset(self.identifiers))
+            and not self.excluded_identifiers.intersection(request.identifiers)
+            and (self.effective_from is None or request.start >= self.effective_from)
+            and (self.effective_to is None or request.end <= self.effective_to)
+            and (self.available_on is None or request.end <= self.available_on)
         )
 
 

@@ -6,15 +6,24 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
 
+from market_leadership.application.compare_markets import MarketComparison, compare_markets
 from market_leadership.application.discover_sectors import (
     BENCHMARK,
     SECTOR_PROXIES,
     DiscoveryResult,
     discover_sectors_from_history,
 )
-from market_leadership.bootstrap import build_request_provider, build_snapshot_repository
+from market_leadership.bootstrap import (
+    build_fixture_market_context,
+    build_request_provider,
+    build_snapshot_repository,
+)
 from market_leadership.config import load_settings
-from market_leadership.infrastructure.snapshot_errors import SnapshotNotFound
+from market_leadership.infrastructure.snapshot_errors import (
+    SchemaMismatch,
+    SnapshotNotFound,
+    SourceUnavailable,
+)
 from market_leadership.ui.cache import load_published_discovery
 from market_leadership.ui.performance_table import (
     performance_table_height,
@@ -191,9 +200,62 @@ def provider_options(default_provider: str, massive_available: bool) -> list[str
     return options
 
 
+def render_fixture_comparison(comparison: MarketComparison) -> None:
+    for overview in comparison.markets:
+        st.subheader(f"{overview.name} ({overview.market_id})")
+        observed_on = overview.as_of.isoformat() if overview.as_of is not None else "Unavailable"
+        available_on = (
+            overview.source_available_on.isoformat()
+            if overview.source_available_on is not None
+            else "Unavailable"
+        )
+        coverage_start = (
+            overview.coverage_start.isoformat()
+            if overview.coverage_start is not None
+            else "Unavailable"
+        )
+        st.caption(
+            f"Benchmark {overview.benchmark_id} · {overview.currency} · "
+            f"{overview.calendar_id} · {observed_on} · "
+            f"{overview.return_basis} · source {overview.source_id} available "
+            f"{available_on} · coverage since {coverage_start}"
+        )
+        st.metric("Local regime", overview.regime)
+        if overview.freshness == "insufficient":
+            st.warning(f"{overview.market_id} local benchmark evidence is insufficient.")
+        elif overview.freshness != "current":
+            st.warning(f"{overview.market_id} benchmark or sector evidence is stale.")
+        if overview.sector_outcomes:
+            st.caption("Three-month local relative proxy outcomes; not weekly leadership ranks")
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "Sector": outcome.sector,
+                            "3 months vs local benchmark": outcome.relative_3m * 100,
+                            "Status": overview.freshness.title(),
+                        }
+                        for outcome in overview.sector_outcomes
+                    ]
+                ),
+                hide_index=True,
+                width="stretch",
+            )
+        else:
+            st.info("No dated sector outcomes are available for this market.")
+        if overview.global_context is not None:
+            st.caption(
+                f"Separate global benchmark {overview.global_context.benchmark_id} "
+                f"({overview.global_context.currency})"
+            )
+        elif overview.global_unavailable_reason is not None:
+            st.warning(overview.global_unavailable_reason)
+
+
 settings = load_settings()
 selected_provider: str | None = None
 requested_as_of: date | None = None
+selected_markets: tuple[str, ...] = ()
 force_refresh = False
 
 (
@@ -204,15 +266,19 @@ force_refresh = False
     refresh_column,
     theme_column,
 ) = st.columns([2.1, 1, 1, 1, 0.8, 0.8])
-with title_column:
-    st.title("US Sector Discovery")
-    st.caption("GICS sector leadership through liquid US-listed proxies")
 with source_column:
     source_mode = st.selectbox(
         "Data source",
-        ["Live provider", "Published snapshot"],
+        ["Live provider", "Published snapshot", "Acceptance fixture"],
         key="discovery_source_mode",
     )
+with title_column:
+    if source_mode == "Acceptance fixture":
+        st.title("Market Comparison")
+        st.caption("Controlled US/JP/GB sample · not live market data")
+    else:
+        st.title("US Sector Discovery")
+        st.caption("GICS sector leadership through liquid US-listed proxies")
 with provider_column:
     if source_mode == "Live provider":
         options = provider_options(settings.default_provider, settings.massive_available)
@@ -224,10 +290,23 @@ with provider_column:
             else 0,
             format_func=lambda value: "Massive" if value == "massive" else value.title(),
         )
+    elif source_mode == "Acceptance fixture":
+        selected_markets = tuple(
+            st.multiselect(
+                "Markets",
+                options=("US", "JP", "GB"),
+                default=("US",),
+                key="selected_fixture_markets",
+            )
+        )
 with date_column:
-    if source_mode == "Live provider":
+    if source_mode in ("Live provider", "Acceptance fixture"):
         market_today = datetime.now(ZoneInfo("America/New_York")).date()
-        requested_as_of = st.date_input("As of", value=market_today, max_value=market_today)
+        requested_as_of = st.date_input(
+            "As of",
+            value=date(2026, 10, 23) if source_mode == "Acceptance fixture" else market_today,
+            max_value=market_today,
+        )
 with refresh_column:
     if source_mode == "Live provider":
         st.write("")
@@ -250,6 +329,24 @@ with theme_column:
     ):
         st.session_state.dark_mode = not dark_mode
         st.rerun()
+
+if source_mode == "Acceptance fixture":
+    if not selected_markets:
+        st.info("Select at least one fixture market to compare local outcomes.")
+        st.stop()
+    if requested_as_of is None:
+        raise RuntimeError("Fixture observation date is unavailable")
+    try:
+        comparison = compare_markets(
+            selected_markets,
+            market_data=build_fixture_market_context(),
+            as_of=requested_as_of,
+        )
+    except (SourceUnavailable, SchemaMismatch, KeyError, ValueError):
+        st.error("Acceptance market context could not be loaded. Check the controlled fixture.")
+        st.stop()
+    render_fixture_comparison(comparison)
+    st.stop()
 
 try:
     if source_mode == "Published snapshot":

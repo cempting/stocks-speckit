@@ -16,17 +16,17 @@ class MarketSentiment:
 
 
 def calculate_market_sentiment(frame: pd.DataFrame, benchmark: str = "SPY") -> MarketSentiment:
-    closes = cast(pd.Series, frame["close"]).dropna().sort_index()
+    closes = cast(pd.Series, frame["close"]).sort_index()
     sma150 = cast(
         pd.Series,
         closes.rolling(window=150, min_periods=150).mean(),
-    ).dropna()
-    if closes.empty or sma150.empty:
+    )
+    if closes.empty or pd.isna(closes.iloc[-1]) or pd.isna(sma150.iloc[-1]):
         return MarketSentiment(benchmark, "Insufficient", None, None, None, "Undefined")
 
     latest_close = float(closes.iloc[-1])
     latest_sma = float(sma150.iloc[-1])
-    if len(sma150) < 20:
+    if len(sma150) < 20 or sma150.iloc[-20:].isna().any():
         return MarketSentiment(
             benchmark,
             "Sideways",

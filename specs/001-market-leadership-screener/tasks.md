@@ -1,46 +1,30 @@
 # Tasks: Market Leadership Screener
 
-**Input**: Design documents in `specs/001-market-leadership-screener/`
+**Input**: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`
+in `specs/001-market-leadership-screener/`.
 
-**Generation context**: Phase 2 supports US daily price/volume only. It adds a Streamlit discovery
-mode for all 11 US GICS sectors. It shows the
-current S&P 500 market regime as sentiment, a three/six/twelve-month performance table switchable
-between absolute sector returns and returns relative to the S&P 500, and one chart per sector with
-official-session close, 50-session SMA, and volume. Weekly calculated sector and industry
-scoreboards, other markets, and non-price data contracts belong to later user-story phases.
+**Baseline**: T001–T026 are completed Phase 1–2 work, retained without renumbering or reopening.
+They provide US daily price/volume ingestion, source cache, canonical daily *input* snapshots and
+live-provider discovery (development default), not release weekly leadership. The US/JP/GB acceptance
+fixture is controlled data only. Do not claim live JP/GB ingestion, non-price feeds or display
+licenses from fixture conformance. At release, replace the development default with the latest
+completed weekly **SECTOR** scoreboard; preserve live US discovery as a separate development path
+until that workflow is ready.
 
-Discover providers for required index and stock data points through a configured
-`MarketDataProviderCatalog`. Direct adapters include Massive REST, preferred when
-`MASSIVE_API_KEY` is configured, and an explicitly selected `yfinance` adapter for development and
-personal-use deployments. The deployed application does not use MCP-based market-data services.
-Runtime discovery returns
-every provider whose declared capabilities cover the requested data point, market, identifiers,
-frequency, date range, currency, and return basis, then deterministic policy selects one and records
-the alternatives and selection reason. Provider failures do not silently switch vendors. Persist
-canonical provider responses as Parquet tables with JSON manifest metadata in an atomic source
-cache. Reuse an entry only when its schema and checksum are valid and its coverage reaches the
-request's latest required completed market session; refresh missing, invalid, incompatible, or
-under-covered entries, and always refresh on explicit force. Upstream calls occur only through
-the runtime request use case for stale/missing data or an explicit refresh action.
-Phase 2 discovery defaults to live-provider
-requests through the persistent source cache and offers an explicit optional mode for reading
-immutable daily input snapshots without upstream calls on reruns.
-
-**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `quickstart.md`, and contracts.
-
-**Architecture constraint**: Preserve the four layers: pure domain, application use cases,
-infrastructure adapters, and Streamlit UI. The UI calls domain behavior only through application use
-cases. Use an explicit `WorkflowSpec` registry; do not add dynamic plugins, a backend service, or a
-database.
+**Architecture**: Pure domain rules; application use cases; explicit provider/repository adapters;
+Streamlit workflows through the existing registry. Follow `contracts/deferred-evidence.md` before
+implementing story-specific deferred sources. Every new behavior starts with a failing automated
+test; no Phase 2 manifest or runtime capability is silently promoted to weekly/non-price support.
+`[P]` indicates independent tasks touching separate files.
 
 ## Phase 1: Setup
 
-**Purpose**: Initialize the Python package, tools, and deterministic acceptance data.
+**Purpose**: Initialize package, tooling and controlled acceptance inputs.
 
 - [X] T001 Initialize the Python 3.12 `uv` project, runtime dependencies, and lockfile in `pyproject.toml` and `uv.lock`
 - [X] T002 Create the package and test directory skeleton with `src/market_leadership/__init__.py` and `tests/unit/domain/test_models.py`
 - [X] T003 Define dated controlled acceptance inputs and expected outputs in `tests/fixtures/acceptance/market_data.json` and `tests/fixtures/acceptance/expected.json`
- [X] T004 Configure Ruff, Pyright, pytest, and test discovery in `pyproject.toml`
+- [X] T004 Configure Ruff, Pyright, pytest, and test discovery in `pyproject.toml`
 
 ---
 
@@ -82,358 +66,177 @@ immutable daily input snapshots without upstream calls.
 
 ---
 
-## Phase 3: User Story 1 - Find Market Leadership (Priority: P1) MVP
+## Phase 3: User Story 1 - Select and Compare Markets (P1)
 
-**Goal**: Produce the dated weekly market-regime and GICS Industry scoreboard with auditable
-strength, ranking, proxy, and insufficiency outcomes, plus a US-sector discovery workflow that
-compares absolute and S&P 500-relative performance and charts sector price, 50-session SMA, and
-volume.
+**Goal**: Select one or several markets while keeping independent local benchmark, calendar, regime,
+currency, dates and sector context. This phase uses fixture-backed JP/GB; live ingestion remains US
+only. US1 can be tested using the fixture's three-month sector outcomes before US2 builds full
+weekly rankings. Do not switch the default page to a weekly scoreboard yet.
 
-**Independent Test**: Load a dated dataset containing known market and industry outcomes and verify
-that the view shows each market regime, ranks industries, and distinguishes gaining, neutral,
-declining, and insufficient-data entries according to the domain rules. Open discovery mode and
-verify that all 11 effective US GICS sectors appear, the displayed sentiment matches the S&P 500
-regime, switching performance mode changes the table from absolute returns to S&P 500-relative
-returns for the same three/six/twelve-month periods, and every sector chart includes close, 50-session
-SMA, and volume without changing the default Industry scoreboard.
+**Independent test**: Using `tests/fixtures/acceptance/{market_data,expected}.json`, switch US,
+JP, GB and multiple selections; assert each regime and top/bottom sector is local, with no pooled
+ranking. Missing/late local data is flagged without suppressing valid markets.
 
-### Tests for User Story 1
+### Tests first (confirm failing before implementation)
 
-Write and confirm these tests fail before implementing the story.
+- [X] T027 [P] [US1] Test effective-dated market/benchmark/catalog capability, currency, calendar, availability, unsupported live JP/GB and optional same-close FX contracts using dated fixture benchmark histories in `tests/contract/test_market_context.py`
+- [X] T028 [P] [US1] Test 150-session SMA, normalized OLS slope over 20 latest averages, strict `+0.025%`/`-0.025%` boundaries, bullish/bearish/sideways, undefined slope with present close/average yielding sideways, and missing close or average yielding insufficiency in `tests/unit/domain/test_regimes.py`
+- [X] T029 [P] [US1] Test fixture-backed one/many market selection, US/JP/GB expected regimes and local top/bottom sectors, distinct dates/currencies/benchmarks, local/global disagreement and missing FX isolation in `tests/integration/test_compare_markets.py`
+- [X] T030 [P] [US1] Test Streamlit market multiselect, retained valid shared selection, per-market local contexts and stale/empty/error states without pooled results in `tests/app/test_market_selection.py`
 
-- [ ] T027 [P] [US1] Test OLS slope indices 0 through 19, normalized boundaries exactly `+0.025%` and `-0.025%`, values outside each boundary, fewer than 20 values, and missing close or average behavior in `tests/unit/domain/test_regimes.py`
-- [ ] T028 [P] [US1] Test three-, six-, and twelve-calendar-month relative returns with matching benchmark, currency, and return bases, including missing required history, in `tests/unit/domain/test_relative_strength.py`
-- [ ] T029 [P] [US1] Test the 40%/30%/30% composite, gaining and declining equality boundaries, rounded-up top 20%, and tie-break order in `tests/unit/domain/test_rankings.py`
-- [ ] T030 [P] [US1] Test proxy qualification, rejected-threshold reasons, and fallback order in `tests/unit/domain/test_proxies.py`
-- [ ] T031 [P] [US1] Test dated snapshot building, latest completed market week, and insufficient-data outcomes over controlled inputs in `tests/integration/test_build_snapshot.py`
-- [ ] T032 [P] [US1] Test the default scoreboard regimes, dated ranking, required row fields, and loading, empty, insufficient, and operational-error states with Streamlit `AppTest` in `tests/app/test_scoreboard.py`
+### Implementation (after T027–T030 fail as intended)
 
-### Implementation for User Story 1
+- [X] T031 [US1] Implement effective-dated market definitions, benchmark/optional FX capability records, source availability and fail-closed unsupported requests in `src/market_leadership/application/ports.py` and `src/market_leadership/infrastructure/fixture_provider.py`; extend `tests/fixtures/acceptance/market_data.json` with deterministic dated US/JP/GB benchmark close histories sufficient to calculate the declared regimes; use only fixture data for JP/GB and require rights/source verification before any non-US live adapter
+- [X] T032 [P] [US1] Implement 150-session average and 20-average OLS slope normalized by latest average as percent in `src/market_leadership/domain/regimes.py`; `> +0.025%` rising and `< -0.025%` falling, equality flat; fewer than 20 averages yields undefined slope and sideways when close/average exist, while missing close or average yields insufficient regime
+- [X] T033 [US1] Implement fixture-backed per-market overview and local sector outcome selection with dates/return basis, benchmark, currency, freshness and optional separately labelled global context in `src/market_leadership/application/compare_markets.py`; preserve valid local result if global FX is absent
+- [X] T034 [US1] Implement session-local multiselect and per-market panels without pooled ranks in `src/market_leadership/ui/workflows/discovery_page.py` and `src/market_leadership/bootstrap.py`; keep live US discovery the development default and snapshot mode optional until weekly release workflow exists
 
-- [ ] T033 [P] [US1] Implement normalized 20-session OLS slope and market regimes in `src/market_leadership/domain/regimes.py`: divide per-session slope by the latest average and express it as a percentage; greater than `+0.025%` is `RISING`, less than `-0.025%` is `FALLING`, and both boundaries and values between them are `FLAT`; fewer than 20 averages is `UNDEFINED` and not rising; with close and average present undefined slope yields `SIDEWAYS`, while missing either yields `INSUFFICIENT`
-- [ ] T034 [P] [US1] Implement matching-basis three-, six-, and twelve-calendar-month relative returns and the 40%/30%/30% composite in `src/market_leadership/domain/relative_strength.py`; missing required twelve-month history or comparison-average history produces insufficiency, never a guessed value
-- [ ] T035 [US1] Implement sufficient-entry ranking, status, top-group membership, and tie-breaking in `src/market_leadership/domain/rankings.py`: gaining requires composite `> 0` and `> 50-session composite average`; declining requires composite `< 0` and `<` that average; equality and all other values are neutral; top-group size is `ceil(0.20 * ranked_count)`; ties use six-month, three-month, twelve-month strength, then name without changing tied composite values
-- [ ] T036 [P] [US1] Implement proxy selection and qualification reasons in `src/market_leadership/domain/proxies.py`: prefer the most liquid qualifying fund with purity at least 60%, AUM at least `$100 million`, and 20-session USD-equivalent ADV at least `$2 million`; otherwise choose an official index as reference-only; otherwise choose an equal-weight basket of at least five eligible stocks, each with ADV at least `$5 million`; otherwise use `NONE` and mark the node insufficient
-- [ ] T037 [US1] Implement deterministic offline calculation, validation, and snapshot-build orchestration in `src/market_leadership/application/build_snapshot.py`; publish no partial snapshot and preserve valid local results when same-date FX is missing for global comparison
-- [ ] T038 [US1] Implement the initial scoreboard query over calculated snapshots in `src/market_leadership/application/browse_scoreboard.py`, ranking only sufficient entries and preserving benchmark and market context
-- [ ] T039 [US1] Implement supplied-value-only regime rendering in `src/market_leadership/ui/components/regime_summary.py`
-- [ ] T040 [US1] Implement ranking-row rendering with name, rank, status, composite strength, week-over-week change, proxy type, eligibility state, and as-of date in `src/market_leadership/ui/components/ranking_table.py`
-- [ ] T041 [US1] Implement the default weekly Industry scoreboard workflow through application use cases in `src/market_leadership/ui/workflows/scoreboard.py`
-- [ ] T042 [P] [US1] Test absolute sector returns, S&P 500-relative returns, matching three/six/twelve-month periods and return bases, 50-session SMA values, and insufficient history in `tests/unit/domain/test_sector_performance.py`
-- [ ] T043 [P] [US1] Test discovery queries return all 11 effective US GICS sectors in deterministic name order with S&P 500 sentiment, both performance modes, dated close/SMA50/volume series, and explicit insufficient records in `tests/integration/test_discover_sectors.py`
-- [ ] T044 [P] [US1] Test discovery initial render, absolute-versus-S&P-500 segmented control, all-sector table and charts, selected and alternative runtime data providers, fresh-cache behavior, explicit forced refresh, empty state, insufficient state, and safe provider failure with Streamlit `AppTest` in `tests/app/test_discovery.py`
-- [ ] T045 [US1] Implement absolute sector returns, S&P 500-relative returns, and 50-session simple moving averages over matching return bases in `src/market_leadership/domain/relative_strength.py`; preserve missing history as insufficient and never forward-fill a missing sector or benchmark close
-- [ ] T046 [US1] Implement a typed US-sector discovery query that selects the 11 effective US `SECTOR` nodes, uses their selected proxies, returns S&P 500 `MarketRegime` as sentiment, and supplies three/six/twelve-month absolute and relative performance plus dated close/SMA50/volume chart series in `src/market_leadership/application/discover_sectors.py`
-- [ ] T047 [P] [US1] Implement a supplied-value-only sector performance table with an absolute-versus-S&P-500 segmented mode control and explicit period, basis, as-of, and insufficiency labels in `src/market_leadership/ui/components/sector_performance_table.py`
-- [ ] T048 [P] [US1] Implement a stable all-sector chart component with official-session close and 50-session SMA in the price panel and aligned volume below it in `src/market_leadership/ui/components/sector_chart.py`
-- [ ] T049 [US1] Implement the discovery workflow with current sentiment, performance table, one chart per sector, selected-provider provenance, alternative-provider details, cache freshness, and an explicit force-refresh action in `src/market_leadership/ui/workflows/discovery.py` and `src/market_leadership/ui/components/data_source_status.py`, then register its stable non-default `WorkflowSpec` in `src/market_leadership/bootstrap.py` without changing the default scoreboard
-
-**Checkpoint**: Verify the P1 independent test. The MVP is this story with the shared foundation and
-controlled fixture.
+**Checkpoint**: US/JP/GB multi-market fixture acceptance passes without suggesting JP/GB live availability.
 
 ---
 
-## Phase 4: User Story 2 - Focus the Market View (Priority: P2)
+## Phase 4: User Story 2 - Find Sector and Industry Leadership (P1)
 
-**Goal**: Support market, hierarchy, status, top-group, eligibility, and proxy filters; search,
-sorting, drill-down, and reset.
+**Goal**: Publish/read versioned weekly calculated snapshots; rank SECTOR within each selected
+market by default, then drill into dated INDUSTRY children retaining the local and parent contexts.
 
-**Independent Test**: Apply each supported filter to a mixed dataset and verify that only matching
-entries remain, active criteria are visible, and clearing the criteria restores the complete view.
+**Independent test**: Controlled aligned 1w/1m/3m/6m/12m and 50-session histories prove composite,
+status, tie order, prior-week deltas, sector default, industry drill-down and missing-history rules.
 
-### Tests for User Story 2
+### Tests first
 
-- [ ] T050 [P] [US2] Test combined market, hierarchy, leadership, top-group, eligibility, and proxy filters plus name, company, and symbol search and every supported sort field in `tests/integration/test_browse_filters.py`
-- [ ] T051 [P] [US2] Test visible active criteria, clear-all behavior, empty-result explanation and reset path, and hierarchy navigation retaining market and benchmark context in `tests/app/test_filters.py`
+- [ ] T035 [P] [US2] Test `contracts/weekly-leadership.md` effective-dated sector/industry ancestry, representation fund/index/basket composition and qualification, latest completed local week, weekly manifest version and refusal to read Phase 2 daily inputs as calculated results in `tests/contract/test_weekly_leadership.py`
+- [ ] T036 [P] [US2] Test absolute and local-benchmark-relative 1w/1m/3m/6m/12m returns with shared ending observations, matching currency/return bases, missing twelve-month and 50-session history in `tests/unit/domain/test_relative_strength.py`
+- [ ] T037 [P] [US2] Test 40%/30%/30% composite, strict positive-above-average gaining, strict negative-below-average declining, equality neutral, sufficient-only within-market rank, 6m/3m/12m/name ties, prior weekly score/rank deltas and strengthening/weakening/stable labels in `tests/unit/domain/test_rankings.py`
+- [ ] T038 [P] [US2] Test immutable calculated weekly publish/load, market holidays and incomplete weeks, industry versus both parent sector and local benchmark, per-market isolation and missing-proxy insufficiency in `tests/integration/test_weekly_leadership.py`
+- [ ] T039 [P] [US2] Test default completed-week SECTOR rows and industry drill-down preserving market, benchmark, sector, dates, bases, insufficient/empty/error states in `tests/app/test_scoreboard.py`
 
-### Implementation for User Story 2
+### Implementation (after T035–T039 fail as intended)
 
-- [ ] T052 [US2] Define typed filter, search, and sort request records for market, hierarchy, status, top-group membership, research eligibility, proxy type, name/company/symbol search, sort field, and sort direction in `src/market_leadership/application/queries.py`
-- [ ] T053 [US2] Implement session-local filter and drill-down state in `src/market_leadership/ui/state.py`; clearing state restores the weekly Industry scoreboard without hidden criteria
-- [ ] T054 [US2] Implement filter controls that return user intent without mutating dataframes or session state in `src/market_leadership/ui/components/filters.py`
-- [ ] T055 [US2] Implement combined filtering, search, and sorting in `src/market_leadership/application/browse_scoreboard.py`; sort only visible results by name, rank, composite, status, or week-over-week change
-- [ ] T056 [US2] Integrate controls and typed browse requests in `src/market_leadership/ui/workflows/scoreboard.py`; display active criteria and the explanatory empty state
-- [ ] T057 [US2] Implement hierarchy drill-down and return navigation while retaining market and benchmark context in `src/market_leadership/ui/workflows/scoreboard.py`
+- [ ] T040 [US2] Implement dated classification/representation canonical input validation and fixture adapter in `src/market_leadership/application/ports.py` and `src/market_leadership/infrastructure/fixture_provider.py`; require documented fund/index/basket source, type, composition basis and effective dates, without assuming live classification/holdings licenses
+- [ ] T041 [US2] Implement separately versioned weekly calculated manifest/table validation, atomic publish/read and rejection of daily input manifests in `src/market_leadership/infrastructure/parquet_repository.py`; preserve existing Phase 2 input schema in `contracts/snapshot-manifest.schema.json`
+- [ ] T042 [P] [US2] Implement matching-basis absolute/local relative returns over 1w/1m/3m/6m/12m and `0.4*RS_3m+0.3*RS_6m+0.3*RS_12m` in `src/market_leadership/domain/relative_strength.py`; no comparison without a shared eligible ending observation
+- [ ] T043 [P] [US2] Implement dated fund/index/basket representation selection and insufficiency reasons (no unapproved numeric fund thresholds) in `src/market_leadership/domain/proxies.py`
+- [ ] T044 [US2] Implement 50-session composite average, gaining/declining/neutral, within-market sector/industry ranks, tie-break order, weekly score/rank change and descriptive momentum in `src/market_leadership/domain/rankings.py`; missing twelve-month or 50-session history has no rank/status
+- [ ] T045 [US2] Extend offline builder for completed local-market weekly calculation and atomic publication in `src/market_leadership/application/build_snapshot.py`; retain existing daily input-build path and never combine markets or publish partial invalid results
+- [ ] T046 [US2] Implement per-market sector browse query and parent-sector/local-market industry inspection in `src/market_leadership/application/browse_scoreboard.py` and `src/market_leadership/application/inspect_industry.py`; retain active market/benchmark/date/return-basis context
+- [ ] T047 [US2] Implement supplied-value-only ranking and regime components in `src/market_leadership/ui/components/ranking_table.py` and `src/market_leadership/ui/components/regime_summary.py`; display rank, status, composite, score/rank deltas, proxy, as-of and insufficiency
+- [ ] T048 [US2] Implement weekly SECTOR default and INDUSTRY drill-down in `src/market_leadership/ui/workflows/scoreboard.py`, `src/market_leadership/ui/workflows/industry_detail.py` and `src/market_leadership/bootstrap.py`; switch default only after weekly fixture-backed acceptance succeeds
 
-**Checkpoint**: Verify all criteria combine correctly, reset restores the default view, and empty
-results remain recoverable.
-
----
-
-## Phase 5: User Story 3 - Inspect Leading and Declining Stocks (Priority: P3)
-
-**Goal**: Show industry context, candidate gates, survival evidence, and holding review flags without
-generating automatic sale instructions.
-
-**Independent Test**: Open a known industry, inspect its constituent stocks, and verify that stock
-relative strength, industry status, eligibility warnings, and data sufficiency are shown separately.
-
-### Tests for User Story 3
-
-- [ ] T058 [P] [US3] Test deterioration transitions `CLEAR --monthly outside top--> COUNTING_1`, `COUNTING_1 --monthly outside top--> ACTIVE`, `COUNTING_1` and `ACTIVE --monthly back in top and not declining--> CLEAR`, and `ANY --weekly declining--> ACTIVE` in `tests/unit/domain/test_deterioration.py`
-- [ ] T059 [P] [US3] Test every stock candidate gate and distinct pass, fail, and insufficient outcomes, including stale fundamentals, in `tests/unit/domain/test_candidates.py`
-- [ ] T060 [P] [US3] Test constituent inspection, separate industry eligibility, and holding-review flags for stable instrument IDs in `tests/integration/test_inspect_industry.py`
-- [ ] T061 [P] [US3] Test industry and stock detail initial, interaction, empty, insufficient-data, and safe operational-failure states in `tests/app/test_stock_research.py`
-
-### Implementation for User Story 3
-
-- [ ] T062 [P] [US3] Implement monthly and weekly deterioration transitions and holding flags in `src/market_leadership/domain/deterioration.py`; monthly outside-top reviews count consecutively, the second activates the flag, monthly return to top clears it only when not declining, and any weekly declining status activates it; emit `REVIEW_REDUCE` for affected supplied holdings with `automatic_sale = false`
-- [ ] T063 [P] [US3] Implement survival and candidate gates in `src/market_leadership/domain/candidates.py`: require positive three- and six-month strength versus industry, `PASS` survival, fundamentals no older than two quarters, non-extreme volatility, matching primary classification, proxy weight at least 5% or proxy rank in the top 10, and a nonblank written reason; compute quarterly cash burn as `max(0, capital_expenditure - operating_cash_flow)` after excluding non-cash items; zero burn means unlimited runway, otherwise runway is `cash_and_equivalents / quarterly_cash_burn / 4` and must be at least two years; independently require EBIT TTM divided by interest expense TTM to meet size/volatility minimums above `$10B` = `1.5/2/3/4`, `$2B` through `$10B` = `2/3/4/5`, and below `$2B` = `3/4/5/6` for Low/Medium/High/Extreme; exempt financial companies only from interest cover; return `PASS`, `FAIL`, or `INSUFFICIENT` distinctly
-- [ ] T064 [US3] Implement industry, constituent-stock, survival, and evidence inspection use cases in `src/market_leadership/application/inspect_industry.py`
-- [ ] T065 [US3] Implement industry detail with status, local eligibility, constituents, and deterioration warnings in `src/market_leadership/ui/workflows/industry_detail.py`
-- [ ] T066 [US3] Implement stock research details with each candidate gate, failure reason, stale or missing evidence, and written reason in `src/market_leadership/ui/workflows/stock_research.py`
-
-**Checkpoint**: Confirm a declining industry blocks new-buy candidacy and raises review/reduce
-information, never an automatic sale.
+**Checkpoint**: A completed weekly sector scoreboard is the release default, not Phase 2 live discovery.
 
 ---
 
-## Phase 6: User Story 4 - Understand and Trust the Evidence (Priority: P4)
+## Phase 5: User Story 3 - Assess Participation and Momentum Quality (P2)
 
-**Goal**: Expose benchmark context, provenance, lagged evidence, definitions, and interpretation
-warnings.
+**Goal**: Add optional dated constituent breadth, cap/equal-weight disagreement, and explicitly
+inferred volume evidence. Missing confirmation never changes US2 leadership.
 
-**Independent Test**: Inspect representative market, industry, and stock entries and verify that each
-metric exposes its meaning, comparison basis, as-of date, data sufficiency, and relevant warning.
+**Independent test**: Dated memberships, histories and weights yield expected 50/200-session
+breadth with at least five eligible members and at least 80% coverage; partial weights/volume are
+insufficient only for dependent indicators.
 
-### Tests for User Story 4
+### Tests first
 
-- [ ] T067 [P] [US4] Test local/global disagreement, same-date FX insufficiency, source provenance, and isolation of lagged evidence from ranking and eligibility in `tests/integration/test_evidence_and_provenance.py`
-- [ ] T068 [P] [US4] Test all required term definitions, historical-performance disclaimer, methodology initial render, and evidence interaction in `tests/app/test_methodology.py`
-- [ ] T069 [P] [US4] Test required provenance fields and explicit unavailable-source representation in `tests/contract/test_provenance.py`
+- [ ] T049 [P] [US3] Test effective-dated constituent membership/weights and aligned close/volume contract, duplicate rejection, source availability and partial coverage in `tests/contract/test_participation_inputs.py`
+- [ ] T050 [P] [US3] After recording an approved numerical material-disagreement policy in `specs/001-market-leadership-screener/research.md`, test 50/200-session participation percentages, included/eligible counts, `<5` and `<80%` insufficiency, cap/equal-weight comparison and price/breadth divergence in `tests/unit/domain/test_participation.py`
+- [ ] T051 [P] [US3] Test relative-volume/volume-pressure missing-history behavior and prohibition on observed-flow terminology in `tests/unit/domain/test_trading_activity.py`
+- [ ] T052 [P] [US3] Test missing membership/weight/volume isolation from price rank and separate evidence dates/coverage in `tests/integration/test_confirmation_evidence.py`
+- [ ] T053 [P] [US3] Test industry evidence UI for breadth, concentration, inferred activity, divergence and insufficient evidence in `tests/app/test_participation.py`
 
-### Implementation for User Story 4
+### Implementation (after T049–T053 fail as intended)
 
-- [ ] T070 [US4] Extend inspection view records with local and global benchmarks, currency and return bases, as-of and comparison dates, source availability, and explicit missing-FX warnings in `src/market_leadership/application/inspect_industry.py`
-- [ ] T071 [P] [US4] Implement provenance rendering for date, basis, instrument, benchmark, source name, and source availability, marking unavailable fields explicitly, in `src/market_leadership/ui/components/provenance.py`
-- [ ] T072 [P] [US4] Implement `EvidenceItem` rendering with event date, availability date, age, coverage, and source in `src/market_leadership/ui/components/evidence_panel.py`
-- [ ] T073 [US4] Implement definitions for market regime, relative strength, gaining, declining, neutral, top group, proxy, deterioration, and insufficient data, plus the historical-performance and non-advice warning, in `src/market_leadership/ui/workflows/methodology.py`
-- [ ] T074 [US4] Display local and global benchmark views side by side with benchmark, currency basis, return basis, and global warning in `src/market_leadership/ui/workflows/industry_detail.py`
-- [ ] T075 [US4] Add source and availability provenance, stale-data warnings, and relevant evidence in `src/market_leadership/ui/workflows/stock_research.py`
-- [ ] T076 [US4] Keep lagged `EvidenceItem` records out of scoreboard rank, status, top-group, and eligibility inputs and allow them only as separate context or review/watchlist priority in `src/market_leadership/application/browse_scoreboard.py`
-
-**Checkpoint**: Verify evidence remains contextual, local eligibility remains authoritative, and
-unavailable provenance is explicit.
+- [ ] T054 [US3] Implement dated constituent/weight canonical fixture inputs and capability rejection for unsupported live holdings in `src/market_leadership/application/ports.py` and `src/market_leadership/infrastructure/fixture_provider.py`; verify sources/rights before enabling live providers
+- [ ] T055 [P] [US3] Implement eligible-member 50/200-session breadth, explicit counts/coverage and cap/equal-weight comparison with versioned materiality threshold in `src/market_leadership/domain/participation.py`; never apply present-day membership retrospectively
+- [ ] T056 [P] [US3] Implement optional close/volume relative-volume or pressure indicators labelled inferred trading activity in `src/market_leadership/domain/trading_activity.py`; never label volume as actual inflow
+- [ ] T057 [US3] Integrate separately dated breadth, concentration, divergence and activity evidence without affecting price leadership in `src/market_leadership/application/inspect_industry.py`
+- [ ] T058 [US3] Render confirmation with source, counts, coverage and insufficiency in `src/market_leadership/ui/components/evidence_panel.py` and `src/market_leadership/ui/workflows/industry_detail.py`
 
 ---
 
-## Phase 7: User Story 5 - Preserve Equity Results During Extension (Priority: P5)
+## Phase 6: User Story 4 - Inspect Observed Fund-Flow Evidence (P3)
 
-**Goal**: Protect established equity outputs and prevent default application of equity ranking
-semantics to unspecified asset categories.
+**Goal**: Present observed fund flows only when qualified inputs exist, independently of price,
+breadth and volume. Missing, stale or overlapping funds do not create synthetic flow totals.
 
-**Independent Test**: Add an acceptance fixture for one separately specified asset category
-containing at least 100 instruments and verify that all baseline equity outputs and controls remain
-unchanged.
+**Independent test**: Positive/negative, conflicting, stale, partial, missing and overlapping fund
+records expose monetary value, percent of compatible assets, event/publication dates, source,
+represented classification, age and coverage without changing score, rank or status.
 
-### Tests for User Story 5
+### Tests first
 
-- [ ] T077 [P] [US5] Freeze baseline equity calculations, labels, history, and filter outcomes, then test that adding a separately specified category with at least 100 instruments leaves every baseline result unchanged in `tests/integration/test_asset_category_compatibility.py` and `tests/fixtures/equity_baseline.json`
-- [ ] T078 [P] [US5] Test that a category without approved ranking semantics receives neither GICS nor equity gain/decline rules by default in `tests/integration/test_asset_category_dispatch.py`
+- [ ] T059 [P] [US4] Test dated observed net-flow/asset input schema, units, source availability, overlap group, positive compatible assets and unsupported-live capability in `tests/contract/test_observed_flows.py`
+- [ ] T060 [P] [US4] Test `100 * net_flow / assets`, invalid/late assets, overlap without aggregation, age, stale/partial/unavailable states and conflict with price in `tests/unit/domain/test_flows.py`
+- [ ] T061 [P] [US4] Test flow contextual isolation from score/rank/status/momentum, price-rise/volume/asset-change non-equivalence and divergence in `tests/integration/test_flow_evidence.py`
+- [ ] T062 [P] [US4] Test fund-flow UI provenance, positive/negative, stale/partial/unavailable and price divergence in `tests/app/test_observed_flows.py`
 
-### Implementation for User Story 5
+### Implementation (after T059–T062 fail as intended)
 
-- [ ] T079 [US5] Implement the release `EQUITY` category discriminator without changing company, instrument, or equity calculation semantics in `src/market_leadership/domain/models.py`
-- [ ] T080 [US5] Dispatch only explicitly specified asset categories at the composition boundary and keep unspecified categories out of equity domain calculations in `src/market_leadership/bootstrap.py`
-
-**Checkpoint**: Confirm the baseline equity fixture and controls remain identical after category
-dispatch is introduced.
-
----
-
-## Phase 8: Polish and Cross-Cutting Concerns
-
-**Purpose**: Validate scale, operational instructions, and required quality gates.
-
-- [ ] T081 Add a 20-market and 10,000-stock browse fixture and verify filter, search, sort, and hierarchy interactions meet the two-second target in `tests/integration/test_browse_performance.py` and `tests/fixtures/scale/market_20_stocks_10000.json`
-- [ ] T082 Validate install, fixture snapshot build, app startup, and focused test commands against `specs/001-market-leadership-screener/quickstart.md`
-- [ ] T083 Update usage and architectural boundaries for the implemented snapshot workflow and explicit registry in `README.md`
-- [ ] T084 Run Ruff format/check, Pyright, and the full pytest suite using the project gates in `pyproject.toml`
+- [ ] T063 [US4] Implement observed-flow/asset fixture contract, overlap provenance and unsupported-live rejection in `src/market_leadership/application/ports.py` and `src/market_leadership/infrastructure/fixture_provider.py`; require verified rights and coverage before a live adapter is enabled
+- [ ] T064 [US4] Implement measured-flow normalization, freshness/coverage and non-aggregation of overlapping funds in `src/market_leadership/application/flows.py`; leave score/rank/status untouched
+- [ ] T065 [US4] Render distinct observed-flow panel with monetary value, percent assets, event/availability dates, age, source and warning in `src/market_leadership/ui/components/evidence_panel.py` and `src/market_leadership/ui/workflows/industry_detail.py`
 
 ---
 
-## Phase 9: International Market Selection (US1 Extension)
+## Phase 7: User Story 5 - Filter and Trust Discovery Results (P2)
 
-**Goal**: Let the user select one supported equity market at a time, including an international
-market, while keeping its local benchmark, currency, trading calendar, and sector results distinct.
-The existing US discovery remains the default. Selecting several markets simultaneously and pooled
-or cross-market comparison are deferred.
+**Goal**: Filter/sort selected markets' results, clear criteria without clearing market selection,
+and expose provenance, definitions and non-advice guidance for every displayed metric.
 
-**Independent Test**: Select the US market and an enabled international market separately using a
-dated fixture. Verify that each selection displays its own benchmark, currency, calendar, regime,
-observation date, and sector results, with no cross-market ranking or silent currency conversion.
+**Independent test**: Mixed multi-market fixture supports conjunction of all requested filters,
+five sorts, one-step reset and empty state; provenance fields are present or explicitly unavailable.
 
-### Market Selection Decision
+### Tests first
 
-- [ ] T085 [US1] Choose and document at least one initial international equity market with provider coverage for its local benchmark and sector representations in `specs/001-market-leadership-screener/research.md`
+- [ ] T066 [P] [US5] Test conjunctive market/level/status/momentum/proxy/sufficiency filters, name/rank/composite/score-change/rank-change sort, ties and selected-market-preserving reset in `tests/integration/test_browse_filters.py`
+- [ ] T067 [P] [US5] Test per-metric observation/comparison period, return/currency basis, benchmark, representation, source, source availability, coverage and freshness or explicit unavailable fields in `tests/contract/test_provenance.py`
+- [ ] T068 [P] [US5] Test filter UI active criteria, clear, empty state, unchanged market selection and sort in `tests/app/test_filters.py`
+- [ ] T069 [P] [US5] Test required definitions and historical-not-forecast/advice/trade warning, plus stale/misaligned dependent-indicator suppression in `tests/app/test_methodology.py`
 
-### Tests for International Market Selection
+### Implementation (after T066–T069 fail as intended)
 
-- [ ] T086 [P] [US1] Test market-definition validation, unique stable IDs, ISO currency, required benchmark and calendar, and deterministic market ordering in `tests/unit/domain/test_markets.py`
-- [ ] T087 [P] [US1] Test market-specific benchmark sentiment, sector returns, currency, calendar, as-of date, and missing-data behavior with dated fixtures in `tests/integration/test_discover_sectors.py`
-- [ ] T088 [P] [US1] Test single-market selection, US default, context labels, selection changes, and unchanged US results in `tests/app/test_discovery.py`
-
-### Implementation for International Market Selection
-
-- [ ] T089 [US1] Define validated market records and an ordered supported-market catalog containing the US and the initial international market definitions in `src/market_leadership/domain/markets.py`
-- [ ] T090 [US1] Refactor sector discovery to accept one market definition and return its market ID, local benchmark, currency, calendar, regime, observation date, and market-specific sector proxies in `src/market_leadership/application/discover_sectors.py`
-- [ ] T091 [US1] Extend deterministic fixture histories for each registered market using its declared symbols and official observation sessions without converting local results to another currency in `src/market_leadership/infrastructure/fixture_provider.py`
-- [ ] T092 [US1] Add a single-select market control to the discovery page, preserve the US default and existing provider/date/refresh controls, and render selected-market benchmark, currency, calendar, and regime context in `src/market_leadership/app.py`
-- [ ] T093 [US1] Document how to add a supported international market, its required benchmark/currency/calendar/sector-proxy metadata, and the current single-market selection limit in `specs/001-market-leadership-screener/quickstart.md`
-
-**Checkpoint**: Verify US discovery remains unchanged and each enabled international market is
-analyzed against only its own local benchmark and data context.
+- [ ] T070 [US5] Implement typed conjunctive filter/sort query and stable local ranking scope in `src/market_leadership/application/queries.py` and `src/market_leadership/application/browse_scoreboard.py`
+- [ ] T071 [US5] Implement session-local selected markets, active criteria, clear-to-sector and sorting in `src/market_leadership/ui/state.py` and `src/market_leadership/ui/components/filters.py`; clear filters preserves market selection
+- [ ] T072 [P] [US5] Implement source/availability/coverage/basis/freshness display with explicit unavailable fields in `src/market_leadership/ui/components/provenance.py`
+- [ ] T073 [US5] Implement metric definitions, historical evidence disclaimer and no personalized advice/trade instruction in `src/market_leadership/ui/workflows/methodology.py` and surface provenance from `src/market_leadership/ui/workflows/scoreboard.py`
 
 ---
 
-## Dependencies and Execution Order
+## Phase 8: Polish and Release Validation
 
-### Phase Dependencies
+- [ ] T074 Test 20-market controlled filter/sort interactions meet two seconds for at least 95% of trials in `tests/integration/test_browse_performance.py`; optimize only if measured results require it
+- [ ] T075 Verify `uv run ruff format --check .`, `uv run ruff check .`, `uv run pyright`, `uv run pytest` and release validation scenarios against `specs/001-market-leadership-screener/quickstart.md`; do not claim unverified live source rights
 
-- **Setup**: No dependencies; starts immediately.
-- **Foundational**: Depends on Setup and blocks every user story.
-- **US1**: Starts after Foundational and supplies the MVP scoreboard.
-- **US2**: Depends on US1 scoreboard queries and workflow.
-- **US3**: Depends on US1 industry results and US2 hierarchy context.
-- **US4**: Depends on US1 and US3 result views; evidence remains independently testable.
-- **US5**: Depends on frozen outputs from US1 and US2; it must not change their semantics.
-- **International Market Selection (US1 extension)**: Depends on the existing US discovery baseline
-  (T043-T049) and shared provider contracts; it can proceed without US2-US5 and selects one market
-  per discovery view. Simultaneous multi-market comparison remains deferred.
-- **Polish**: Follows all stories selected for delivery.
+## Dependency Graph and Parallel Work
 
-### Within Each User Story
+- T001–T026 (completed) → US1 T027–T034 → US2 T035–T048 → US3 T049–T058
+  and US4 T059–T065 → US5 T066–T073 → release T074–T075.
+- US1 market definitions/fixture context precede US2 ranking. US2 weekly price rankings are required
+  before US3/US4 evidence integration; US3 and US4 can proceed independently after US2. US5
+  depends on US2 for filters and on US3/US4 for complete provenance and definitions.
+- In each story, independent `[P]` tests may be written concurrently; confirm they fail for absent
+  behavior before implementation. Independent implementation files T032 (US1), T042/T043 (US2),
+  T055/T056 (US3) can follow their own failing tests in parallel; the integration task follows
+  all producers. No task marked `[P]` relies on another unfinished task in its phase.
 
-- Write the story's tests first and confirm they fail for the expected missing behavior.
-- Implement domain behavior before application use cases and application use cases before UI.
-- Run the focused story tests at its checkpoint before starting the next story.
-- Run the full suite before marking the story complete.
+## Implementation Strategy and Requirement Coverage
 
-### Parallel Opportunities
+MVP: finish US1 fixture-backed market selection, then US2 release weekly SECTOR scoreboard and
+industry drill-down. US3/US4 add optional, non-ranking evidence; US5 adds filters and trust before
+release. Preserve the existing daily input path throughout. Validate each checkpoint with its
+focused contract/unit/integration/AppTest files and then the full suite.
 
-- Foundational contract tests T005-T008 can run in parallel.
-- Direct-provider catalog, cache, runtime refresh, and Streamlit cache tests T017-T020 can run in parallel; T022 and T023 can proceed together after T010 and T021, while T024 waits for both.
-- US1 tests T027-T032 and T042-T044 can run in parallel; after T009, T033, T034, and T036 touch independent modules, while T047 and T048 can run together after T046 defines their view records.
-- US2 tests T050-T051 can run in parallel.
-- US3 tests T058-T061 can run in parallel; T062 and T063 touch independent domain modules.
-- US4 tests T067-T069 can run in parallel; T071 and T072 touch independent UI components.
-- US5 tests T077-T078 can run in parallel.
+| Requirements | Tests and implementation |
+|---|---|
+| FR-001–FR-006 | US1 T027–T034; US2 T035, T038–T048 |
+| FR-007–FR-014 | US2 T035–T048 |
+| FR-015–FR-018 | US2 T037/T044; US3 T049–T058 |
+| FR-019–FR-021 | US4 T059–T065 |
+| FR-022–FR-023 | US5 T066/T068/T070/T071 |
+| FR-024–FR-027 | US1 T027/T029; US3 T052/T053; US4 T059/T062; US5 T067/T069/T072/T073 |
 
-## Parallel Examples
-
-### User Story 1
-
-```text
-T027: Test market regimes in tests/unit/domain/test_regimes.py
-T028: Test relative strength in tests/unit/domain/test_relative_strength.py
-T030: Test proxy selection in tests/unit/domain/test_proxies.py
-T042: Test sector performance in tests/unit/domain/test_sector_performance.py
-T043: Test US-sector discovery in tests/integration/test_discover_sectors.py
-T044: Test discovery workflow in tests/app/test_discovery.py
-```
-
-### User Story 2
-
-```text
-T050: Test browse filters in tests/integration/test_browse_filters.py
-T051: Test filter workflow behavior in tests/app/test_filters.py
-```
-
-### User Story 3
-
-```text
-T058: Test deterioration in tests/unit/domain/test_deterioration.py
-T059: Test candidates in tests/unit/domain/test_candidates.py
-T061: Test stock research workflows in tests/app/test_stock_research.py
-```
-
-### User Story 4
-
-```text
-T067: Test evidence and provenance integration in tests/integration/test_evidence_and_provenance.py
-T068: Test methodology workflow in tests/app/test_methodology.py
-T069: Test provenance contract in tests/contract/test_provenance.py
-```
-
-### User Story 5
-
-```text
-T077: Test frozen equity compatibility in tests/integration/test_asset_category_compatibility.py
-T078: Test category dispatch in tests/integration/test_asset_category_dispatch.py
-```
-
-## Requirement Coverage
-
-- **FR-001**: T009, T031, T041, T043, T046, T049
-- **FR-002**: T031-T032, T037, T041, T049
-- **FR-003**: T027, T033, T039
-- **FR-004**: T028, T034, T042-T046
-- **FR-005**: T029, T034
-- **FR-006**: T029, T035
-- **FR-007**: T029, T035
-- **FR-008**: T067, T070, T074
-- **FR-009**: T051, T057, T065
-- **FR-010**: T050, T052-T056
-- **FR-011**: T050, T052, T055-T056
-- **FR-012**: T051, T053-T056
-- **FR-013**: T032, T040
-- **FR-014**: T030, T036
-- **FR-015**: T058-T059, T062-T066
-- **FR-016**: T058, T060, T062, T065
-- **FR-017**: T059-T061, T063-T066
-- **FR-018**: T043-T049, T059-T061, T063-T066
-- **FR-019**: T043-T049, T067, T069-T072, T075
-- **FR-020**: T067, T072, T075-T076
-- **FR-021**: T068, T073
-- **FR-022**: T068, T073
-- **FR-023**: T077-T080
-
-## Input-Derived Coverage
-
-- **PROVIDER-001 - Find every runtime-capable provider for a requested data point**: T010, T017, T019, T021-T022, T024, T044, T049
-- **PROVIDER-002 - Request through deterministic provider selection and refresh only when stale/missing or forced**: T018-T020, T023-T026, T044, T049
-- **PROVIDER-003 - Store canonical acquired data in an appropriate typed format**: T006, T018, T023, T025, T082
-
-## Implementation Strategy
-
-### MVP First
-
-1. Complete Setup and Foundational.
-2. Complete User Story 1.
-3. Stop and validate the P1 independent test and full suite.
-4. Demo the fixture-backed weekly Industry scoreboard before expanding scope.
-
-### Incremental Delivery
-
-1. Add US2 filtering and navigation, then validate independently.
-2. Add US3 stock research and deterioration, then validate independently.
-3. Add US4 evidence and interpretation, then validate independently.
-4. Add US5 category isolation only after the equity baseline is frozen.
-5. Complete scale and cross-cutting validation.
-
-## Notes
-
-- `[P]` means the task touches different files and has no dependency on another incomplete task in
-  its phase.
-- `[US1]` through `[US5]` map tasks to the prioritized user stories in `spec.md`.
-- Commit after each task or coherent task group; do not mix unrelated refactors into a task.
-- Stop at every checkpoint and preserve the smallest executable increment.
-
-## International Market Extension Execution
-
-- **Dependencies**: T085-T093 follow the US discovery baseline (T043-T049) and shared provider
-  contracts, but do not depend on US2-US5. This increment selects one market at a time.
-- **Parallel work**: T086-T088 can be implemented independently; T089 establishes the market
-  catalog contract before T090-T092 integrate it into the use case, fixture provider, and UI.
-- **Parallel example**:
-
-  ```text
-  T086: Test market definitions in tests/unit/domain/test_markets.py
-  T087: Test local market discovery context in tests/integration/test_discover_sectors.py
-  T088: Test single-market selection in tests/app/test_discovery.py
-  ```
-
-- **Implementation order**: Complete T085, write and fail T086-T088, implement T089-T092, then
-  document onboarding in T093. Keep the US default and defer simultaneous-market comparison.
-- **Scope note**: T085-T093 are an incremental US1 extension. The current spec's simultaneous-market
-  acceptance scenarios remain deferred and should be reconciled before implementation.
+**Open release gate**: Select and document authorized live non-US market, classification,
+membership/weight and observed-flow sources (including permitted display/derived-data rights,
+availability and freshness) before enabling those capabilities. Approve a numerical material
+cap/equal-weight disagreement policy before T050/T055. Fixtures keep discovery testable without a
+provider decision; no such license or live adapter is presumed.

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 from market_leadership.application.ports import (
     MarketDataProvider,
@@ -10,7 +11,10 @@ from market_leadership.application.request_market_data import (
     RequestMarketData,
 )
 from market_leadership.config import Settings
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
+from market_leadership.infrastructure.fixture_provider import (
+    FixtureProvider,
+    load_acceptance_market_context,
+)
 from market_leadership.infrastructure.market_data_cache import CachedMarketDataProvider
 from market_leadership.infrastructure.massive_provider import MassiveProvider
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
@@ -66,18 +70,21 @@ def build_provider(
     return CachedMarketDataProvider(provider, cache_path)
 
 
+def _provider_capabilities(provider: MarketDataProvider) -> tuple[ProviderCapability, ...]:
+    if provider.provider_id == "fixture" and isinstance(provider, FixtureProvider):
+        return provider.capabilities()
+    if isinstance(provider, YFinanceProvider):
+        return provider.capabilities()
+    return (_DAILY_HISTORY_CAPABILITY,)
+
+
 def build_market_data_catalog(settings: Settings) -> MarketDataProviderCatalog:
     providers = tuple(
         _build_provider_adapter(provider_id, settings.retry_limit)
         for provider_id in settings.provider_ids
     )
     capabilities = {
-        provider.provider_id: (
-            provider.capabilities()
-            if isinstance(provider, YFinanceProvider)
-            else (_DAILY_HISTORY_CAPABILITY,)
-        )
-        for provider in providers
+        provider.provider_id: _provider_capabilities(provider) for provider in providers
     }
     return ConfiguredProviderCatalog(
         providers,
@@ -97,6 +104,10 @@ def build_snapshot_repository(settings: Settings) -> ParquetSnapshotRepository:
     return ParquetSnapshotRepository(settings.snapshot_dir)
 
 
+def build_fixture_market_context() -> dict[str, Any]:
+    return load_acceptance_market_context()
+
+
 def build_request_provider(
     provider_id: str,
     source_cache_path: str,
@@ -106,13 +117,7 @@ def build_request_provider(
     provider = _build_provider_adapter(provider_id, retry_limit)
     catalog = ConfiguredProviderCatalog(
         (provider,),
-        {
-            provider_id: (
-                provider.capabilities()
-                if isinstance(provider, YFinanceProvider)
-                else (_DAILY_HISTORY_CAPABILITY,)
-            )
-        },
+        {provider_id: _provider_capabilities(provider)},
         {},
     )
     return RequestedDailyHistoryProvider(

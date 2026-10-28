@@ -8,17 +8,19 @@
 
 ## Summary
 
-Build a weekly equity market-leadership screener that computes auditable market regimes, GICS
-rankings, proxy eligibility, deterioration, and stock research gates from versioned market-data
-snapshots. Keep calculations in pure Python modules, coordinate them through small application use
-cases and provider protocols, and expose them through independently testable Streamlit workflow
-functions registered in one explicit navigation composition root.
+Build a weekly equity market-leadership screener that compares selected markets without pooling
+their local rankings, ranks sectors before industry drill-down, and distinguishes participation,
+inferred trading activity, and observed flows in versioned market-data snapshots. Keep calculations
+in pure Python modules, coordinate them through small application use cases and provider protocols,
+and expose them through independently testable Streamlit workflows in one navigation composition root.
 
 The Phase 2 foundation is narrower than the completed release: direct US daily price/volume
 ingestion, a persistent canonical source cache, a daily input snapshot builder, and optional
 immutable input-snapshot viewing. Live-provider discovery remains the Phase 2 UI default. Weekly
-calculated scoreboards, additional markets, and non-price runtime contracts follow in user-story
-phases.
+calculated scoreboards, non-price canonical contracts, and additional live markets follow in
+user-story phases. The US/JP/GB acceptance fixture proves multi-market selection, not licensed live
+ingestion outside the US. The completed release defaults to the latest completed weekly SECTOR
+scoreboard; until built, existing live US discovery remains the development/Phase 2 default.
 
 ## Technical Context
 
@@ -39,16 +41,16 @@ mobile browser
 **Project Type**: Single Python package with a Streamlit web UI and an offline snapshot-build
 entrypoint
 
-**Performance Goals**: Filter, search, sort, and hierarchy interactions complete within two
-seconds for 20 markets and 10,000 stocks; initial cached snapshot load targets five seconds on a
-developer laptop
+**Performance Goals**: Filter, sort, and hierarchy interactions complete within two seconds for
+20 markets at the 95th percentile, measured against controlled data
 
-**Constraints**: Weekly completed-market data only; local eligibility is authoritative; no trade
-execution or forecast behavior; missing evidence must fail closed; UI modules do not calculate
-domain outcomes
+**Constraints**: Weekly completed-market scoreboards with daily evidence inputs; local comparisons
+are authoritative; no trade execution or forecast behavior; missing evidence fails closed only for
+the affected result; UI modules do not calculate domain outcomes; verify source rights before live
+non-price or additional-market ingestion is advertised
 
-**Scale/Scope**: 20 markets, GICS through sub-industry, approximately 10,000 stocks, four primary
-workflows, one active read-only snapshot per process
+**Scale/Scope**: Up to 20 markets for acceptance/performance; sector and industry classifications,
+five user stories, immutable read-only snapshots, no stock research workflow
 
 ## Constitution Check
 
@@ -58,8 +60,8 @@ workflows, one active read-only snapshot per process
 |-----------|-----------------|----------------------|--------|
 | Deliberate design | Requirements and domain decisions identify formulas, dates, thresholds, and failure modes. | Research records choices and rejected alternatives; contracts define inputs and errors. | PASS |
 | Small, cohesive units | Domain, orchestration, adapters, and UI need distinct owners. | Source tree gives calculations, use cases, providers, workflows, and components one responsibility each. | PASS |
-| Tests as evidence | Every behavior needs deterministic controlled data. | Unit, contract, integration, and `AppTest` suites map to FR-001–FR-023. | PASS |
-| Lean, extensible architecture | Two demonstrated replacement needs exist: workflows and market-data sources. | Two narrow protocols and an explicit registry address those needs; no dynamic plugin system or service tier is added. | PASS |
+| Tests as evidence | Every behavior needs deterministic controlled data. | Failing-first unit, contract, integration, and `AppTest` tasks map to FR-001–FR-027. | PASS |
+| Lean, extensible architecture | Two demonstrated replacement needs exist: workflows and market-data sources. | Existing narrow ports and explicit registry address those needs; no dynamic plugin system or service tier is added. | PASS |
 | Maintainability | Domain decisions require visible provenance and explicit state. | Immutable domain records, versioned snapshot manifests, typed boundaries, and reason codes preserve intent. | PASS |
 | Engineering constraints | External data, filesystem access, dates, and Streamlit state must be isolated. | Provider/repository ports isolate I/O; evaluation dates are inputs; shared cached data is separate from session filter state. | PASS |
 
@@ -92,16 +94,17 @@ src/market_leadership/
 │   ├── models.py                  # immutable identifiers and result records
 │   ├── regimes.py                 # normalized slope and market-regime rules
 │   ├── relative_strength.py       # returns, components, and composite
-│   ├── rankings.py                # statuses, tie-breaking, and top group
-│   ├── proxies.py                 # proxy qualification and fallback selection
-│   ├── deterioration.py           # monthly and weekly review-state transitions
-│   └── candidates.py              # industry and single-stock eligibility gates
+│   ├── rankings.py                # statuses, tie-breaking, rank and score changes
+│   ├── proxies.py                 # documented representation and qualification
+│   ├── participation.py           # constituent breadth and concentration
+│   └── trading_activity.py        # price/volume-derived confirmation
 ├── application/
 │   ├── ports.py                   # MarketDataProvider and SnapshotRepository protocols
 │   ├── queries.py                 # typed filter/search/sort request records
 │   ├── build_snapshot.py          # deterministic offline calculation pipeline
 │   ├── browse_scoreboard.py       # scoreboard query use case
-│   └── inspect_industry.py        # industry, stock, evidence, and provenance use case
+│   ├── inspect_industry.py        # industry, participation and provenance use case
+│   └── flows.py                   # observed fund-flow normalization and overlap
 ├── infrastructure/
 │   ├── parquet_provider.py        # validated canonical snapshot input
 │   ├── parquet_repository.py      # atomic snapshot persistence and retrieval
@@ -115,7 +118,6 @@ src/market_leadership/
     ├── workflows/
     │   ├── scoreboard.py
     │   ├── industry_detail.py
-    │   ├── stock_research.py
     │   └── methodology.py
     └── components/
         ├── filters.py
@@ -137,22 +139,20 @@ has no Streamlit or filesystem imports. Application use cases depend only on dom
 Infrastructure implements those ports. UI workflows are small function-based pages assembled in
 `bootstrap.py`; swapping a workflow changes one registry entry and does not alter navigation or
 domain code. Components render supplied view data and never determine status or eligibility. The
-workflow registry controls pages only. The equity package accepts only `EQUITY` instruments; a future
-asset category requires its own specified model and calculation path selected at the composition
-boundary before equity domain code runs.
+workflow registry controls pages only. The equity package accepts only `EQUITY` instruments; other
+asset categories and stock research remain out of scope. Phase 2 input manifests remain unchanged;
+a separately versioned calculated weekly snapshot contract precedes its implementation.
 
 ## Requirement Ownership
 
 | Requirements | Owning implementation | Primary evidence |
 |--------------|-----------------------|------------------|
-| FR-001–FR-002 | `models`, `build_snapshot`, scoreboard workflow | hierarchy fixtures and default-page `AppTest` |
-| FR-003 | `regimes` | slope-boundary and regime unit tests |
-| FR-004–FR-007 | `relative_strength`, `rankings` | controlled calculation and tie tests |
-| FR-008–FR-013 | browse use case, UI state, ranking components | query integration tests and `AppTest` |
-| FR-014 | `proxies` | threshold and fallback unit/contract fixtures |
-| FR-015–FR-018 | `deterioration`, `candidates` | transition and pass/fail gate tests |
-| FR-019–FR-022 | snapshot contract, provenance/evidence components | contract tests and interpretation `AppTest` |
-| FR-023 | category discriminator, composition boundary, and unchanged equity domain modules | frozen equity baseline compatibility test |
+| FR-001–FR-006 | market/classification inputs, `regimes`, browse use case, scoreboard workflow | US/JP/GB fixture, boundary tests, selection `AppTest` |
+| FR-007–FR-014 | `relative_strength`, `rankings`, `proxies`, weekly snapshot, industry inspection | basis, ties, missing history and drill-down tests |
+| FR-015–FR-018 | `participation`, `trading_activity`, inspection use case | membership/weight/volume coverage and divergence tests |
+| FR-019–FR-021 | observed-flow contract, `flows`, evidence panel | normalization/overlap, stale and separation tests |
+| FR-022–FR-023 | browse query, session filter state, filter components | filter/sort/reset/empty `AppTest` |
+| FR-024–FR-027 | provenance records, methodology workflow, evidence panels | contract and interpretation `AppTest` |
 
 ## Complexity Tracking
 

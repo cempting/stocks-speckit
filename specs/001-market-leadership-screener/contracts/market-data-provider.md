@@ -5,10 +5,12 @@
 The application calculates from canonical records rather than a vendor SDK. Any adapter, including
 local Parquet and deterministic fixtures, must satisfy this contract.
 
-This full-release contract is staged. Phase 2 runtime adapters declare only verified US adjusted
-daily price/volume capability; FX, classifications, holdings, fundamentals, and evidence contracts
-and their live sources are deferred. An adapter must reject unsupported requests rather than claim
-these data types or fabricate valid observations.
+This is a target interface, not a claim that every method or source is available. Phase 2 runtime
+adapters declare only verified US adjusted daily price/volume capability. Market definitions,
+classification/membership, representation/weights, optional FX, and observed flows are deferred
+canonical contracts introduced and tested in their owning story phases (see
+[deferred-evidence.md](deferred-evidence.md)). Fundamentals and stock-candidacy sources are out of
+scope. Adapters reject unsupported requests rather than fabricate observations.
 
 ## Protocol
 
@@ -21,8 +23,7 @@ class MarketDataProvider(Protocol):
     def prices(self, request: PriceRequest) -> PriceFrame: ...
     def fx_rates(self, request: FxRequest) -> FxFrame: ...
     def proxy_inputs(self, as_of: date) -> ProxyInputs: ...
-    def fundamentals(self, as_of: date) -> FundamentalFrame: ...
-    def evidence(self, request: EvidenceRequest) -> Sequence[EvidenceItem]: ...
+    def observed_flows(self, request: FlowRequest) -> Sequence[ObservedFlowEvidence]: ...
 ```
 
 Requests include explicit date ranges, identifiers, return basis, and currency basis. Results are
@@ -41,8 +42,7 @@ status, or eligibility calculation.
 | `fx_rates` | currencies and `date` | same-close rate, source, availability |
 | `fund_holdings` | fund, holding, `as_of` | weight, source, availability |
 | `liquidity` | instrument, `as_of` | ADV20 USD and fund AUM where applicable |
-| `fundamentals` | company, fiscal period | required survival inputs, source, availability |
-| `evidence` | `evidence_id` | subject, kind, event/available dates, source, coverage |
+| `observed_flows` | fund, event period, source | monetary net flow, asset basis, availability, representation, coverage |
 
 Parquet files use string column names, UTC timestamps for retrieval metadata, ISO dates for market
 dates, decimal or float values with documented units, and no serialized Python objects.
@@ -70,6 +70,7 @@ are not included in user-visible text.
 
 ## Conformance Tests
 
-Every adapter runs the same tests for as-of filtering, deterministic ordering, empty results, duplicate
-rejection, same-date FX behavior, source traceability, and all canonical schemas. The fixture adapter
-is the reference implementation, not a relaxed test double.
+Every adapter runs conformance tests for only its declared capabilities. Phase 2 tests cover US
+price/volume; later story-specific tests cover dated classification, weights, optional same-date FX
+and flows as their contracts are implemented. The fixture adapter is the reference implementation,
+not a relaxed test double; US/JP/GB fixtures do not certify live providers or display rights.

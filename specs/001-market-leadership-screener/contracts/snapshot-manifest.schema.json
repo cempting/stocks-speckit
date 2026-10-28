@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://stocks-speckit.local/schemas/snapshot-manifest.schema.json",
-  "title": "Market Leadership Snapshot Manifest",
+  "title": "Daily Price/Volume Input Snapshot Manifest (Phase 2)",
   "type": "object",
   "additionalProperties": false,
   "required": [

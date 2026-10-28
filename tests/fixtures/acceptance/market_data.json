@@ -8,7 +8,9 @@
       "timezone": "America/New_York",
       "calendar_id": "XNYS",
       "local_benchmark_id": "SPX",
-      "classification_scheme_id": "GICS-US"
+      "classification_scheme_id": "GICS-US",
+      "enabled_from": "2025-01-01",
+      "enabled_to": null
     },
     {
       "market_id": "JP",
@@ -17,7 +19,9 @@
       "timezone": "Asia/Tokyo",
       "calendar_id": "XTKS",
       "local_benchmark_id": "N225",
-      "classification_scheme_id": "GICS-JP"
+      "classification_scheme_id": "GICS-JP",
+      "enabled_from": "2025-01-01",
+      "enabled_to": null
     },
     {
       "market_id": "GB",
@@ -26,7 +30,9 @@
       "timezone": "Europe/London",
       "calendar_id": "XLON",
       "local_benchmark_id": "UKX",
-      "classification_scheme_id": "GICS-GB"
+      "classification_scheme_id": "GICS-GB",
+      "enabled_from": "2025-01-01",
+      "enabled_to": null
     }
   ],
   "benchmarks": [
@@ -43,6 +49,71 @@
       "regime": "SIDEWAYS"
     },
     { "market_id": "GB", "symbol": "UKX", "close": 9400.0, "regime": "BEARISH" }
+  ],
+  "benchmark_histories": [
+    {
+      "market_id": "US",
+      "benchmark_id": "SPX",
+      "currency": "USD",
+      "calendar_id": "XNYS",
+      "return_basis": "adjusted",
+      "effective_from": "2025-01-01",
+      "effective_to": null,
+      "first_session": "2026-01-02",
+      "last_session": "2026-10-23",
+      "first_close": 5785.0,
+      "close_change_per_session": 5.0,
+      "source_id": "fixture",
+      "available_on": "2026-10-23"
+    },
+    {
+      "market_id": "JP",
+      "benchmark_id": "N225",
+      "currency": "JPY",
+      "calendar_id": "XTKS",
+      "return_basis": "adjusted",
+      "effective_from": "2025-01-01",
+      "effective_to": null,
+      "first_session": "2026-01-05",
+      "last_session": "2026-10-23",
+      "first_close": 51000.0,
+      "close_change_per_session": 0.0,
+      "source_id": "fixture",
+      "available_on": "2026-10-23"
+    },
+    {
+      "market_id": "GB",
+      "benchmark_id": "UKX",
+      "currency": "GBP",
+      "calendar_id": "XLON",
+      "return_basis": "adjusted",
+      "effective_from": "2025-01-01",
+      "effective_to": null,
+      "first_session": "2026-01-02",
+      "last_session": "2026-10-23",
+      "first_close": 11040.0,
+      "close_change_per_session": -8.0,
+      "source_id": "fixture",
+      "available_on": "2026-10-23"
+    }
+  ],
+  "fx_rates": [
+    {
+      "base_currency": "JPY",
+      "quote_currency": "USD",
+      "date": "2026-10-22",
+      "close": 0.0067,
+      "source_id": "fixture-fx",
+      "available_on": "2026-10-22"
+    },
+    {
+      "base_currency": "GBP",
+      "quote_currency": "USD",
+      "date": "2026-10-23",
+      "close": 1.33,
+      "source_id": "fixture-fx",
+      "available_on": "2026-10-24"
+    }
   ],
   "sector_outcomes": [
     {

@@ -3,6 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
+from market_leadership.application.ports import DataPointRequest
 from market_leadership.infrastructure.fixture_provider import FixtureProvider
 from market_leadership.infrastructure.parquet_provider import ParquetSnapshotProvider
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
@@ -10,6 +11,81 @@ from market_leadership.infrastructure.provider_validation import (
     canonicalize_daily_history,
     canonicalize_fx_rates,
 )
+
+
+@pytest.mark.parametrize(
+    ("symbol", "first_session", "first_close", "last_close"),
+    [
+        ("SPX", date(2026, 1, 2), 5785.0, 6800.0),
+        ("N225", date(2026, 1, 5), 51000.0, 51000.0),
+        ("UKX", date(2026, 1, 2), 11040.0, 9400.0),
+    ],
+)
+def test_fixture_local_benchmarks_follow_market_sessions_and_declared_closes(
+    symbol: str, first_session: date, first_close: float, last_close: float
+) -> None:
+    history = FixtureProvider().fetch_daily_history(
+        (symbol,), start=first_session, end=date(2026, 10, 23)
+    )[symbol]
+
+    assert history.index[0].date() == first_session
+    assert history.index[-1].date() == date(2026, 10, 23)
+    assert history["close"].iloc[0] == first_close
+    assert history["close"].iloc[-1] == last_close
+    assert history.attrs == {"source_id": "fixture", "available_on": "2026-10-23"}
+
+
+@pytest.mark.parametrize("symbol", ["SPX", "N225", "UKX"])
+def test_fixture_benchmarks_reject_dates_outside_effective_source_interval(
+    symbol: str,
+) -> None:
+    provider = FixtureProvider()
+    with pytest.raises(ValueError, match="outside its fixture benchmark availability"):
+        provider.fetch_daily_history((symbol,), start=date(2024, 12, 31), end=date(2026, 10, 23))
+    with pytest.raises(ValueError, match="outside its fixture benchmark availability"):
+        provider.fetch_daily_history((symbol,), start=date(2026, 10, 23), end=date(2026, 10, 24))
+
+
+@pytest.mark.parametrize(
+    ("market_id", "symbol", "currency"),
+    [("US", "SPX", "USD"), ("JP", "N225", "JPY"), ("GB", "UKX", "GBP")],
+)
+def test_fixture_capabilities_are_local_effective_and_source_bounded(
+    market_id: str, symbol: str, currency: str
+) -> None:
+    capabilities = FixtureProvider.capabilities()
+
+    def request(*, market: str, ticker: str, unit: str, session: date) -> DataPointRequest:
+        return DataPointRequest(
+            data_point="daily_history",
+            market_id=market,
+            identifiers=(ticker,),
+            frequency="1d",
+            start=session,
+            end=session,
+            currency=unit,
+            return_basis="adjusted",
+        )
+
+    assert (
+        sum(
+            capability.covers(
+                request(market=market_id, ticker=symbol, unit=currency, session=date(2026, 10, 23))
+            )
+            for capability in capabilities
+        )
+        == 1
+    )
+    for market, ticker, unit, session in (
+        (market_id, symbol, currency, date(2024, 12, 31)),
+        (market_id, symbol, currency, date(2026, 10, 24)),
+        (market_id, symbol, "EUR", date(2026, 10, 23)),
+        (market_id, "SPY" if market_id != "US" else "N225", currency, date(2026, 10, 23)),
+    ):
+        assert not any(
+            capability.covers(request(market=market, ticker=ticker, unit=unit, session=session))
+            for capability in capabilities
+        )
 
 
 def _parquet_provider(tmp_path) -> ParquetSnapshotProvider:

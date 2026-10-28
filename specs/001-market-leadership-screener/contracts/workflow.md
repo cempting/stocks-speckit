@@ -25,18 +25,22 @@ The composition root builds an ordered tuple of descriptors and converts each de
    cache invalidation.
 4. Shared filter and drill-down values use namespaced session keys defined in `ui/state.py`.
 5. The workflow renders loading, empty, insufficient, and operational-error states explicitly.
-6. Displayed outcomes include as-of date and access to provenance; warnings do not overwrite the
-   underlying result state.
+6. Displayed outcomes include as-of date and access to provenance; missing or stale required inputs
+   suppress dependent indicators, not independent valid results.
 7. A replacement implementing the same user outcome may be swapped by changing one registry entry.
 
-## Initial Registry
+## Release Registry (target; not the Phase 2 default)
 
 | Key | Responsibility | Required use case |
 |-----|----------------|-------------------|
-| `scoreboard` | Default regimes, ranking, filtering, search, sort, and hierarchy movement | Browse scoreboard |
-| `industry-detail` | Components, proxy, local/global context, evidence, and constituents | Inspect industry |
-| `stock-research` | Candidate gates, failures, stale evidence, and research reason | Inspect industry/stock |
+| `scoreboard` | Default latest completed weekly SECTOR rankings by selected market, regimes, filters and drill-down | Browse scoreboard |
+| `industry-detail` | Parent-sector/local-market comparisons, participation, trading activity, observed flows and provenance | Inspect industry |
 | `methodology` | Definitions, basis, provenance guidance, and non-advice warning | Read snapshot metadata |
+
+Until the weekly workflow passes acceptance, the existing live US daily-history discovery is the
+development/Phase 2 default; published daily input snapshots remain an optional mode. Multi-market
+fixture comparisons are not claims of live JP/GB ingestion. Clear filters restores the selected
+markets' weekly SECTOR view, retaining market selection.
 
 ## Component Contract
 

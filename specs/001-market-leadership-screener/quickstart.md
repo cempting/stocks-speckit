@@ -1,13 +1,17 @@
 # Quickstart: Market Leadership Screener
 
-This guide covers US daily-history discovery and the daily-history input snapshot builder.
-The full weekly sector-and-industry scoreboard and non-price data ingestion are not implemented yet.
+This guide covers US daily-history discovery, daily-history input snapshots, and the controlled
+US/JP/GB acceptance-fixture comparison. The weekly sector-and-industry scoreboard, live non-US
+discovery, participation and observed-flow contracts are release targets, not implemented capabilities.
+At release, the default is a completed
+weekly SECTOR scoreboard; live US discovery remains the Phase 2/development default until then.
 
 ## Prerequisites
 
 - Python 3.12
 - `uv`
-- A licensed canonical snapshot directory, or the repository acceptance fixture
+- The existing US daily-history fixture or an authorized daily-history source. The US/JP/GB
+  controlled fixture is for acceptance testing only, not a live feed or proof of display rights.
 
 ## Local Configuration
 
@@ -67,8 +71,8 @@ uv run pyright
 uv run pytest
 ```
 
-The full suite includes formula boundaries, provider contracts, use-case integration, equity baseline
-compatibility, and Streamlit `AppTest` workflows.
+The current suite covers implemented Phase 1–3 behavior; future weekly calculations and user-story
+tests listed in `tasks.md` must be written failing-first and pass before release.
 
 ## Run the App
 
@@ -89,7 +93,32 @@ from `MARKET_LEADERSHIP_SNAPSHOT_DIR` (default `.data/snapshots`). That mode dis
 ID and as-of date, makes no upstream requests on page reruns, and does not offer a live refresh
 button. If no input snapshot has been published, the page displays a build instruction instead of
 switching providers. **Live provider** remains the default; the snapshot mode does not calculate
-weekly leadership rankings.
+weekly leadership rankings. Do not select this mode as the release scoreboard.
+
+Choose **Acceptance fixture** from **Data source** to compare US, JP and GB local benchmark regimes
+and three-month local-relative sector proxy outcomes. Select one or several markets using **Markets**;
+each gets a separate panel showing its benchmark, currency, calendar, return basis, observation date,
+source and coverage. The fixture is a controlled development/acceptance sample, not licensed live
+JP/GB ingestion or a calculated weekly ranking. Missing local history is labelled insufficient
+without concealing other markets; stale observations are labelled stale. This mode never calls a live
+provider or changes the default US live discovery workflow.
+
+## Validate the Release Workflow (after T035+ implementation)
+
+Using `tests/fixtures/acceptance/market_data.json` and `expected.json`, exercise US, JP and GB
+selection individually and together. Check each local regime, benchmark, currency, latest completed
+weekly date and top/bottom sectors independently; never display a pooled ranking. The current fixture
+contains context and three-month relative outcomes only: extend it with dated 1w/1m/3m/6m/12m
+histories, 50-session composites, sector/industry memberships, prior weekly ranks and evidence to
+test the complete release. The US/JP/GB test is fixture-backed; verify source rights and complete
+provider contracts separately before enabling non-US live ingestion.
+
+Confirm sector is the default level, industries retain their parent and market, filter reset retains
+selected markets, and stale/missing breadth or observed flows do not change price rank. Verify
+observed flow is distinct from inferred trading activity and all outcomes expose basis, dates,
+sources and coverage. Run the same `uv run pytest` and quality-gate commands above after each phase.
+See [contracts/deferred-evidence.md](contracts/deferred-evidence.md) for phase-specific inputs and
+[data-model.md](data-model.md) for insufficiency rules.
 
 ## Run Focused Tests
 
@@ -114,7 +143,9 @@ test, then run the complete suite before closing the task.
 
 ## Add a Data Provider
 
-1. Implement the protocol in [contracts/market-data-provider.md](contracts/market-data-provider.md).
-2. Run the shared provider conformance suite.
+1. Implement only declared supported capabilities from
+   [contracts/market-data-provider.md](contracts/market-data-provider.md), respecting the
+   [deferred input contracts](contracts/deferred-evidence.md).
+2. Run the conformance suite for those capabilities; verify source and display rights separately.
 3. Register the adapter in the offline builder composition root.
 4. Keep vendor credentials outside snapshots, logs, and Streamlit session state.

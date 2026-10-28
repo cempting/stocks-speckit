@@ -16,15 +16,17 @@
 `market_id`, `name`, `base_currency`, `timezone`, `calendar_id`, `local_benchmark_id`,
 `classification_scheme_id`, `enabled_from`, `enabled_to`.
 
-Validation: one active local benchmark and one active GICS scheme; currency is ISO 4217; the primary
-listing market governs a multi-listed company.
+Validation: one active local benchmark and one documented sector/industry scheme; currency is ISO
+4217; the primary listing market governs a multi-listed company. US/JP/GB reference markets in
+`tests/fixtures/acceptance/market_data.json` are controlled acceptance inputs, not live coverage.
 
 ### ClassificationNode
 
 `node_id`, `scheme_id`, `level` (`SECTOR`, `INDUSTRY_GROUP`, `INDUSTRY`, `SUB_INDUSTRY`), `name`,
 `parent_node_id`, `effective_from`, `effective_to`.
 
-Validation: parent is exactly one level higher; each effective GICS chain is complete and acyclic.
+Validation: sector-to-industry ancestry is effective-dated and acyclic; an intermediary
+`INDUSTRY_GROUP` is retained where the scheme uses it. Never apply today's membership to history.
 
 ### Company and Instrument
 
@@ -38,17 +40,18 @@ Validation: symbol is unique per exchange and effective period; stocks reference
 and indices do not impersonate companies. A future category is dispatched to its separately specified
 model before equity calculations and cannot enter with `asset_category = EQUITY`.
 
-### Benchmark and IndustryProxy
+### Benchmark and Representation
 
 Benchmark: `benchmark_id`, `instrument_id`, `scope` (`LOCAL`, `GLOBAL`), `market_id?`, `currency`,
 `return_basis`.
 
-IndustryProxy: `proxy_id`, `market_id`, `node_id`, `proxy_type` (`FUND`, `INDEX`,
+Representation: `proxy_id`, `market_id`, `node_id`, `proxy_type` (`FUND`, `INDEX`,
 `EQUAL_WEIGHT_BASKET`, `NONE`), `instrument_id?`, `member_ids`, `purity_pct?`, `aum_usd?`,
 `adv20_usd?`, `selected_as_of`, `effective_from`, `effective_to`, `qualification_reasons`.
 
-Validation: choose the most liquid qualifying fund first, then an official index, then at least five
-equal-weight eligible stocks. `NONE` is explicit and makes the node insufficient.
+Validation: document each fund, official index, or constituent basket's composition basis, effective
+dates, source and qualification. A representation unavailable for required history makes its
+classification price result insufficient; no unverified liquidity or purity threshold is implied.
 
 ## Observation Entities
 
@@ -62,50 +65,29 @@ FX: `base_currency`, `quote_currency`, `date`, `close`, `source_id`, `available_
 Validation: one value per key and source version; global conversion uses same-close FX. A missing FX
 observation blocks only the global result.
 
-### LiquidityObservation and FundHolding
+### FundHolding and Optional LiquidityObservation
 
-Liquidity: `instrument_id`, `as_of`, `adv20_usd`, `aum_usd?`, `source_id`, `available_on`.
+Liquidity (only where qualified as a documented representation property): `instrument_id`,
+`as_of`, `adv20_usd`, `aum_usd?`, `source_id`, `available_on`.
 
 Holding: `fund_instrument_id`, `held_instrument_id`, `weight_pct`, `as_of`, `source_id`,
 `available_on`.
 
-Validation: fund weights are non-negative and approximately sum to 100%; stock floor is $5 million
-ADV; fund floors are $100 million AUM and $2 million ADV; fund purity is at least 60%.
+Validation: weights are non-negative, effective-dated, source-attributed, and reconcile to the
+documented coverage. Phase 2 has no live holdings or liquidity input; approve any additional
+qualification thresholds and source rights before deploying a live representation adapter.
 
-### FinancialSnapshot and SurvivalCheck
+### ObservedFlowEvidence
 
-FinancialSnapshot includes `company_id`, `fiscal_period_end`, currency, cash and equivalents,
-operating cash flow, capital expenditure, interest expense TTM, EBIT TTM, market cap USD, shares,
-source, and `available_on`.
+`flow_id`, `fund_instrument_id`, `represented_node_id`, `event_period_start`, `event_period_end`,
+`available_on`, `net_flow`, `flow_currency`, `assets`, `assets_as_of`, `flow_pct_assets?`,
+`coverage`, `overlap_group?`, `source_id`, `freshness`, `reason_codes`.
 
-SurvivalCheck includes `company_id`, `evaluated_as_of`, `source_period`, `result` (`PASS`, `FAIL`,
-`INSUFFICIENT`), quarterly cash burn, runway years, interest cover TTM, market-cap tier,
-interest-cover threshold, volatility class, proxy-basis flag, financial-company exemption, and reasons.
-
-Validation: `quarterly_cash_burn = max(0, capital_expenditure - operating_cash_flow)` for the latest
-reported quarter after excluding non-cash accounting items. Zero burn produces unlimited runway;
-otherwise `runway_years = cash_and_equivalents / quarterly_cash_burn / 4`, using existing cash only,
-and must be at least two years. A GAAP loss may be an explicitly flagged proxy only when no better
-cash-flow evidence exists. Interest cover is EBIT TTM divided by interest expense TTM and
-independently must meet the size-by-volatility minimum:
-
-| Market-cap tier (USD) | Low | Medium | High | Extreme |
-|-----------------------|-----|--------|------|---------|
-| Mega/large, above $10B | 1.5 | 2 | 3 | 4 |
-| Mid, $2B through $10B | 2 | 3 | 4 | 5 |
-| Small/micro, below $2B | 3 | 4 | 5 | 6 |
-
-Evidence older than two quarters is insufficient. Financial companies are exempt from the interest-
-cover veto because regulatory-capital ratios are outside this feature; they still require the runway
-test. PASS is never itself a reason to rank or buy a stock.
-
-### EvidenceItem
-
-`evidence_id`, `subject_type`, `subject_id`, `kind`, `direction`, `magnitude`, `event_date`,
-`available_on`, `coverage`, `source_id`, `source_reference`, `lag_days`.
-
-Validation: availability cannot precede the event. Evidence is contextual and cannot alter status,
-rank, top group, or eligibility.
+Validation: `flow_pct_assets = 100 * net_flow / assets` only with positive, temporally compatible
+assets; otherwise normalization is insufficient. Availability cannot precede the event period.
+Overlapping funds are not summed without a documented deduplication and coverage rule. Missing,
+partial or stale flows leave the price ranking untouched. Changes in assets, price and volume are
+never substitutes for observed net flow.
 
 ### SourceRecord
 
@@ -118,71 +100,53 @@ Every observation and displayed outcome resolves to at least one source record o
 
 ### MarketRegime
 
-`market_id`, `view`, `benchmark_id`, `as_of`, `close`, `sma150`, `normalized_slope_pct`,
+`market_id`, `benchmark_id`, `as_of`, `close`, `sma150`, `normalized_slope_pct`,
 `slope_state`, `regime`, `data_quality`, `reason_codes`, `source_ids`.
 
 States: slope is `RISING`, `FLAT`, `FALLING`, or `UNDEFINED`; regime is `BULLISH`, `SIDEWAYS`,
-`BEARISH`, or `INSUFFICIENT`. Fewer than 20 average values makes slope `UNDEFINED` and regime
-`SIDEWAYS` when the current close and average are present; missing either current value makes the
-regime `INSUFFICIENT`.
+`BEARISH`, or `INSUFFICIENT`. Greater than +0.025% normalized OLS slope over 20 latest 150-session
+average values is rising; less than -0.025% is falling; equality is flat. Undefined slope or missing
+current close/average makes regime `INSUFFICIENT` rather than implying sideways.
 
 ### ScoreboardSnapshot and ScoreboardEntry
 
-Snapshot: `snapshot_id`, `market_id`, `view`, `level`, `as_of`, `benchmark_id`, `currency_basis`,
-`return_basis`, `entry_ids`, `built_at`, `ruleset_version`.
+Snapshot: `snapshot_id`, `market_id`, `level`, `as_of`, `benchmark_id`, `currency_basis`,
+`return_basis`, `entry_ids`, `built_at`, `ruleset_version`, `source_ids`. The `as_of` is the latest
+completed week for that market; do not combine differently dated local weeks into a pooled ranking.
 
-Entry: `entry_id`, snapshot and node IDs, proxy ID, 3/6/12-month strengths, composite, 50-session
-composite average, prior-week composite, week-over-week change, rank, status, top-group flag,
-eligibility, data quality, warning/reason codes, and provenance IDs.
+Entry: `entry_id`, snapshot and node IDs, representation ID and type, absolute and local-relative
+1-week/1-month/3-month/6-month/12-month returns, parent-sector-relative industry returns,
+3/6/12-month strengths, composite, 50-session composite average, prior-week composite,
+week-over-week change, prior rank, rank change, rank, status, momentum state, data sufficiency,
+warning/reason codes, and provenance IDs.
 
-Validation: all components share date, basis, and benchmark. Only sufficient entries rank. Ties use
-six-month, three-month, twelve-month, then name. Top group size is `ceil(0.20 * ranked_count)`.
+Validation: components use the latest shared eligible observation, matching return basis and local
+benchmark. Composite = `0.4*RS_3m + 0.3*RS_6m + 0.3*RS_12m`; status requires 50-session composite
+history, and only sufficient entries rank. Ties use six-month, three-month, twelve-month, then name.
+An industry belongs to its dated parent sector and is ranked within that market and hierarchy.
 
-### DeteriorationRecord
+### BreadthSnapshot, ConcentrationEvidence, TradingActivityEvidence
 
-`market_id`, `industry_node_id`, `review_date`, `consecutive_months_outside_top`, `active`,
-`raised_at?`, `cleared_at?`, `reason` (`DECLINING`, `OUTSIDE_TOP_TWO_MONTHS`).
+Breadth: `node_id`, `as_of`, `membership_as_of`, `above_sma50_pct?`,
+`above_sma200_pct?`, `included_count`, `eligible_count`, `coverage_pct`, `reason_codes`,
+`source_ids`. Show each percentage only with at least five eligible members and history for at
+least 80% of them; missing evidence affects only breadth.
 
-Transitions:
+Concentration: `node_id`, `as_of`, `cap_weighted_return?`, `equal_weight_return?`,
+`comparison_basis`, `weight_coverage`, `source_ids`, `reason_codes`. Material disagreement is
+labelled possible concentration under a documented, versioned threshold, never broad participation
+by assumption.
 
-```text
-CLEAR --monthly outside top--> COUNTING_1
-COUNTING_1 --monthly outside top--> ACTIVE
-COUNTING_1 --monthly back in top and not declining--> CLEAR
-ACTIVE --monthly back in top and not declining--> CLEAR
-ANY --weekly declining--> ACTIVE
-```
-
-An active state blocks new candidacy and creates review/reduce information, never a sell order.
-
-### HoldingReviewFlag
-
-`flag_id`, `holding_instrument_id`, `industry_node_id`, `review_date`, `deterioration_reason`,
-`action` (`REVIEW_REDUCE`), `automatic_sale` (always false), `cleared_at?`.
-
-The deterioration use case accepts the stable instrument IDs of existing holdings. At the next weekly
-review it emits one flag for each held stock whose effective primary classification descends from the
-declining industry. Monthly deterioration emits the same flag for affected holdings when the second
-consecutive outside-top review activates it. An industry with no supplied holdings still retains its
-deterioration record and new-candidacy block.
-
-### StockCandidateEvaluation
-
-`evaluation_id`, `stock_instrument_id`, `industry_node_id`, `as_of`, `industry_eligible`,
-`rs_3m_vs_industry`, `rs_6m_vs_industry`, `survival_check_id`, `volatility_class`,
-`primary_classification_matches`, `proxy_weight_pct`, `proxy_rank`, `research_reason_present`,
-`research_reason`, `result` (`CANDIDATE`, `BLOCKED`, `INSUFFICIENT`), `gate_results`, `reason_codes`,
-`source_ids`.
-
-All required gates must pass. The written reason is retained for audit and display; blank or
-whitespace-only text fails its gate. Insufficient required evidence is distinct from a definite failed
-gate.
+Trading activity: `node_id`, `as_of`, `indicator`, `value?`, `comparison_period`, `coverage`,
+`source_ids`, `reason_codes`. Every indicator is explicitly **inferred trading activity** and is
+insufficient without aligned close/volume history. No indicator is an observed fund flow.
 
 ## UI State
 
-`FilterState` is session-local and contains market, hierarchy level, statuses, top-group choice,
-eligibility choices, proxy types, search text, sort field, sort direction, and selected node. It is
-not persisted in a shared cache or snapshot. Clearing it restores the weekly industry scoreboard.
+`FilterState` is session-local and contains selected market IDs, hierarchy level, leadership statuses,
+momentum states, proxy types, sufficiency states, sort field/direction, and selected sector. It is
+not persisted in a shared cache or snapshot. Clearing filters preserves selected markets and
+restores the latest completed weekly SECTOR scoreboard.
 
 ## Relationships
 
@@ -192,12 +156,11 @@ erDiagram
     MARKET ||--o{ CLASSIFICATION_NODE : enables
     COMPANY ||--o{ INSTRUMENT : lists_as
     CLASSIFICATION_NODE ||--o{ CLASSIFICATION_NODE : contains
-    CLASSIFICATION_NODE ||--|| INDUSTRY_PROXY : represented_by
+    CLASSIFICATION_NODE ||--o{ REPRESENTATION : represented_by
     INSTRUMENT ||--o{ PRICE_OBSERVATION : has
-    COMPANY ||--o{ FINANCIAL_SNAPSHOT : reports
     SCOREBOARD_SNAPSHOT ||--o{ SCOREBOARD_ENTRY : contains
     CLASSIFICATION_NODE ||--o{ SCOREBOARD_ENTRY : ranked_as
-    CLASSIFICATION_NODE ||--o{ DETERIORATION_RECORD : reviewed_by
-    INSTRUMENT ||--o{ STOCK_CANDIDATE_EVALUATION : evaluated_as
+    CLASSIFICATION_NODE ||--o{ BREADTH_SNAPSHOT : measured_by
+    CLASSIFICATION_NODE ||--o{ OBSERVED_FLOW_EVIDENCE : contextualized_by
     SOURCE_RECORD ||--o{ PRICE_OBSERVATION : supplies
 ```
