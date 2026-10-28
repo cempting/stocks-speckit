@@ -71,11 +71,11 @@ upstream error is rejected because it can change data semantics without an expli
 **Staging decision**: Phase 2's immutable daily input snapshots and live US discovery are not
 weekly calculated scoreboards. The US/JP/GB acceptance fixture establishes test-only multi-market
 selection with distinct local currencies, benchmarks and regimes; it is not a live-data entitlement.
-Before US1 calculations, define effective-dated market/classification/representation inputs and
-weekly snapshot schema, then test them with controlled fixtures. Publish only completed local-market
-weeks; never imply a shared date across markets. Release default switches to the SECTOR scoreboard
-only after its acceptance tests pass. Alternative rejected: calling the Phase 2 input snapshot a
-weekly ranking or treating cross-market fixtures as live providers.
+Phase 4 now implements effective-dated classification/representation fixture inputs and a distinct
+weekly snapshot schema. Publish only completed local-market weeks; never imply a shared date across
+markets. The default switched to the SECTOR scoreboard after its fixture-backed acceptance tests
+passed. Alternative rejected: calling the Phase 2 input snapshot a weekly ranking or treating
+cross-market fixtures as live providers.
 
 **Evidence decision**: Implement dated classifications and representations in US2; constituent
 membership and weights in US3; provenance across all stories; observed net flows and assets

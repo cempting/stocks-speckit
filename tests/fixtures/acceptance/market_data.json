@@ -115,6 +115,49 @@
       "available_on": "2026-10-24"
     }
   ],
+  "weekly": {
+    "classification_version": "fixture-classification-1",
+    "representation_version": "fixture-representation-1",
+    "first_session": "2025-01-02",
+    "last_session": "2026-10-23",
+    "source_id": "controlled-weekly-fixture",
+    "nodes": [
+      {"market_id":"US","node_id":"US-TECH","level":"SECTOR","name":"Information Technology","parent_node_id":null,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"US","node_id":"US-UTIL","level":"SECTOR","name":"Utilities","parent_node_id":null,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"US","node_id":"US-SOFT","level":"INDUSTRY","name":"Software","parent_node_id":"US-TECH","effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"JP","node_id":"JP-INDUSTRIAL","level":"SECTOR","name":"Industrials","parent_node_id":null,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"JP","node_id":"JP-STAPLES","level":"SECTOR","name":"Consumer Staples","parent_node_id":null,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"JP","node_id":"JP-MACH","level":"INDUSTRY","name":"Machinery","parent_node_id":"JP-INDUSTRIAL","effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"GB","node_id":"GB-ENERGY","level":"SECTOR","name":"Energy","parent_node_id":null,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"GB","node_id":"GB-FIN","level":"SECTOR","name":"Financials","parent_node_id":null,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"GB","node_id":"GB-EXPL","level":"INDUSTRY","name":"Exploration","parent_node_id":"GB-ENERGY","effective_from":"2025-01-01","effective_to":null}
+    ],
+    "representations": [
+      {"market_id":"US","node_id":"US-TECH","proxy_id":"US-TECH-FUND","proxy_type":"FUND","instrument_id":"US-TECH-FUND","composition_basis":"controlled sector fund composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"US","node_id":"US-UTIL","proxy_id":"US-UTIL-INDEX","proxy_type":"INDEX","instrument_id":"US-UTIL-INDEX","composition_basis":"controlled sector index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"US","node_id":"US-SOFT","proxy_id":"US-SOFT-INDEX","proxy_type":"INDEX","instrument_id":"US-SOFT-INDEX","composition_basis":"controlled industry index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"JP","node_id":"JP-INDUSTRIAL","proxy_id":"JP-INDUSTRIAL-INDEX","proxy_type":"INDEX","instrument_id":"JP-INDUSTRIAL-INDEX","composition_basis":"controlled sector index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"JP","node_id":"JP-STAPLES","proxy_id":"JP-STAPLES-INDEX","proxy_type":"INDEX","instrument_id":"JP-STAPLES-INDEX","composition_basis":"controlled sector index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"JP","node_id":"JP-MACH","proxy_id":"JP-MACH-INDEX","proxy_type":"INDEX","instrument_id":"JP-MACH-INDEX","composition_basis":"controlled industry index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"GB","node_id":"GB-ENERGY","proxy_id":"GB-ENERGY-INDEX","proxy_type":"INDEX","instrument_id":"GB-ENERGY-INDEX","composition_basis":"controlled sector index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"GB","node_id":"GB-FIN","proxy_id":"GB-FIN-INDEX","proxy_type":"INDEX","instrument_id":"GB-FIN-INDEX","composition_basis":"controlled sector index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null},
+      {"market_id":"GB","node_id":"GB-EXPL","proxy_id":"GB-EXPL-INDEX","proxy_type":"INDEX","instrument_id":"GB-EXPL-INDEX","composition_basis":"controlled industry index composition","source_id":"controlled-weekly-fixture","qualified":true,"effective_from":"2025-01-01","effective_to":null}
+    ],
+    "histories": [
+      {"market_id":"US","instrument_id":"SPX","currency":"USD","return_basis":"adjusted","first_close":5000.0,"change_per_session":4.0},
+      {"market_id":"US","instrument_id":"US-TECH-FUND","currency":"USD","return_basis":"adjusted","first_close":100.0,"change_per_session":0.18},
+      {"market_id":"US","instrument_id":"US-UTIL-INDEX","currency":"USD","return_basis":"adjusted","first_close":100.0,"change_per_session":0.01},
+      {"market_id":"US","instrument_id":"US-SOFT-INDEX","currency":"USD","return_basis":"adjusted","first_close":100.0,"change_per_session":0.25},
+      {"market_id":"JP","instrument_id":"N225","currency":"JPY","return_basis":"adjusted","first_close":50000.0,"change_per_session":5.0},
+      {"market_id":"JP","instrument_id":"JP-INDUSTRIAL-INDEX","currency":"JPY","return_basis":"adjusted","first_close":100.0,"change_per_session":0.12},
+      {"market_id":"JP","instrument_id":"JP-STAPLES-INDEX","currency":"JPY","return_basis":"adjusted","first_close":100.0,"change_per_session":-0.01},
+      {"market_id":"JP","instrument_id":"JP-MACH-INDEX","currency":"JPY","return_basis":"adjusted","first_close":100.0,"change_per_session":0.15},
+      {"market_id":"GB","instrument_id":"UKX","currency":"GBP","return_basis":"adjusted","first_close":9000.0,"change_per_session":-4.0},
+      {"market_id":"GB","instrument_id":"GB-ENERGY-INDEX","currency":"GBP","return_basis":"adjusted","first_close":100.0,"change_per_session":0.06},
+      {"market_id":"GB","instrument_id":"GB-FIN-INDEX","currency":"GBP","return_basis":"adjusted","first_close":100.0,"change_per_session":-0.1},
+      {"market_id":"GB","instrument_id":"GB-EXPL-INDEX","currency":"GBP","return_basis":"adjusted","first_close":100.0,"change_per_session":0.08}
+    ]
+  },
   "sector_outcomes": [
     {
       "market_id": "US",

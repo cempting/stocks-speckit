@@ -105,8 +105,8 @@ Every observation and displayed outcome resolves to at least one source record o
 
 States: slope is `RISING`, `FLAT`, `FALLING`, or `UNDEFINED`; regime is `BULLISH`, `SIDEWAYS`,
 `BEARISH`, or `INSUFFICIENT`. Greater than +0.025% normalized OLS slope over 20 latest 150-session
-average values is rising; less than -0.025% is falling; equality is flat. Undefined slope or missing
-current close/average makes regime `INSUFFICIENT` rather than implying sideways.
+average values is rising; less than -0.025% is falling; equality is flat. An undefined slope with a present close and 150-session average yields `SIDEWAYS`;
+missing current close or average yields `INSUFFICIENT`.
 
 ### ScoreboardSnapshot and ScoreboardEntry
 

@@ -14,13 +14,13 @@ inferred trading activity, and observed flows in versioned market-data snapshots
 in pure Python modules, coordinate them through small application use cases and provider protocols,
 and expose them through independently testable Streamlit workflows in one navigation composition root.
 
-The Phase 2 foundation is narrower than the completed release: direct US daily price/volume
-ingestion, a persistent canonical source cache, a daily input snapshot builder, and optional
-immutable input-snapshot viewing. Live-provider discovery remains the Phase 2 UI default. Weekly
-calculated scoreboards, non-price canonical contracts, and additional live markets follow in
-user-story phases. The US/JP/GB acceptance fixture proves multi-market selection, not licensed live
-ingestion outside the US. The completed release defaults to the latest completed weekly SECTOR
-scoreboard; until built, existing live US discovery remains the development/Phase 2 default.
+The Phase 2 foundation provides direct US daily price/volume ingestion, a persistent source cache,
+daily input snapshots, and optional immutable input-snapshot viewing. Phase 3 adds controlled
+US/JP/GB local comparison. Phase 4 publishes fixture-backed completed weekly sector/industry
+snapshots; the latest completed weekly SECTOR scoreboard is now the UI default, while the existing
+US live discovery remains separately navigable. These fixture workflows do not imply licensed live
+non-US ingestion; constituent participation, flows, and further live non-price contracts remain
+deferred.
 
 ## Technical Context
 

@@ -9,7 +9,7 @@ from streamlit.testing.v1 import AppTest
 from market_leadership.infrastructure.fixture_provider import FixtureProvider
 from market_leadership.infrastructure.snapshot_errors import SourceUnavailable
 
-APP_PATH = Path(__file__).parents[2] / "src/market_leadership/app.py"
+APP_PATH = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
 ACCEPTANCE_PATH = Path(__file__).parents[1] / "fixtures/acceptance"
 
 

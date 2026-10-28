@@ -33,16 +33,25 @@ _DAILY_HISTORY_CAPABILITY = ProviderCapability(
 
 def build_workflow_registry(
     discovery_render: Callable[[], None],
+    scoreboard_render: Callable[[], None],
 ) -> tuple[WorkflowSpec, ...]:
     return validate_workflows(
         (
+            WorkflowSpec(
+                key="weekly-scoreboard",
+                title="Weekly Sector Leadership",
+                url_path="scoreboard",
+                icon=":material/leaderboard:",
+                render=scoreboard_render,
+                default=True,
+            ),
             WorkflowSpec(
                 key="sector-discovery",
                 title="US Sector Discovery",
                 url_path="discovery",
                 icon=":material/monitoring:",
                 render=discovery_render,
-                default=True,
+                default=False,
             ),
         )
     )

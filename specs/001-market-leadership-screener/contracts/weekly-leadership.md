@@ -1,9 +1,9 @@
 # Calculated Weekly Leadership Snapshot Contract
 
-This is the US2 **release-target** contract, distinct from the existing Phase 2 daily price/volume
-input manifest (`snapshot-manifest.schema.json`). No calculated-weekly artifact or live non-US
-producer is claimed to exist yet. US2 must implement and contract-test a separate schema version;
-an input manifest must fail calculated-weekly loading, not be silently upgraded.
+This US2 contract is implemented for controlled fixture-backed weekly results with the separate
+[`weekly-1.0.0` manifest](weekly-snapshot-manifest.schema.json), distinct from the Phase 2 daily
+input manifest (`snapshot-manifest.schema.json`). No live non-US or licensed classification source
+is claimed. A daily input manifest fails weekly loading; it is never silently upgraded.
 
 ## Publication boundary
 
@@ -28,6 +28,8 @@ an input manifest must fail calculated-weekly loading, not be silently upgraded.
   Missing optional inputs do not invalidate a valid local ranking. Reading a weekly artifact never
   makes an upstream provider request.
 
-The controlled US/JP/GB fixture has only three-month sector comparisons today; extend it with
-dated periods, industry hierarchy, 50-session composite history and prior-week observations before
-asserting complete weekly acceptance. See `deferred-evidence.md` for source-capability gates.
+The controlled US/JP/GB fixture includes dated close histories, local benchmarks, sector/industry
+ancestry and documented fixture representations. Its weekly builder calculates all five horizons,
+50-session composite histories and prior score/rank deltas when a prior weekly artifact was
+published. This is acceptance data, not a licensed live market source. See `deferred-evidence.md`
+for additional live-source gates.

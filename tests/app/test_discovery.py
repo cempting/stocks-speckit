@@ -32,7 +32,7 @@ def test_discovery_page_renders_all_sectors_and_refresh(monkeypatch, tmp_path) -
         "market_leadership.bootstrap._build_provider_adapter",
         lambda provider_id, retry_limit: CountingProvider(),
     )
-    app_path = Path(__file__).parents[2] / "src/market_leadership/app.py"
+    app_path = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
     app = AppTest.from_file(app_path).run(timeout=20)
 
     assert not app.exception
@@ -89,7 +89,7 @@ def test_snapshot_mode_loads_published_input_without_upstream_calls(monkeypatch,
         raise AssertionError("snapshot mode must not construct a runtime provider")
 
     monkeypatch.setattr("market_leadership.bootstrap._build_provider_adapter", unexpected_upstream)
-    app_path = Path(__file__).parents[2] / "src/market_leadership/app.py"
+    app_path = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
     app = AppTest.from_file(app_path)
     app.session_state["discovery_source_mode"] = "Published snapshot"
     app.run(timeout=20)
@@ -120,7 +120,7 @@ def test_missing_latest_spy_close_is_flagged_stale_in_live_discovery(monkeypatch
         "market_leadership.bootstrap._build_provider_adapter",
         lambda provider_id, retry_limit: IncompleteProvider(),
     )
-    app_path = Path(__file__).parents[2] / "src/market_leadership/app.py"
+    app_path = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
     app = AppTest.from_file(app_path).run(timeout=20)
 
     assert not app.exception
@@ -140,7 +140,7 @@ def test_snapshot_mode_reports_missing_snapshot_without_upstream_call(
         raise AssertionError("snapshot mode must not construct a runtime provider")
 
     monkeypatch.setattr("market_leadership.bootstrap._build_provider_adapter", unexpected_upstream)
-    app_path = Path(__file__).parents[2] / "src/market_leadership/app.py"
+    app_path = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
     app = AppTest.from_file(app_path)
     app.session_state["discovery_source_mode"] = "Published snapshot"
     app.run(timeout=20)

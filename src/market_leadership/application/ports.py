@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum
-from typing import Protocol
+from typing import Any, Protocol
 
 import pandas as pd
+
+from market_leadership.domain.models import ClassificationNode, Market
+from market_leadership.domain.proxies import DocumentedRepresentation
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,3 +166,54 @@ class SnapshotReference:
     manifest_checksum: str
     ruleset_version: str | None = None
     source_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class WeeklyPriceHistory:
+    instrument_id: str
+    currency: str
+    return_basis: str
+    closes: pd.Series
+    source_id: str
+    available_on: date
+
+
+@dataclass(frozen=True, slots=True)
+class WeeklyMarketInputs:
+    market: Market
+    as_of: date
+    classifications: tuple[ClassificationNode, ...]
+    representations: tuple[DocumentedRepresentation, ...]
+    histories: dict[str, WeeklyPriceHistory]
+    classification_version: str
+    representation_version: str
+    source_id: str
+
+
+class WeeklyInputProvider(Protocol):
+    provider_id: str
+
+    def weekly_inputs(self, market_id: str, *, as_of: date) -> WeeklyMarketInputs: ...
+
+
+class WeeklySnapshotRepository(Protocol):
+    def publish_weekly(
+        self,
+        *,
+        snapshot_id: str,
+        market_id: str,
+        level: str,
+        as_of: date,
+        benchmark_id: str,
+        currency: str,
+        return_basis: str,
+        classification_version: str,
+        representation_version: str,
+        ruleset_version: str,
+        tables: dict[str, pd.DataFrame],
+        sources: tuple[dict[str, str | None], ...],
+    ) -> SnapshotReference: ...
+
+    def load_weekly(self, snapshot_id: str) -> tuple[dict[str, Any], dict[str, pd.DataFrame]]: ...
+
+    def load_latest_weekly(self, market_id: str, level: str) -> SnapshotReference: ...

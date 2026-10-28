@@ -10,5 +10,9 @@ def _render_discovery() -> None:
     run_module("market_leadership.ui.workflows.discovery_page", run_name="__main__")
 
 
-navigation = st.navigation(to_pages(build_workflow_registry(_render_discovery)))
+def _render_scoreboard() -> None:
+    run_module("market_leadership.ui.workflows.scoreboard", run_name="__main__")
+
+
+navigation = st.navigation(to_pages(build_workflow_registry(_render_discovery, _render_scoreboard)))
 navigation.run()

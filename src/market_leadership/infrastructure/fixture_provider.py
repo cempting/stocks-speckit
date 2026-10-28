@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -8,8 +8,19 @@ import exchange_calendars as xcals
 import numpy as np
 import pandas as pd
 
-from market_leadership.application.ports import ProviderCapability
-from market_leadership.domain.models import Market
+from market_leadership.application.ports import (
+    ProviderCapability,
+    WeeklyMarketInputs,
+    WeeklyPriceHistory,
+)
+from market_leadership.application.weekly_calendar import latest_completed_market_week
+from market_leadership.domain.models import (
+    ClassificationLevel,
+    ClassificationNode,
+    Market,
+    ProxyType,
+)
+from market_leadership.domain.proxies import DocumentedRepresentation
 from market_leadership.infrastructure.provider_validation import canonicalize_daily_history
 from market_leadership.infrastructure.snapshot_errors import SchemaMismatch, SourceUnavailable
 
@@ -76,6 +87,141 @@ _BENCHMARKS = (
 
 class FixtureProvider:
     provider_id = "fixture"
+
+    def weekly_inputs(self, market_id: str, *, as_of: date) -> WeeklyMarketInputs:
+        fixture = load_acceptance_market_context()
+        matches = [item for item in fixture["markets"] if item["market_id"] == market_id]
+        if len(matches) != 1:
+            raise ValueError(f"unknown or duplicate fixture market: {market_id}")
+        record = matches[0]
+        market = Market(
+            market_id=record["market_id"],
+            name=record["name"],
+            base_currency=record["base_currency"],
+            timezone=record["timezone"],
+            calendar_id=record["calendar_id"],
+            local_benchmark_id=record["local_benchmark_id"],
+            classification_scheme_id=record["classification_scheme_id"],
+            enabled_from=date.fromisoformat(record["enabled_from"]),
+            enabled_to=(date.fromisoformat(record["enabled_to"]) if record["enabled_to"] else None),
+        )
+        weekly = fixture["weekly"]
+        first = date.fromisoformat(weekly["first_session"])
+        last = date.fromisoformat(weekly["last_session"])
+        completed = latest_completed_market_week(
+            market.calendar_id, min(as_of, last + timedelta(days=1))
+        )
+        if (
+            completed < first
+            or completed < market.enabled_from
+            or (market.enabled_to is not None and completed > market.enabled_to)
+        ):
+            raise ValueError(f"no completed fixture week is available for {market_id}")
+
+        nodes = tuple(
+            ClassificationNode(
+                node_id=item["node_id"],
+                scheme_id=market.classification_scheme_id,
+                level=ClassificationLevel(item["level"]),
+                name=item["name"],
+                parent_node_id=item["parent_node_id"],
+                effective_from=date.fromisoformat(item["effective_from"]),
+                effective_to=(
+                    date.fromisoformat(item["effective_to"]) if item["effective_to"] else None
+                ),
+            )
+            for item in weekly["nodes"]
+            if item["market_id"] == market_id
+            and date.fromisoformat(item["effective_from"]) <= completed
+            and (
+                item["effective_to"] is None
+                or completed <= date.fromisoformat(item["effective_to"])
+            )
+        )
+        by_id = {node.node_id: node for node in nodes}
+        if len(by_id) != len(nodes):
+            raise ValueError(f"duplicate classification node for {market_id}")
+        for node in nodes:
+            if node.level is ClassificationLevel.SECTOR:
+                continue
+            if node.parent_node_id not in by_id:
+                raise ValueError(f"industry parent is unavailable for {node.node_id}")
+            parent = by_id[node.parent_node_id]
+            allowed_parents = {
+                ClassificationLevel.INDUSTRY_GROUP: (ClassificationLevel.SECTOR,),
+                ClassificationLevel.INDUSTRY: (
+                    ClassificationLevel.SECTOR,
+                    ClassificationLevel.INDUSTRY_GROUP,
+                ),
+                ClassificationLevel.SUB_INDUSTRY: (ClassificationLevel.INDUSTRY,),
+            }
+            if parent.level not in allowed_parents[node.level]:
+                raise ValueError(f"industry parent has the wrong hierarchy for {node.node_id}")
+
+        representations = tuple(
+            DocumentedRepresentation(
+                market_id=item["market_id"],
+                node_id=item["node_id"],
+                proxy_id=item["proxy_id"],
+                proxy_type=ProxyType(item["proxy_type"]),
+                instrument_id=item["instrument_id"],
+                composition_basis=item["composition_basis"],
+                source_id=item["source_id"],
+                qualified=item["qualified"],
+                effective_from=date.fromisoformat(item["effective_from"]),
+                effective_to=(
+                    date.fromisoformat(item["effective_to"]) if item["effective_to"] else None
+                ),
+                member_ids=tuple(item.get("member_ids", ())),
+            )
+            for item in weekly["representations"]
+            if item["market_id"] == market_id
+            and date.fromisoformat(item["effective_from"]) <= completed
+            and (
+                item["effective_to"] is None
+                or completed <= date.fromisoformat(item["effective_to"])
+            )
+        )
+        if any(proxy.node_id not in by_id for proxy in representations):
+            raise ValueError(f"representation references missing classification for {market_id}")
+        if len({proxy.proxy_id for proxy in representations}) != len(representations):
+            raise ValueError(f"duplicate representation for {market_id}")
+
+        sessions = xcals.get_calendar(market.calendar_id).sessions_in_range(first, completed)
+        histories: dict[str, WeeklyPriceHistory] = {}
+        for item in weekly["histories"]:
+            if item["market_id"] != market_id:
+                continue
+            instrument_id = item["instrument_id"]
+            if instrument_id in histories:
+                raise ValueError(f"duplicate weekly history for {instrument_id}")
+            if item["currency"] != market.base_currency or item["return_basis"] != "adjusted":
+                raise ValueError(f"incompatible weekly price basis for {instrument_id}")
+            closes = float(item["first_close"]) + np.arange(len(sessions)) * float(
+                item["change_per_session"]
+            )
+            if not np.isfinite(closes).all() or (closes <= 0).any():
+                raise ValueError(f"invalid weekly fixture closes for {instrument_id}")
+            histories[instrument_id] = WeeklyPriceHistory(
+                instrument_id=instrument_id,
+                currency=item["currency"],
+                return_basis=item["return_basis"],
+                closes=pd.Series(closes, index=sessions.tz_localize(None)),
+                source_id=weekly["source_id"],
+                available_on=completed,
+            )
+        if market.local_benchmark_id not in histories:
+            raise ValueError(f"local benchmark history is unavailable for {market_id}")
+        return WeeklyMarketInputs(
+            market=market,
+            as_of=completed,
+            classifications=nodes,
+            representations=representations,
+            histories=histories,
+            classification_version=weekly["classification_version"],
+            representation_version=weekly["representation_version"],
+            source_id=weekly["source_id"],
+        )
 
     @staticmethod
     def markets() -> tuple[Market, ...]:
