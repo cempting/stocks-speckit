@@ -9,13 +9,22 @@ def build_sector_chart(frame: pd.DataFrame, *, dark_mode: bool = False) -> alt.V
     close_color = "#7dd3fc" if dark_mode else "#17324d"
     sma_color = "#f4b860" if dark_mode else "#e09f3e"
     chart_data = frame.tail(260).reset_index(names="date")
+    if "volume" not in chart_data.columns:
+        chart_data["volume"] = float("nan")
     prior_close = chart_data["close"].shift()
     chart_data["volume_signal"] = "Neutral"
     chart_data.loc[chart_data["close"] > prior_close, "volume_signal"] = "Buy"
     chart_data.loc[chart_data["close"] < prior_close, "volume_signal"] = "Sell"
+    price_series = ["close", "sma50"]
+    color_domain = ["close", "sma50"]
+    color_range = [close_color, sma_color]
+    if "sma150" in chart_data.columns:
+        price_series.append("sma150")
+        color_domain.append("sma150")
+        color_range.append("#a78bfa" if dark_mode else "#6a4c93")
     price_data = chart_data.melt(
         id_vars="date",
-        value_vars=["close", "sma50"],
+        value_vars=price_series,
         var_name="series",
         value_name="value",
     )
@@ -29,8 +38,8 @@ def build_sector_chart(frame: pd.DataFrame, *, dark_mode: bool = False) -> alt.V
                 "series:N",
                 title=None,
                 scale=alt.Scale(
-                    domain=["close", "sma50"],
-                    range=[close_color, sma_color],
+                    domain=color_domain,
+                    range=color_range,
                 ),
                 legend=alt.Legend(orient="top", direction="horizontal"),
             ),

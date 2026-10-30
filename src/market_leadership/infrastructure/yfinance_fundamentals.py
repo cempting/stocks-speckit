@@ -10,7 +10,9 @@ from market_leadership.domain.fundamentals import (
     FinancialQuarter,
     FundamentalBundle,
     FundamentalRequest,
+    peer_facts_from_bundle,
 )
+from market_leadership.domain.peer_scores import PeerFacts
 from market_leadership.infrastructure.provider_errors import (
     ProviderRequestError,
     is_retryable_provider_failure,
@@ -64,6 +66,16 @@ yf = cast(_TickerAPI, import_module("yfinance"))
 
 def ticker_factory(symbol: str) -> TickerReader:
     return yf.Ticker(symbol)
+
+
+def adapt_yfinance_peer_facts(
+    bundle: FundamentalBundle,
+    *,
+    instrument_id: str,
+) -> PeerFacts:
+    if bundle.provider_id != "yfinance":
+        raise ValueError("Peer scoring requires yfinance source evidence")
+    return peer_facts_from_bundle(bundle, instrument_id=instrument_id)
 
 
 class FundamentalAcquisitionError(ProviderRequestError):

@@ -7,6 +7,7 @@ import streamlit as st
 from pandas.io.formats.style import Styler
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.elements.lib.column_types import ColumnConfig
+from streamlit.typing import DataframeState
 
 
 class _StreamlitTables(Protocol):
@@ -20,6 +21,20 @@ class _StreamlitTables(Protocol):
         key: str | None = None,
         column_config: dict[str, ColumnConfig] | None = None,
     ) -> DeltaGenerator: ...
+
+
+class _SelectableStreamlitTables(Protocol):
+    def dataframe(
+        self,
+        data: pd.DataFrame,
+        *,
+        hide_index: bool,
+        width: Literal["stretch"],
+        key: str,
+        column_config: dict[str, ColumnConfig],
+        on_select: Literal["rerun"],
+        selection_mode: Literal["single-row"],
+    ) -> DataframeState: ...
 
 
 def render_dataframe(
@@ -38,4 +53,21 @@ def render_dataframe(
         height=height,
         key=key,
         column_config=column_config,
+    )
+
+
+def render_selectable_dataframe(
+    data: pd.DataFrame,
+    *,
+    key: str,
+    column_config: dict[str, ColumnConfig],
+) -> DataframeState:
+    return cast(_SelectableStreamlitTables, st).dataframe(
+        data,
+        hide_index=True,
+        width="stretch",
+        key=key,
+        column_config=column_config,
+        on_select="rerun",
+        selection_mode="single-row",
     )

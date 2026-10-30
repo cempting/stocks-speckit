@@ -15,7 +15,7 @@ ROOT = Path(__file__).parents[2]
 
 def test_entrypoint_has_only_live_discovery_and_reviewed_membership_tabs(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "market_leadership.ui.workflows.discovery_page.build_request_provider",
+        "market_leadership.bootstrap.build_request_provider",
         lambda *args, **kwargs: FixtureProvider(),
     )
     monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path))
@@ -43,7 +43,7 @@ def test_discovery_discloses_the_experimental_provider_catalog(monkeypatch, tmp_
         catalog_path,
     )
     monkeypatch.setattr(
-        "market_leadership.ui.workflows.discovery_page.build_request_provider",
+        "market_leadership.bootstrap.build_request_provider",
         lambda *args, **kwargs: FixtureProvider(),
     )
     monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path))

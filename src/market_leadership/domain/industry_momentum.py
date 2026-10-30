@@ -25,7 +25,9 @@ INDUSTRY_REPRESENTATIONS: tuple[IndustryRepresentation, ...] = (
     IndustryRepresentation("US-BANKS", "Banks", "Financials", "KBE"),
     IndustryRepresentation("US-BROKER-DEALERS", "Broker-Dealers", "Financials", "IAI"),
     IndustryRepresentation("US-CAPITAL-MARKETS", "Capital Markets", "Financials", "KCE"),
-    IndustryRepresentation("US-CLOUD-COMPUTING", "Cloud Computing", "Information Technology", "SKYY"),
+    IndustryRepresentation(
+        "US-CLOUD-COMPUTING", "Cloud Computing", "Information Technology", "SKYY"
+    ),
     IndustryRepresentation("US-COPPER-MINERS", "Copper Miners", "Materials", "COPX"),
     IndustryRepresentation("US-CYBERSECURITY", "Cybersecurity", "Information Technology", "CIBR"),
     IndustryRepresentation("US-ENERGY-INFRASTRUCTURE", "Energy Infrastructure", "Energy", "AMLP"),
@@ -36,7 +38,9 @@ INDUSTRY_REPRESENTATIONS: tuple[IndustryRepresentation, ...] = (
     IndustryRepresentation("US-ENERGY-SERVICES", "Oil & Gas Equipment & Services", "Energy", "XES"),
     IndustryRepresentation("US-GOLD-MINERS", "Gold Miners", "Materials", "GDX"),
     IndustryRepresentation("US-HOMEBUILDERS", "Homebuilders", "Consumer Discretionary", "XHB"),
-    IndustryRepresentation("US-HEALTHCARE-PROVIDERS", "Health Care Providers", "Health Care", "IHF"),
+    IndustryRepresentation(
+        "US-HEALTHCARE-PROVIDERS", "Health Care Providers", "Health Care", "IHF"
+    ),
     IndustryRepresentation("US-INSURANCE", "Insurance", "Financials", "KIE"),
     IndustryRepresentation("US-INDUSTRIAL-REITS", "Industrial REITs", "Real Estate", "INDS"),
     IndustryRepresentation("US-MEDICAL-DEVICES", "Medical Devices", "Health Care", "IHI"),

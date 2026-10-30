@@ -51,3 +51,21 @@ def test_sector_chart_colors_volume_by_close_direction() -> None:
         "Sell",
         "Neutral",
     ]
+
+
+def test_stock_detail_chart_includes_both_moving_average_series() -> None:
+    index = pd.date_range("2026-01-01", periods=4, freq="B")
+    frame = pd.DataFrame(
+        {
+            "close": [100, 105, 101, 101],
+            "sma50": [99, 100, 101, 102],
+            "sma150": [95, 96, 97, 98],
+            "volume": [1_000_000, 1_100_000, 900_000, 800_000],
+        },
+        index=index,
+    )
+
+    specification = build_sector_chart(frame).to_dict()
+    price_data = specification["datasets"][specification["vconcat"][0]["data"]["name"]]
+
+    assert {row["series"] for row in price_data} == {"close", "sma50", "sma150"}

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -7,6 +7,10 @@ import streamlit as st
 from market_leadership.application.discover_sectors import (
     DiscoveryResult,
     discover_sectors_from_snapshot,
+)
+from market_leadership.application.load_stock_history import (
+    StockHistoryBatch,
+    load_stock_history,
 )
 from market_leadership.application.ports import DataPointRequest, SnapshotReference
 from market_leadership.application.request_market_data import (
@@ -115,6 +119,59 @@ def refresh_fundamental_bundle(
     current = now or datetime.now(UTC)
     _cached_fundamentals.clear(request, _factory, current)
     return load_fundamental_bundle(request, _factory=_factory, now=current)
+
+
+def _request_member_history(
+    source_cache_path: str,
+    symbols: tuple[str, ...],
+    as_of: date,
+    retry_limit: int,
+    *,
+    force_refresh: bool,
+) -> StockHistoryBatch:
+    from market_leadership.bootstrap import build_request_provider
+
+    provider = build_request_provider(
+        "yfinance",
+        source_cache_path,
+        retry_limit=retry_limit,
+    )
+    return load_stock_history(provider, symbols, as_of=as_of, force=force_refresh)
+
+
+@st.cache_data(ttl=3600, max_entries=64, show_spinner=False)
+def _cached_member_history(
+    source_cache_path: str,
+    symbols: tuple[str, ...],
+    as_of: date,
+    retry_limit: int,
+) -> StockHistoryBatch:
+    return _request_member_history(
+        source_cache_path,
+        symbols,
+        as_of,
+        retry_limit,
+        force_refresh=False,
+    )
+
+
+def load_member_history(
+    source_cache_path: str,
+    symbols: tuple[str, ...],
+    as_of: date,
+    *,
+    retry_limit: int,
+    force_refresh: bool = False,
+) -> StockHistoryBatch:
+    if force_refresh:
+        return _request_member_history(
+            source_cache_path,
+            symbols,
+            as_of,
+            retry_limit,
+            force_refresh=True,
+        )
+    return _cached_member_history(source_cache_path, symbols, as_of, retry_limit)
 
 
 @st.cache_data(max_entries=256, show_spinner=False)

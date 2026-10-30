@@ -3,6 +3,8 @@ from datetime import date, datetime
 from hashlib import sha256
 from math import isfinite
 
+from market_leadership.domain.peer_scores import PeerFacts
+
 METRIC_GROUPS = (
     (
         "Quality",
@@ -97,6 +99,44 @@ class FundamentalScorecard:
     fingerprint: str
     metrics: tuple[FundamentalMetric, ...]
     warnings: tuple[str, ...] = ()
+
+
+def peer_facts_from_bundle(
+    bundle: FundamentalBundle,
+    *,
+    instrument_id: str,
+) -> PeerFacts:
+    if not instrument_id.strip():
+        raise ValueError("Peer facts require a stable instrument ID")
+    reason = (
+        "The fundamental source does not expose verified fact publication vintages or a "
+        "matching dated market capitalization."
+    )
+    if bundle.warnings:
+        reason += " The source bundle also contains incomplete evidence."
+    return PeerFacts(
+        instrument_id=instrument_id,
+        facts_available_on=None,
+        current_ttm_start=None,
+        current_ttm_end=None,
+        prior_ttm_start=None,
+        prior_ttm_end=None,
+        net_income=None,
+        revenue=None,
+        prior_revenue=None,
+        opening_equity=None,
+        closing_equity=None,
+        diluted_eps=None,
+        prior_diluted_eps=None,
+        operating_cash_flow=None,
+        prior_operating_cash_flow=None,
+        positive_capex_outflow=None,
+        market_cap=None,
+        market_cap_date=None,
+        currency=bundle.currency or None,
+        market_cap_currency=None,
+        unavailable_reason=reason,
+    )
 
 
 def _consecutive(periods: tuple[date, ...]) -> bool:

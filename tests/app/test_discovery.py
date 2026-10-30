@@ -13,9 +13,14 @@ def test_discovery_uses_one_yfinance_path_and_discloses_dates(monkeypatch, tmp_p
             calls.append(symbols)
             return super().fetch_daily_history(symbols, start=start, end=end, force=force)
 
+    def build_test_provider(provider_id: str, *args, **kwargs) -> CountingProvider:
+        del args, kwargs
+        assert provider_id == "yfinance"
+        return CountingProvider()
+
     monkeypatch.setattr(
-        "market_leadership.ui.workflows.discovery_page.build_request_provider",
-        lambda *args, **kwargs: CountingProvider(),
+        "market_leadership.bootstrap.build_request_provider",
+        build_test_provider,
     )
     app_path = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
     app = AppTest.from_file(app_path).run(timeout=20)
@@ -26,3 +31,4 @@ def test_discovery_uses_one_yfinance_path_and_discloses_dates(monkeypatch, tmp_p
     assert "REQUESTED" in text and "OBSERVED" in text
     assert not any(widget.label in {"Discovery mode", "Data provider"} for widget in app.selectbox)
     assert not any("snapshot" in item.value.lower() for item in app.info)
+    assert len(calls) == 1
