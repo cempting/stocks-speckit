@@ -33,3 +33,6 @@
 
 - The stock tape shows all three existing scorecard scores where available. The project does not
   define a new aggregate score.
+- Price thumbnails include the 50 Simple Moving Average when supported by sufficient history; an
+  adjacent volume column and its directional color convention are specified for all discovery
+  tapes.

@@ -7,6 +7,7 @@ from math import isfinite
 import pandas as pd
 
 from market_leadership.application.ports import MarketDataProvider
+from market_leadership.infrastructure.region_database import StockMembershipRecord
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +24,23 @@ class StockHistoryBatch:
     provider_id: str
     requested_as_of: date
     series: tuple[StockHistorySeries, ...]
+
+
+def verified_primary_provider_symbols(
+    members: tuple[StockMembershipRecord, ...],
+) -> tuple[str, ...]:
+    symbols: list[str] = []
+    for member in members:
+        primary = member.primary_listing
+        if (
+            member.resolution_state == "identified"
+            and primary is not None
+            and primary.resolution_state == "verified"
+        ):
+            symbol = primary.provider_symbol or primary.symbol
+            if symbol and symbol not in symbols:
+                symbols.append(symbol)
+    return tuple(symbols)
 
 
 def load_stock_history(

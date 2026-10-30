@@ -4,7 +4,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from market_leadership.application.load_stock_history import load_stock_history
+from market_leadership.application.load_stock_history import (
+    load_stock_history,
+    verified_primary_provider_symbols,
+)
 from market_leadership.application.score_industry import score_industry
 from market_leadership.domain.fundamentals import (
     FundamentalBundle,
@@ -12,6 +15,10 @@ from market_leadership.domain.fundamentals import (
 )
 from market_leadership.domain.stock_selection import MembershipEntry
 from market_leadership.infrastructure.fixture_provider import FixtureProvider
+from market_leadership.infrastructure.region_database import (
+    ListingRecord,
+    StockMembershipRecord,
+)
 from market_leadership.ui.cache import load_member_history
 
 
@@ -182,3 +189,55 @@ def test_score_orchestration_loads_the_complete_active_industry_cohort():
     assert all(stock.scorecard.quality.value is None for stock in result.stocks)
     assert result.stocks[0].reason is not None
     assert "publication vintages" in result.stocks[0].reason
+
+
+def test_provider_symbols_exclude_unresolved_and_nonprimary_listings():
+    members = (
+        StockMembershipRecord(
+            "instrument-a",
+            None,
+            "Alpha",
+            "identified",
+            "classified",
+            "sector-a",
+            "Technology",
+            "industry-a",
+            "Cloud",
+            date(2020, 1, 1),
+            None,
+            (
+                ListingRecord("listing-primary", "NASDAQ", "AAA", "AAA", "USD", True, "verified"),
+                ListingRecord("listing-other", "NYSE", "AAA.A", "AAA.A", "USD", False, "verified"),
+            ),
+        ),
+        StockMembershipRecord(
+            "instrument-placeholder",
+            None,
+            "Unresolved company",
+            "placeholder",
+            "classified",
+            "sector-a",
+            "Technology",
+            "industry-a",
+            "Cloud",
+            date(2020, 1, 1),
+            None,
+            (),
+        ),
+        StockMembershipRecord(
+            "instrument-no-primary",
+            None,
+            "Unverified company",
+            "identified",
+            "classified",
+            "sector-a",
+            "Technology",
+            "industry-a",
+            "Cloud",
+            date(2020, 1, 1),
+            None,
+            (ListingRecord("listing-unverified", "NYSE", "CCC", "CCC", "USD", False, "verified"),),
+        ),
+    )
+
+    assert verified_primary_provider_symbols(members) == ("AAA",)

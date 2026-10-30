@@ -5,45 +5,42 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from market_leadership.application.score_industry import IndustryScoreResult, StockScoreEvidence
-from market_leadership.config import Settings
 from market_leadership.domain.peer_scores import (
     BlockPeerScore,
     MetricPeerScore,
     PeerScorecard,
 )
-from market_leadership.domain.stock_selection import MembershipCatalog, MembershipEntry
+from market_leadership.domain.stock_selection import MembershipEntry
 from market_leadership.infrastructure.fixture_provider import FixtureProvider
+from market_leadership.infrastructure.region_database import RegionDatabase
+from market_leadership.infrastructure.universe_import import import_reviewed_file
 
 ROOT = Path(__file__).parents[2]
 
 
-def _catalog() -> MembershipCatalog:
-    return MembershipCatalog(
-        observed_on=date(2026, 10, 23),
-        source_id="controlled-test",
-        classification="controlled",
-        mode="fixture",
-        coverage="two controlled members",
-        approval_reference="test-only",
-        entries=tuple(
-            MembershipEntry(
-                f"instrument-{symbol.lower()}",
-                f"company-{symbol.lower()}",
-                symbol,
-                name,
-                "NASDAQ",
-                "USD",
-                "TECH",
-                "Information Technology",
-                "CLOUD",
-                "Cloud Computing",
-                date(2026, 1, 1),
-                None,
-            )
-            for symbol, name in (("AAA", "Alpha"), ("BBB", "Beta"))
-        ),
-        fingerprint="controlled-catalog",
+def _create_database(tmp_path: Path) -> Path:
+    database_path = tmp_path / "market-universe.sqlite"
+    database = RegionDatabase(database_path)
+    database.initialize()
+    members = tmp_path / "members.csv"
+    members.write_text(
+        "InstrumentId,Ticker,Name,Exchange,Sector,Industry,EffectiveFrom\n"
+        "instrument-aaa,AAA,Alpha,NASDAQ,Technology,Cloud,2020-01-01\n"
+        "instrument-bbb,BBB,Beta,NASDAQ,Technology,Cloud,2020-01-01\n"
+        "instrument-ccc,CCC,Gamma,NYSE,Financials,Banks,2020-01-01\n",
+        encoding="utf-8",
     )
+    import_reviewed_file(
+        database,
+        members,
+        region_id="US",
+        classification_id="TEST",
+        source_id="controlled-test",
+        exchange_id=None,
+        coverage="controlled sample",
+        approval_reference="test-only",
+    )
+    return database_path
 
 
 def _score_result(members: tuple[MembershipEntry, ...]) -> IndustryScoreResult:
@@ -71,25 +68,10 @@ def _run_app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> AppTest:
         del args, kwargs
         return FixtureProvider()
 
-    def load_test_catalog(path: str) -> MembershipCatalog:
-        del path
-        return _catalog()
-
-    def validate_test_catalog(catalog: MembershipCatalog, settings: Settings) -> None:
-        del catalog, settings
-
     monkeypatch.setattr(
         "market_leadership.bootstrap.build_request_provider", build_fixture_provider
     )
-    monkeypatch.setattr(
-        "market_leadership.infrastructure.stock_membership.load_membership_catalog",
-        load_test_catalog,
-    )
-    monkeypatch.setattr(
-        "market_leadership.infrastructure.stock_membership.validate_live_access",
-        validate_test_catalog,
-    )
-    monkeypatch.setenv("STOCK_MEMBERSHIP_CATALOG", "controlled-test.json")
+    monkeypatch.setenv("MARKET_UNIVERSE_DATABASE_PATH", str(_create_database(tmp_path)))
     monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path))
     return AppTest.from_file(ROOT / "src/market_leadership/ui/workflows/discovery_page.py").run(
         timeout=20
@@ -97,10 +79,12 @@ def _run_app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> AppTest:
 
 
 def _select_cloud_industry(app: AppTest) -> AppTest:
-    app.selectbox("market_leadership.progressive_discovery.sector").select("XLK").run(timeout=20)
+    app.selectbox("market_leadership.progressive_discovery.sector").select("test-technology").run(
+        timeout=20
+    )
     return (
         app.selectbox("market_leadership.progressive_discovery.industry")
-        .select("US-CLOUD-COMPUTING")
+        .select("test-cloud")
         .run(timeout=20)
     )
 
@@ -151,11 +135,10 @@ def test_stock_detail_uses_stable_identity_and_returns_to_industry(
 
     assert not app.exception
     assert any(item.value == "Contained stocks" for item in app.subheader)
-    assert app.selectbox("market_leadership.progressive_discovery.sector").value == "XLK"
     assert (
-        app.selectbox("market_leadership.progressive_discovery.industry").value
-        == "US-CLOUD-COMPUTING"
+        app.selectbox("market_leadership.progressive_discovery.sector").value == "test-technology"
     )
+    assert app.selectbox("market_leadership.progressive_discovery.industry").value == "test-cloud"
     assert load_calls == 1
 
 
@@ -167,7 +150,9 @@ def test_changing_sector_clears_the_stock_and_industry_tape(
     app.selectbox("market_leadership.progressive_discovery.stock_picker").select(
         "instrument-aaa"
     ).run(timeout=20)
-    app.selectbox("market_leadership.progressive_discovery.sector").select("XLF").run(timeout=20)
+    app.selectbox("market_leadership.progressive_discovery.sector").select("test-financials").run(
+        timeout=20
+    )
 
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
@@ -180,11 +165,24 @@ def test_selecting_stock_row_opens_its_stable_identity(
 ) -> None:
     app = _run_app(monkeypatch, tmp_path)
     app = _select_cloud_industry(app)
-    app.session_state["market_leadership.progressive_discovery.stock_tape"] = {
-        "selection": {"rows": [1], "columns": [], "cells": []}
-    }
-
-    app.run(timeout=20)
+    next(button for button in app.button if button.label == "BBB · Beta").click().run(timeout=20)
 
     assert not app.exception
     assert any(item.value == "BBB · Beta" for item in app.title)
+
+
+def test_stock_detail_discloses_scores_until_explicitly_loaded(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = _run_app(monkeypatch, tmp_path)
+    app = _select_cloud_industry(app)
+    app.selectbox("market_leadership.progressive_discovery.stock_picker").select(
+        "instrument-aaa"
+    ).run(timeout=20)
+
+    assert not app.exception
+    assert [metric.value for metric in app.metric] == [
+        "Not loaded",
+        "Not loaded",
+        "Not loaded",
+    ]

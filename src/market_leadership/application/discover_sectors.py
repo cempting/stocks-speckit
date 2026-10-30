@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
+from typing import Literal
 
 import pandas as pd
 
@@ -10,6 +11,10 @@ from market_leadership.domain.sector_performance import (
     PerformanceResult,
     calculate_performance,
     with_sma50,
+)
+from market_leadership.infrastructure.region_database import (
+    EntityRepresentationRecord,
+    RegionDatabase,
 )
 
 BENCHMARK = "SPY"
@@ -69,6 +74,30 @@ def discover_sectors(
         force=force,
     )
     return discover_sectors_from_history(provider.provider_id, history, as_of=as_of)
+
+
+def load_entity_representations(
+    database: RegionDatabase,
+    *,
+    region_id: str,
+    classification_id: str,
+    entity_type: Literal["sector", "industry"],
+    entity_ids: tuple[str, ...],
+    as_of: date,
+) -> tuple[EntityRepresentationRecord, ...]:
+    if not database.is_initialized():
+        raise ValueError(f"Regional database is missing or invalid: {database.path}")
+    allowed_ids = set(entity_ids)
+    return tuple(
+        representation
+        for representation in database.get_entity_representations(
+            region_id,
+            classification_id,
+            entity_type,
+            as_of=as_of,
+        )
+        if representation.entity_id in allowed_ids
+    )
 
 
 def discover_sectors_from_history(

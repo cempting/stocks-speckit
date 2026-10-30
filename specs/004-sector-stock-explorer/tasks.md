@@ -2,11 +2,11 @@
 
 **Input**: Design documents from `/specs/004-sector-stock-explorer/`
 
-**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/progressive-discovery.md`
+**Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`
 
-**Tests**: Test tasks are included because the project constitution requires tests first and the plan defines automated acceptance evidence. Each test task must demonstrate the absent behavior before its implementation task begins.
+**Tests**: Tests are included because the project constitution requires tests first and the plan defines automated acceptance evidence. Write each behavior test before its implementation and confirm it fails for the missing behavior.
 
-**Organization**: Tasks are grouped by the three prioritized user stories. The feature extends the existing Python/Streamlit application; no new dependencies or project initialization are needed.
+**Organization**: Tasks are grouped by the three prioritized user stories. Existing application dependencies and test tooling are reused; SQLite uses Python's standard library.
 
 ## Phase 1: Setup
 
@@ -18,155 +18,159 @@ No setup tasks are needed. Python dependencies, test runners, and the two-tab St
 
 **Purpose**: Blocking prerequisites shared by all user stories
 
-No new project-wide framework or persistence layer is required. Stable selection, peer-score calculation, and chart evidence are scoped to their first consuming user story below.
+No separate project-wide framework is required. The database and its first consumer belong to User Story 1; chart and score evidence remain in their respective stories.
 
 ## Phase 3: User Story 1 - Explore Market Leadership by Hierarchy (Priority: P1) 🎯 MVP
 
-**Goal**: Show exactly the sector, industry, or member-stock tape appropriate to the user's current hierarchy selection, without stale child rows.
+**Goal**: Replace the required `STOCK_MEMBERSHIP_CATALOG` runtime configuration with a populated SQLite regional universe and show the correct region, sector, industry, and member-stock hierarchy with truthful coverage and setup states.
 
-**Independent Test**: With a controlled sector/industry/member catalog, verify the initial sector-only view, each selection transition, all industry members, and child-selection invalidation after a parent change.
+**Independent Test**: Using a temporary database and controlled imports, verify database initialization, atomic validation/import, US region coverage, deduplicated multi-listing membership, placeholder handling, conflict reporting, and sector-to-industry-to-stock selection without stale rows. With no valid database, verify Discovery explains how to initialize and populate it.
 
 ### Tests for User Story 1
 
-- [X] T001 [P] [US1] Add unit tests for initial, valid, and invalid parent/child selection transitions in `tests/unit/domain/test_progressive_selection.py`; verify sector changes clear invalid industries and stocks and industry changes clear invalid stocks.
-- [X] T002 [P] [US1] Add AppTest cases for sector-only, sector-to-industry, industry-to-all-members, and stale-row removal behavior in `tests/app/test_sector_stock_explorer.py`.
+- [X] T001 [P] [US1] Add schema and repository tests in `tests/unit/infrastructure/test_region_database.py` for foreign keys, effective-date queries, region-scoped deduplication, chart representations, and the exact states `coverage_state` (`complete | partial | unverified`), `resolution_state` (`identified | placeholder`), and `classification_state` (`classified | unclassified | conflict`); verify at most one active primary listing per provider and region.
+- [X] T002 [P] [US1] Add CSV/JSON validation and atomic-import tests in `tests/unit/infrastructure/test_universe_import.py` for missing classification, placeholders, duplicate listings, local-source conflicts, idempotency, and the exact import statuses `validated | committed | committed_partial | rejected`; prove rejected imports preserve the last valid database state.
+- [X] T003 [P] [US1] Add CLI contract tests in `tests/integration/test_universe_admin.py` for `init`, `validate`, `import`, and approval-gated `refresh`, including nonzero failures, actionable reports, and no provider call before review approval.
+- [X] T004 [P] [US1] Extend region and parent/child transition tests in `tests/unit/domain/test_progressive_selection.py` to prove stable-ID selection, region scoping, invalid-descendant clearing, and database-revision reconciliation.
+- [X] T005 [P] [US1] Extend hierarchy AppTest cases in `tests/app/test_sector_stock_explorer.py` to cover database-missing/invalid/unpopulated setup guidance, region coverage disclosure, US sector-to-industry-to-stock views, and no stale rows after changing parents.
 
 ### Implementation for User Story 1
 
-- [X] T003 [US1] Implement typed progressive selection and parent/child reconciliation in `src/market_leadership/domain/progressive_selection.py` after T001; preserve valid stable IDs, and clear only invalid descendants when the parent changes.
-- [X] T004 [US1] Update `src/market_leadership/ui/workflows/discovery_page.py` after T002/T003 to render only sectors with no selected sector and only the selected sector's industries after sector selection; retain the existing two-tab entrypoint.
-- [X] T005 [US1] Connect selected industry to the reviewed catalog in `src/market_leadership/ui/workflows/discovery_page.py` and `src/market_leadership/infrastructure/stock_membership.py` after T004; show all active member identities and explicit catalog errors/empty states, never stale or fabricated rows.
-- [X] T006 [US1] Wire sector, industry, and stock selections through stable identifiers and clear invalid dependent widget state before widgets are rendered in `src/market_leadership/ui/workflows/discovery_page.py` after T003/T005; preserve valid hierarchy state on ordinary reruns.
+- [X] T006 [US1] Implement the SQLite schema, initialization, and focused repository queries in `src/market_leadership/infrastructure/region_database.py`; persist region, classification, sector, industry, stock, listing, membership, representation, provenance, import-run, and issue records with foreign keys, stable IDs, and the data-model effective-date and uniqueness rules.
+- [X] T007 [US1] Implement reviewed CSV and JSON parsing, validation, conflict reporting, placeholder/unclassified handling, coverage updates, and atomic/idempotent writes in `src/market_leadership/infrastructure/universe_import.py`; preserve local classifications as authoritative and record live differences without overwriting them.
+- [X] T008 [US1] Implement `init`, `validate`, `import`, and gated `refresh` commands in `src/market_leadership/universe_admin.py`; use `.data/market-universe.sqlite` by default, support `--database`, require reviewed source/coverage metadata for imports, and keep refresh disabled until the single selected provider's coverage, terms, and display rights are approved.
+- [X] T009 [US1] Adapt membership loading in `src/market_leadership/infrastructure/stock_membership.py` and `src/market_leadership/application/discover_sectors.py` to read active region/classification/industry records from SQLite instead of requiring `STOCK_MEMBERSHIP_CATALOG`; return each `instrument_id` once and preserve explicit missing-database, invalid-database, empty-membership, and coverage states.
+- [X] T010 [P] [US1] Extend typed selection and reconciliation in `src/market_leadership/domain/progressive_selection.py` to carry stable `region_id` and `database_revision` context and clear only descendants invalidated by a region, sector, or industry change.
+- [X] T011 [US1] Update `src/market_leadership/ui/workflows/discovery_page.py` to select the US region initially, show a region control when multiple regions are populated, render only the valid hierarchy stage, display reviewed coverage scope/as-of/completeness, and show actionable initialization/import guidance rather than a valid-empty-market state.
+- [X] T012 [US1] Update `src/market_leadership/ui/workflows/industry_deep_dive.py` to obtain the same region-scoped memberships from the SQLite repository while retaining its current evidence and review gates.
 
-**Checkpoint**: The user can traverse the hierarchy and see the correct complete member set independently of chart thumbnails and score availability.
+**Checkpoint**: A reviewed local import can populate a US regional database, and Discovery can show its sector/industry/member hierarchy without requiring `STOCK_MEMBERSHIP_CATALOG`; setup, coverage, conflicts, and unresolved records remain explicit.
 
 ## Phase 4: User Story 2 - Compare Sector, Industry, and Stock Evidence (Priority: P1)
 
-**Goal**: Add row-specific chart thumbnails and stock identity, price, and the existing Quality, Growth, and Cash Flow peer scores.
+**Goal**: Show each sector, industry, and stock's own price thumbnail beside an adjacent volume thumbnail, with directional bars and existing peer scores where available.
 
-**Independent Test**: Use controlled sector, industry, and stock histories plus a complete peer cohort; verify each chart belongs to its row, every active member is present, scores match the 001 contract, and missing evidence is explicit.
+**Independent Test**: With a populated test database and controlled completed histories, verify all three tapes bind both thumbnails to the row's identity and same sessions, show the 50-session average when supported, color volume bars by close direction, and retain explicit unavailable/insufficient evidence. Verify scores use the complete eligible industry cohort and load only after explicit user intent.
+
+**Dependency**: Requires User Story 1's database-backed hierarchy and active-member query.
 
 ### Tests for User Story 2
 
-- [X] T007 [P] [US2] Add tests for exact peer percentiles, shared tie ranks, all-equal peers, five-valid-peer minimum, required two-metric block completeness, invalid denominators, and cutoff insufficiency in `tests/unit/domain/test_peer_scores.py`; assert formulas against `specs/001-market-leadership-screener/contracts/fundamental-scoring.md`.
-- [X] T008 [P] [US2] Add UI component tests in `tests/unit/ui/test_progressive_tape.py` proving sector/industry/stock thumbnails use their own row's series and stock rows show ticker, name, price, three score states, and explicit missing evidence.
-- [X] T009 [P] [US2] Add provider/cache integration tests in `tests/integration/test_stock_evidence.py` proving only the selected industry's active symbols are requested, the full eligible peer cohort is scored before display filtering, explicit score-load intent is required, successful cache entries are reused, and failed/unknown evidence is not treated as a successful empty result.
+- [X] T013 [P] [US2] Add or extend domain tests in `tests/unit/domain/test_stock_chart.py` for row-bound preview series, 50-session averages over exactly 50 completed closes, identical price/volume sessions, and `up`/`down`/`neutral` direction including first, unchanged, and indeterminate observations.
+- [X] T014 [P] [US2] Extend component tests in `tests/unit/ui/test_progressive_tape.py` to verify separate adjacent price and volume columns for sector, industry, and stock rows, the directional-color explanation, and independent missing-price, missing-volume, and insufficient-average states.
+- [X] T015 [P] [US2] Extend provider/cache integration tests in `tests/integration/test_stock_evidence.py` to prove only verified active listings in the selected region/industry are requested, placeholders are skipped, histories are not borrowed across rows, and financial evidence loads only on explicit intent for the complete eligible cohort.
+- [X] T016 [US2] Extend AppTest coverage in `tests/app/test_sector_stock_explorer.py` to verify chart-column adjacency and row identity in all three stages, directional legend wording, and visible unavailable states without hiding otherwise valid rows.
 
 ### Implementation for User Story 2
 
-- [X] T010 [US2] Implement pure peer block score calculation in `src/market_leadership/domain/peer_scores.py` after T007, following `specs/001-market-leadership-screener/contracts/fundamental-scoring.md`; use the complete eligible industry cohort before technical filters, display selection, paging, or sorting, require `N >= 5` for each metric and both metrics per block, rank exact unrounded values, and never produce an overall score.
-- [X] T011 [US2] Add an industry-scoped member-history request in `src/market_leadership/application/load_stock_history.py` and cache successful results through `src/market_leadership/ui/cache.py` after T009; request only active member symbols, preserve requested/observed session and source, and retain per-symbol unavailable states without substituting another symbol's history.
-- [X] T012 [US2] Adapt verified fundamental evidence for peer scoring in `src/market_leadership/domain/fundamentals.py` and `src/market_leadership/infrastructure/yfinance_fundamentals.py` after T009/T010; use only required dated facts available at the analysis cutoff, and represent unknown publication vintage, market-cap date, denominator, or required fact as insufficient rather than estimating it.
-- [X] T013 [US2] Add complete-industry score orchestration in `src/market_leadership/application/score_industry.py` after T010/T012; load eligible cohort evidence through the existing `src/market_leadership/bootstrap.py` loader and cache, compute all three blocks before any display filtering, and return explicit per-stock missing, insufficient, and failure reasons.
-- [X] T014 [US2] Add first-column entity-specific chart thumbnails and the stock row fields in `src/market_leadership/ui/components/progressive_tape.py` after T008/T011/T013; render ticker, name, latest valid price, and three peer scores or explicit unavailable states (each available block score is a finite value from 0 to 100), and never reuse a parent or sibling chart.
-- [X] T015 [US2] Integrate scoped history, explicit score-load action, and progressive tape rendering in `src/market_leadership/ui/workflows/discovery_page.py` after T006/T009/T014; selecting/sorting a tape must not trigger financial retrieval, and display all active members even when their price or score evidence is missing.
+- [X] T017 [US2] Extend chart evidence calculation in `src/market_leadership/domain/stock_chart.py` to produce each entity's same-session close, 50-session average, volume, and close-to-close direction series; compute averages from exactly 50 completed closes and retain available evidence when another series is insufficient.
+- [X] T018 [US2] Update `src/market_leadership/ui/components/progressive_tape.py` to render row-specific price and separate adjacent volume thumbnails for all tape types, use green for up, red for down, and neutral for unchanged/unknown direction, and identify the colors as price-direction indications rather than verified buyer/seller activity.
+- [X] T019 [US2] Scope member price-history loading in `src/market_leadership/application/load_stock_history.py` and successful response caching in `src/market_leadership/ui/cache.py` to verified active listings for the selected region and industry; preserve per-instrument failures and do not request unresolved placeholders.
+- [X] T020 [US2] Connect database-backed eligible memberships to score loading in `src/market_leadership/application/score_industry.py` and `src/market_leadership/ui/workflows/discovery_page.py`; retain the existing 001 Quality, Growth, and Cash Flow peer-score contract, load only after explicit user intent, score the full eligible cohort before display filtering, and expose partial/insufficient/error states.
 
-**Checkpoint**: Sector and industry tapes show their own chart thumbnails; the stock tape includes every active member, its own chart, ticker, name, price, and available peer scores.
+**Checkpoint**: Each visible row has its own adjacent price and volume evidence, with correct 50-session and direction semantics; stock scores remain contract-compliant and are not fetched implicitly.
 
 ## Phase 5: User Story 3 - Inspect an Individual Stock (Priority: P2)
 
-**Goal**: Open a detail view for the selected stock with that security's price, volume, 50/150-session moving averages, and the same peer scores.
+**Goal**: Open the selected stable stock identity in a detailed view with its own price/volume chart, 50/150-session averages, and the same three peer scorecards.
 
-**Independent Test**: Select a known stock ID, verify the detail view keeps the correct security identity and chart values, mark insufficient series explicitly, then return to the same valid sector and industry context.
+**Independent Test**: Select a known instrument from a controlled regional database, verify detail identity and chart values/states, then return to the same valid region, sector, and industry context.
+
+**Dependency**: Requires User Story 1's stable member identities and User Story 2's stock histories and peer-score evidence.
 
 ### Tests for User Story 3
 
-- [X] T016 [P] [US3] Add controlled-history tests for price, volume, 50-session and 150-session simple averages, and per-series insufficiency in `tests/unit/domain/test_stock_chart.py`; assert the averages use exactly 50 and 150 completed sessions.
-- [X] T017 [P] [US3] Add AppTest coverage for opening the selected stable stock identity, displaying matching scores, missing chart/score evidence, and returning to the prior valid hierarchy context in `tests/app/test_stock_detail.py`.
+- [X] T021 [P] [US3] Extend chart-domain tests in `tests/unit/domain/test_stock_chart.py` to verify 50- and 150-session simple averages use exactly that many completed observations and each insufficient series is represented independently, not as zero.
+- [X] T022 [P] [US3] Extend detail AppTest cases in `tests/app/test_stock_detail.py` to verify activation opens the same stable `instrument_id`, presents the matching three peer scores and explicit missing-evidence states, and returns to the prior valid hierarchy context.
 
 ### Implementation for User Story 3
 
-- [X] T018 [US3] Implement stock chart evidence calculation in `src/market_leadership/domain/stock_chart.py` after T016; compute simple moving averages from the stock's own completed history, use exactly 50 and 150 observations, and expose an explicit unavailable state for each insufficient series (insufficient history is represented per series, not as zero or a fabricated chart).
-- [X] T019 [US3] Implement the detailed stock view in `src/market_leadership/ui/components/stock_detail.py` after T017/T018; identify the stock by stable instrument ID with ticker/name labels, render price, volume, both moving averages, the same three peer scores, and separate unavailable/insufficient evidence states.
-- [X] T020 [US3] Wire stock-row activation, detail return, and context preservation in `src/market_leadership/ui/workflows/discovery_page.py` after T015/T017/T019; reject invalid/stale stock IDs and clear only the stock detail selection on return.
+- [X] T023 [US3] Update `src/market_leadership/ui/components/stock_detail.py` to render the selected instrument's own completed price/volume history and 50/150-session averages, identify each unavailable series independently, and show the same Quality, Growth, and Cash Flow score states as the stock tape.
+- [X] T024 [US3] Wire stable stock-row activation, stale-ID validation, detail return, and context preservation in `src/market_leadership/ui/workflows/discovery_page.py`; retain valid region/sector/industry selections and clear only the stock-detail selection on return.
 
-**Checkpoint**: The selected member opens its own chart and matching scoreboard, and the user can return without reselecting a valid sector or industry.
+**Checkpoint**: Activating a stock opens that exact security's detail view, and returning restores its valid Discovery context.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-**Purpose**: Keep validation guidance accurate and verify the feature against its acceptance evidence.
+**Purpose**: Keep operational guidance and regression evidence aligned with the implementation.
 
-- [X] T021 [P] Update `specs/004-sector-stock-explorer/quickstart.md` to include `tests/unit/ui/test_progressive_tape.py`, `tests/unit/domain/test_stock_chart.py`, and `tests/app/test_stock_detail.py` in focused validation and retain the documented end-to-end outcomes.
-- [X] T022 Run the feature validation in `specs/004-sector-stock-explorer/quickstart.md`, then run `uv run ruff check src/market_leadership tests`, `uv run pyright`, and `uv run pytest -m "not live"`; resolve feature-caused failures without weakening existing checks.
+- [X] T025 [P] Update `specs/004-sector-stock-explorer/contracts/universe-management-cli.md` and `specs/004-sector-stock-explorer/quickstart.md` to document the implemented reviewed-file inputs, database lifecycle, import/validation commands, approval gate, and focused verification workflow.
+- [X] T026 Run the focused feature tests and quality checks from `specs/004-sector-stock-explorer/quickstart.md`, then run `uv run ruff check src/market_leadership tests`, `uv run pyright`, and `uv run pytest -m "not live"`; resolve feature-caused failures without weakening existing checks.
 
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependency changes or initialization are needed.
-- **Foundational (Phase 2)**: No separate cross-feature foundation is needed; user-story-owned prerequisites are implemented with their first consumer.
-- **User Stories**: US1 precedes US2 because the evidence tapes need the hierarchy and selected member set. US2 precedes US3 because the detail view reuses stock history and peer scores. US3 therefore depends on US1 and US2.
-- **Polish (Phase 6)**: Depends on all desired stories being complete.
+- **Setup (Phase 1)**: No dependency installation or project initialization is needed.
+- **Foundational (Phase 2)**: No separate cross-feature foundation is needed.
+- **User Stories**: US1 has no feature-story dependency. US2 depends on US1's database-backed membership and selection context. US3 depends on US1's stable stock identity and US2's chart history and score evidence.
+- **Polish (Phase 6)**: Depends on the desired user stories being complete.
 
 ### User Story Dependencies
 
-- **US1 (P1)**: Starts immediately; no dependency on another feature story.
-- **US2 (P1)**: Depends on US1's valid sector/industry/member selections and validated membership (T001-T006).
-- **US3 (P2)**: Depends on US1's member identities and US2's row history, chart evidence, and peer scores (T001-T015).
+- **US1 (P1)**: Starts after the existing project setup; database, ingestion, and hierarchy work form the MVP.
+- **US2 (P1)**: Starts after US1's database repository and hierarchy integration are available.
+- **US3 (P2)**: Starts after US1 and US2 provide stable identities, member histories, and score states.
 
 ### Within Each User Story
 
-- Write the listed tests before implementing their behavior and confirm they fail for the missing feature.
-- Domain validation and calculations precede their application/UI integrations.
-- AppTest tasks may be developed alongside unit tests only when they use separate files.
-- Do not parallelize tasks that edit the same source file; in particular, Discovery workflow integrations T004, T005, T006, T015, and T020 must be applied in sequence.
+- Tests are written first and confirmed to fail before implementation.
+- In US1, database schema/repository precedes ingestion and CLI; database membership and selection precede Discovery integration.
+- In US2, chart calculation precedes rendering; scoped history and database membership precede stock evidence integration.
+- In US3, chart evidence and score availability precede detail rendering; detail rendering precedes workflow navigation integration.
+- Do not parallelize tasks that edit the same file.
 
 ### Parallel Opportunities
 
-- **US1**: T001 and T002 can be prepared in parallel; T003 follows T001; T004 follows T002/T003; T005 follows T004; T006 follows T003/T005.
-- **US2**: T007, T008, and T009 can be prepared in parallel. T010 follows T007; T011 follows T009; T012 follows T009/T010; T013 follows T010/T012; T014 follows T008/T011/T013; T015 follows T006/T009/T014.
-- **US3**: T016 and T017 can be prepared in parallel. T018 follows T016; T019 follows T017/T018; T020 follows T015/T017/T019.
-- **Polish**: T021 can proceed independently of implementation; T022 follows all implementation and documentation tasks.
+- **US1 tests**: T001-T005 can be authored in parallel because they use separate test files. After tests, T006 and T010 can proceed in parallel; T007 follows T006, and T008 follows T006/T007. T009 follows T006/T007; T011/T012 follow the repository and selection integrations.
+- **US2 tests**: T013-T015 can be authored in parallel. T016 follows US1's AppTest work because it extends the same test file. After tests, T017 and T019 can proceed in parallel; T018 follows T017; T020 follows the database membership and score evidence interfaces.
+- **US3 tests**: T021 and T022 can be authored in parallel. T023 follows the chart and score evidence work; T024 follows T023.
+- **Cross-story**: Stories are delivered sequentially because US2 consumes US1's database membership and US3 consumes evidence from both earlier stories.
 
 ## Parallel Examples
 
 ### User Story 1
 
 ```text
-Task: T001 Add selection-transition unit tests in tests/unit/domain/test_progressive_selection.py
-Task: T002 Add hierarchy AppTest cases in tests/app/test_sector_stock_explorer.py
+Task: T001 Add SQLite repository tests in tests/unit/infrastructure/test_region_database.py
+Task: T002 Add import validation tests in tests/unit/infrastructure/test_universe_import.py
+Task: T003 Add CLI contract tests in tests/integration/test_universe_admin.py
+Task: T004 Extend region selection tests in tests/unit/domain/test_progressive_selection.py
+Task: T005 Extend hierarchy AppTest cases in tests/app/test_sector_stock_explorer.py
 ```
 
 ### User Story 2
 
 ```text
-Task: T007 Add peer-score formula tests in tests/unit/domain/test_peer_scores.py
-Task: T008 Add tape-rendering unit tests in tests/unit/ui/test_progressive_tape.py
-Task: T009 Add stock-evidence integration tests in tests/integration/test_stock_evidence.py
-```
-
-After T009 and T010:
-
-```text
-Task: T011 Add scoped member-history loading in src/market_leadership/application/load_stock_history.py
-Task: T012 Adapt verified facts for scoring in src/market_leadership/domain/fundamentals.py and src/market_leadership/infrastructure/yfinance_fundamentals.py
+Task: T013 Add chart-preview domain tests in tests/unit/domain/test_stock_chart.py
+Task: T014 Extend tape component tests in tests/unit/ui/test_progressive_tape.py
+Task: T015 Extend history and score-loading integration tests in tests/integration/test_stock_evidence.py
 ```
 
 ### User Story 3
 
 ```text
-Task: T016 Add moving-average unit tests in tests/unit/domain/test_stock_chart.py
-Task: T017 Add stock-detail AppTest cases in tests/app/test_stock_detail.py
+Task: T021 Extend stock moving-average tests in tests/unit/domain/test_stock_chart.py
+Task: T022 Extend stock-detail AppTest cases in tests/app/test_stock_detail.py
 ```
 
 ## Implementation Strategy
 
 ### MVP First (User Story 1 Only)
 
-1. Complete T001-T006.
-2. Verify hierarchy states and membership transitions with the focused selection and AppTest cases.
-3. Stop at the US1 checkpoint: users can progress from sectors to industries to all contained stock identities, without chart/score enhancements.
+1. Complete T001-T012.
+2. Verify reviewed local-file initialization/import, region coverage, unique industry membership, and all hierarchy transitions independently.
+3. Stop at the US1 checkpoint: the industry membership configuration error is replaced by a working database-backed path and actionable setup guidance.
 
 ### Incremental Delivery
 
-1. Deliver US1 and verify its independent selection journey.
-2. Deliver US2 after US1; prove chart identity, complete member coverage, and contract-compliant or explicitly insufficient peer scores.
-3. Deliver US3 after US2; prove stock-specific chart evidence and round-trip context.
+1. Deliver US1 and verify the database-backed hierarchy and CLI independently.
+2. Deliver US2 and verify row-specific adjacent chart evidence, provider request scope, and explicit peer-score loading.
+3. Deliver US3 and verify stock-specific detail and context return.
 4. Run all validation commands in the quickstart after the desired stories are complete.
 
 ## Notes
 
-- Every task uses the required `- [ ] T### [P?] [US#?] description with file path` format.
-- `[P]` appears only where tasks can edit different files without waiting on incomplete work.
-- The stock tape and detail view display the existing three peer block scores, not the current eight raw quarterly metrics as a substitute and not a new aggregate.
-- User-facing score values remain unavailable unless the peer contract's inputs, cutoff, and cohort requirements are demonstrated by evidence.
+- Every task uses the required checklist format: unchecked checkbox, sequential ID, optional `[P]`, story label for story tasks, and exact file path(s).
+- The live membership refresh remains disabled until the single selected provider passes the required coverage, terms, and display-rights review; tasks must not select or substitute an unreviewed provider.
+- No source-priority merge, fabricated classification, proxy-chart substitution, or score aggregate is introduced.

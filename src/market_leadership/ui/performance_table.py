@@ -96,7 +96,7 @@ def _mix_color(start: str, end: str, amount: float) -> str:
     return f"#{mixed[0]:02x}{mixed[1]:02x}{mixed[2]:02x}"
 
 
-def _style_performance_column(values: pd.Series, *, dark_mode: bool) -> list[str]:
+def performance_column_styles(values: pd.Series, *, dark_mode: bool) -> list[str]:
     numeric = values.astype("float64")
     finite = numeric.dropna()
     largest_gain = max(float(finite.max()), 0.0) if not finite.empty else 0.0
@@ -144,7 +144,7 @@ def style_performance_table(frame: pd.DataFrame, *, dark_mode: bool) -> Styler:
     for column in PERFORMANCE_COLUMNS:
         if column in frame.columns:
             styled = styled.apply(
-                _style_performance_column,
+                performance_column_styles,
                 dark_mode=dark_mode,
                 subset=[column],
             )

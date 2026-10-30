@@ -1,0 +1,9 @@
+- generic [ref=e2]:
+  - link "Skip to main content" [ref=e3] [cursor=pointer]:
+    - /url: "#stMain"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e8]:
+        - button "Deploy" [ref=e10] [cursor=pointer]
+        - button "Main menu" [ref=e14] [cursor=pointer]
+    - main [ref=e18]

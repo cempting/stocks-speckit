@@ -2,7 +2,10 @@ from datetime import date
 
 import pandas as pd
 
-from market_leadership.domain.stock_chart import build_stock_chart_evidence
+from market_leadership.domain.stock_chart import (
+    build_discovery_chart_preview,
+    build_stock_chart_evidence,
+)
 
 
 def _history(count: int) -> pd.DataFrame:
@@ -62,3 +65,32 @@ def test_empty_history_marks_all_series_without_fabricated_values():
 
     assert (chart.price_state, chart.volume_state) == ("unavailable", "unavailable")
     assert (chart.sma50_state, chart.sma150_state) == ("insufficient", "insufficient")
+
+
+def test_discovery_preview_uses_same_completed_sessions_for_price_volume_and_direction():
+    history = pd.DataFrame(
+        {
+            "close": [10.0, 11.0, 11.0, 9.0, 12.0],
+            "volume": [100.0, 110.0, 120.0, 130.0, 140.0],
+        },
+        index=pd.bdate_range("2026-10-19", periods=5),
+    )
+
+    preview = build_discovery_chart_preview(history, as_of=date(2026, 10, 23))
+
+    assert preview.index.equals(history.index)
+    assert preview["direction"].tolist() == ["neutral", "up", "neutral", "down", "up"]
+    assert preview["close"].tolist() == history["close"].tolist()
+    assert preview["volume"].tolist() == history["volume"].tolist()
+    assert preview["sma50"].isna().all()
+
+
+def test_discovery_preview_excludes_future_observations_and_calculates_exact_sma50():
+    history = _history(55)
+    history.loc[pd.Timestamp("2027-01-01")] = (1000.0, 1000.0)
+
+    preview = build_discovery_chart_preview(history, as_of=date(2026, 3, 18))
+
+    assert len(preview) == 55
+    assert preview["sma50"].iloc[:49].isna().all()
+    assert preview["sma50"].iloc[49] == sum(range(1, 51)) / 50

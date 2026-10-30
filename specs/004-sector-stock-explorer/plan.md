@@ -6,28 +6,34 @@
 
 ## Summary
 
-Extend the existing live Discovery workflow into a progressive US market explorer: show sector
-performance until a sector is selected, then its industries, then all available member stocks.
-Each tape starts with an entity-specific chart thumbnail. Selecting a stock opens its detail view
-with its own price/volume history, 50- and 150-session moving averages, and the Quality, Growth,
-and Cash Flow peer scores defined by the existing [fundamental scoring contract](../001-market-leadership-screener/contracts/fundamental-scoring.md).
+Extend the existing live Discovery workflow into a region-aware explorer backed by a persistent
+market database. Start with one US region that combines securities across exchange listings,
+while keeping exchange listings and classification systems distinct in the data model. Provide
+CLI tooling to initialize the database, import reviewed local files, validate membership, and
+refresh through the application's single live provider only after its coverage and display rights
+are approved.
 
-Keep the current two-tab Streamlit shell and single yfinance runtime source. Reuse the reviewed
-membership catalog, market-data caches, financial bundle reader, and stable session-state
-patterns. Add the peer-score calculation required by the accepted score choice, because the
-current application has the raw quarterly scorecard but not the contract's three peer scores.
-No scores are inferred when their inputs or evidence are insufficient.
+Discovery queries sector, industry, stock, and listing membership from the database instead of
+requiring `STOCK_MEMBERSHIP_CATALOG` or relying on hard-coded membership configuration. The
+existing two-tab Streamlit shell, yfinance price-history flow, market-data caches, financial
+bundle reader, and stable session-state patterns remain. Each progressive tape has a price-chart
+thumbnail with its 50-session average and an adjacent volume-chart thumbnail whose bars show
+price direction. The selected-stock detail retains its price/volume chart, 50/150-session
+averages, and peer scores. Unavailable or unresolved records remain explicit rather than
+fabricated.
 
 ## Technical Context
 
 **Language/Version**: Python `>=3.12,<3.13`.
 
 **Primary Dependencies**: Existing Streamlit, pandas, NumPy, Altair, and yfinance dependencies;
-no new runtime dependency is planned.
+Python's standard-library `sqlite3` provides persistence, with no new runtime dependency planned.
 
-**Storage**: Existing response cache and `st.cache_data` for successful, parameter-keyed market
-and financial evidence; namespaced `st.session_state` for current stable-ID selections. No new
-persistent database or user-specific shared cache.
+**Storage**: A local SQLite database under ignored `.data/` stores regions, classification
+systems, sectors, industries, stable stock identities, exchange listings, memberships, and source
+provenance. Existing response cache and `st.cache_data` remain for successful, parameter-keyed
+market and financial evidence; namespaced `st.session_state` holds current stable-ID selections.
+No user selection is stored in shared cached results.
 
 **Testing**: pytest, Streamlit AppTest, Ruff, and strict Pyright; deterministic injected providers,
 clocks, and membership/fundamental fixtures. No network is needed for required tests.
@@ -43,16 +49,22 @@ opening a row for up to 100 displayed entities should complete within two second
 controlled runs. Remote loads show progress and explicit partial/failure states; no latency
 guarantee is made for yfinance.
 
-**Constraints**: Use only live yfinance market data. Request stock history only for the selected
-industry's active catalog members. Financial peer scores require the complete eligible industry
-cohort, use the existing 001 formulas and sufficiency rules, and are loaded only after explicit
-user intent. Missing, stale, unauthorized, or incomplete evidence is not substituted or presented
-as success. Live membership/financial display remains subject to reviewed catalog coverage and
-rights.
+**Constraints**: Use only the application's single selected live provider for all runtime
+market-data requests; retain yfinance unless a reviewed provider decision replaces it. Request
+stock history only for verified listings of stocks in the selected region/industry. Financial
+peer scores require the complete eligible industry cohort, use the existing 001 formulas and
+sufficiency rules, and are loaded only after explicit user intent. Reviewed local files are
+authoritative for region, sector, industry, stock identity, and membership; live-source
+discrepancies are reported without overwriting them. Do not enable a live database refresh unless
+the selected provider supplies the needed coverage and passes terms/display-rights review.
+Missing, stale, unauthorized, conflicting, or incomplete evidence is not substituted or presented
+as success.
 
-**Scale/Scope**: US sectors, their available industries, and the active member stocks of one
-selected industry at a time; a detailed view for one selected stock. No new markets, alerts,
-recommendations, trading, portfolio workflow, or aggregate score.
+**Scale/Scope**: One initially populated US region combining eligible exchange listings, its
+available sectors and industries, and member stocks of one selected industry at a time; a
+detailed view for one selected stock. The schema supports additional regions and non-GICS
+classifications, but no non-US data, alerts, recommendations, trading, portfolio workflow, or
+aggregate score is introduced.
 
 ## Constitution Check
 
@@ -60,18 +72,19 @@ recommendations, trading, portfolio workflow, or aggregate score.
 
 | Principle or constraint | Pre-design | Post-design |
 |-------------------------|------------|-------------|
-| I. Keep It Simple | PASS: extend the existing live Discovery and selection patterns | PASS: no service, route framework, or dependency added |
-| II. Lean Delivery | PASS: scope is limited to the accepted sector-to-stock journey | PASS: reuse existing market, membership, cache, and financial boundaries |
+| I. Keep It Simple | PASS: extend existing live Discovery and use stdlib SQLite | PASS: one local database and one CLI, with no service or new dependency |
+| II. Lean Delivery | PASS: scope is limited to database-backed US region discovery | PASS: reuse existing market, cache, and financial boundaries |
 | III. YAGNI | PASS: later “further things to come” are explicitly excluded | PASS: no extension points or speculative score aggregation |
-| IV. Avoid Waste | PASS: active-view-only data and current caches are available | PASS: no hidden financial loads; stock history is limited to selected industry |
-| V. Separation of Concerns | PASS: existing domain, provider, state, and render layers are suitable | PASS: calculations, data retrieval, state reconciliation, and rendering remain distinct |
-| VI. High Cohesion, Low Coupling | PASS: current stable identifiers and existing typed records are reusable | PASS: add only the missing peer-score calculation boundary and focused UI components |
-| Streamlit and live-data constraints | PASS: current entrypoint already uses Streamlit and yfinance | PASS: preserve the two-tab shell, one provider, scoped cache keys, reviewed membership, and explicit errors |
+| IV. Avoid Waste | PASS: active-view-only data and current caches are available | PASS: no hidden financial loads; stock history is limited to selected region/industry |
+| V. Separation of Concerns | PASS: existing domain, provider, state, and render layers are suitable | PASS: DB access, ingestion, market retrieval, state, and rendering remain distinct |
+| VI. High Cohesion, Low Coupling | PASS: stable identities and typed membership records are reusable | PASS: focused database repository, importer, CLI, and UI query boundaries |
+| Streamlit and live-data constraints | PASS: current entrypoint already uses Streamlit and yfinance | PASS: preserve the two-tab shell, one price provider, scoped cache keys, reviewed local membership, and explicit errors |
 | Test and evidence gates | PASS: project provides pytest, AppTest, Ruff, and Pyright | PASS: each workflow stage has controlled test evidence; live network is not required |
 
-**Gate result: PASS.** No exception is requested. The current score implementation is not assumed
-to satisfy the feature: the peer-percentile contract is the authoritative scoring rule, and the
-calculation work is an explicit prerequisite in the implementation workflow.
+**Gate result: PASS.** No exception is requested. SQLite is the smallest persistent store already
+available in Python. A named live membership source remains a release prerequisite, not a license
+to guess at a provider or bypass the coverage and rights review. The peer-percentile contract is
+authoritative for score calculation.
 
 ## Project Structure
 
@@ -84,7 +97,8 @@ specs/004-sector-stock-explorer/
 ├── data-model.md
 ├── quickstart.md
 ├── contracts/
-│   └── progressive-discovery.md
+│   ├── progressive-discovery.md
+│   └── universe-management-cli.md
 ├── checklists/
 │   └── requirements.md
 └── tasks.md              # generated by /speckit-tasks, not by this command
@@ -105,8 +119,11 @@ src/market_leadership/
 │   └── peer_scores.py                 # add only the missing 001 peer-score calculation
 ├── infrastructure/
 │   ├── yfinance_provider.py
-│   ├── stock_membership.py
+│   ├── region_database.py             # SQLite schema and focused query repository
+│   ├── universe_import.py             # reviewed CSV/JSON ingestion and conflict report
+│   ├── stock_membership.py            # adapt membership reads to database records
 │   └── yfinance_fundamentals.py
+├── universe_admin.py                  # init, validate, import, and approved refresh CLI
 └── ui/
     ├── cache.py
     ├── dataframe.py
@@ -121,20 +138,23 @@ tests/
 ├── unit/
 │   ├── domain/
 │   │   └── test_peer_scores.py
+│   ├── infrastructure/
+│   │   ├── test_region_database.py
+│   │   └── test_universe_import.py
 │   └── ui/
 │       └── test_progressive_tape.py
 ├── integration/
-│   └── test_stock_evidence.py
+│   ├── test_stock_evidence.py
+│   └── test_region_discovery.py
 └── app/
     └── test_sector_stock_explorer.py
 ```
 
-**Structure Decision**: Keep the current application entrypoint and two root tabs. The progressive
-sector/industry/stock tapes and selected-stock detail view belong to the Discovery journey; the
-existing Industry Deep-Dive tab remains available and reuses the same reviewed membership
-contracts. Use existing data and validation modules where possible; add only the missing peer
-score calculation and cohesive renderers. No third top-level grading tab or separate routing
-system is introduced.
+**Structure Decision**: Keep the current application entrypoint and two root tabs. Discovery and
+Industry Deep-Dive read the same normalized region/industry membership repository. Add one
+standard-library SQLite boundary and one CLI for database lifecycle and data imports; keep live
+market evidence in the existing provider/cache boundary. The progressive tapes and stock detail
+remain inside Discovery; no third top-level tab or separate routing system is introduced.
 
 ## Phase 0 - Research Resolution
 
@@ -145,47 +165,76 @@ See [research.md](./research.md). Resolved decisions:
 2. Use stable sector, industry, and instrument IDs for selection and detail handoff. Symbols and
    names remain display attributes.
 3. Use each entity's own cached price history for its chart; request member-stock histories only
-   after an industry is selected.
-4. Reuse the reviewed dated membership catalog and its live-access validation. An invalid or
-   unavailable catalog blocks member rows rather than producing a misleading empty industry.
-5. Use the existing 001 peer-percentile definitions for Quality, Growth, and Cash Flow. Add the
+   after a region and industry are selected.
+4. Persist region, classification, sector, industry, stock, listing, and dated membership records
+   in SQLite. The app reads memberships from this database instead of requiring a JSON path in
+   runtime settings.
+5. Import reviewed local CSV/JSON data with provenance. The user's existing sector-rotation
+   resources are candidate inputs; source files are validated before publication, and source
+   coverage is not claimed complete until reviewed.
+6. Reviewed local data is authoritative for region, sector, industry, stock identity, and
+   membership. A live refresh must use the application's single selected provider, pass coverage,
+   terms, and display-rights review, and report rather than overwrite disagreements.
+7. Represent US as one region with securities deduplicated by stable identity and exchange
+   listings retained separately. Do not merge securities by display name or assume one ticker
+   uniquely identifies a stock.
+8. Use the existing 001 peer-percentile definitions for Quality, Growth, and Cash Flow. Add the
    missing pure calculation; do not treat the eight raw metrics in the current fundamental matrix
    as the three requested block scores.
-6. Score calculations require the whole eligible industry peer set, at least five valid peers per
+9. Score calculations require the whole eligible industry peer set, at least five valid peers per
    metric, and dated/cutoff-valid evidence. Unknown or incomplete evidence is insufficient.
-7. Fetch financial evidence only after explicit user intent, reuse the existing cache, and disclose
+10. Fetch financial evidence only after explicit user intent, reuse the existing cache, and disclose
    partial failures; ordinary reruns and table navigation never cause a score-fetch storm.
-8. No unresolved technical decisions remain. yfinance's missing point-in-time evidence remains an
-   explicit insufficiency, not a basis for relaxing the existing scoring contract.
+11. Use the local US exchange CSVs as candidate listing inputs; treat S&P/Russell files as
+   overlapping index sources rather than independent exchange listings. Unclassified symbols,
+   duplicate/conflicting rows, or sources without approved coverage are reported for review.
+12. SQLite, import format validation, and query semantics are resolved. Live refresh is
+   intentionally a pre-release approval gate for the application's single selected provider;
+   the current yfinance price integration is not presumed to have authorized or complete
+   classification coverage.
 
 ## Phase 1 - Design and Contracts
 
 ### Data and interaction flow
 
-1. The Discovery view loads the existing live sector and industry representation observations.
-   With no selected sector, it renders only the sector tape; selecting one valid sector ID changes
-   the visible tape to that sector's industries.
-2. Selecting one valid industry ID clears any invalid stock/detail state, validates the matching
-   current membership context, and loads daily price history for its active members in a scoped
-   batch. The stock tape presents all catalog members, including rows with explicit unavailable
-   history or financial evidence.
-3. A tape row carries its own chart series and stable identity. Rendering never borrows a parent,
-   sibling, or previous selection's chart. Unsupported histories retain the row and display an
-   insufficiency state.
-4. An explicit score-load action retrieves eligible peer evidence for the selected industry,
+1. The Discovery view reads available regions from SQLite, selects the US region initially, and
+   offers a region selector when more than one region is populated. It queries sectors and
+   industries using stable classification IDs. Existing sector/industry representation symbols
+   move from Python constants into database-managed records; incomplete or absent representations
+   are shown as unavailable.
+2. With no sector selected, Discovery renders only the selected region's sector tape. Selecting a
+   sector replaces it with that region/classification's industries. Selecting an industry queries
+   every active member exactly once and clears only invalid descendant state.
+3. The stock tape presents identified stocks and unresolved placeholders. Only verified listings
+   are sent to the application's selected provider (currently yfinance); each stock row retains
+   explicit unavailable, insufficient, or placeholder states. Histories are scoped to the
+   selected region and industry. Unclassified listings remain visible in coverage reporting and
+   are not assigned to a fabricated industry.
+4. Each tape row carries its own completed price/volume history and stable identity. Compute the
+   50-session simple moving average from 50 completed closes; render it in the price thumbnail
+   when sufficient history exists. Put a separate volume-chart thumbnail immediately next to the
+   price thumbnail. Color each volume bar green when the close rose from the prior observation,
+   red when it fell, and neutral when unchanged or direction is unknown. Identify the colors as
+   price-direction indications, not verified buyer/seller activity. Rendering never borrows a
+   parent, sibling, or previous selection's chart. Unsupported histories retain the row and
+   display an insufficiency state.
+5. An explicit score-load action retrieves eligible peer evidence for the selected region and industry,
    reuses the existing per-symbol financial cache, and computes block percentiles over the full
    cohort before display filtering. The UI distinguishes not loaded, sufficient, insufficient,
    and failed evidence. Errors are visible; failed loads are not cached as successful scores.
-5. Selecting a stock ID opens the detail view for that exact identity. Its chart uses its own
+6. Selecting a stock ID opens the detail view for that exact identity. Its chart uses its own
    completed daily observations and independently indicates whether price, volume, 50-session,
    and 150-session evidence is available. The scorecard uses the same industry peer result and
    provenance as the tape.
-6. Returning from detail clears only the stock-detail selection. Valid sector, industry, filters,
+7. Returning from detail clears only the stock-detail selection. Valid region, sector, industry, filters,
    and available evidence remain. Changing a parent clears only invalid descendants and their
    selection-dependent display state.
-7. The Industry Deep-Dive tab keeps its current reviewed-catalog behavior. Any shared membership
-   helper remains responsible for catalog validation; user-specific selections stay in session
-   state and are never part of cached source results.
+8. The Industry Deep-Dive tab reads the same database membership while retaining its current
+   evidence and review gates. User-specific selections stay in session state and never enter
+   cached source results.
+9. The CLI initializes the schema, validates imports before writing, and commits accepted rows
+   atomically. A partial import marks region coverage partial and reports row issues. Live-source
+   mismatches are reported; they do not overwrite reviewed local classification or membership.
 
 ### Implementation workflow and dependencies
 
@@ -195,14 +244,16 @@ small tests and implementation tasks within each stage:
 
 | Stage | Deliverable and smallest useful validation | Depends on |
 |------:|---------------------------------------------|------------|
-| 1. Stable selection state | Pure parent/child transition tests prove valid IDs persist and stale industry/stock IDs clear | None |
-| 2. Peer-score domain | Formula, tied percentile, minimum-peer, missing-data, and cutoff tests match contract 001 | None |
-| 3. Sector and industry tapes | AppTest proves initial sector-only view and sector-to-industry transition; row tests verify own chart series | 1 |
-| 4. Member-stock tape | Catalog tests and AppTest prove all active members appear, stock fields are bound to stable IDs, and missing evidence is explicit | 1, 3 |
-| 5. Scoped market history | Provider/cache integration tests prove only active selected-industry symbols are requested and each row gets its own history | 4 |
-| 6. Explicit peer-score loading | Integration and AppTest prove complete peer cohort, cache reuse, no eager calls, and visible partial failures | 2, 4 |
-| 7. Stock detail | AppTest proves row-to-detail identity and return context; chart tests prove price, volume, and both moving-average states | 4, 5, 6 |
-| 8. End-to-end and regression | Complete hierarchy, empty/error/freshness cases, two-tab shell, focused quality gates, then full non-live suite | 3-7 |
+| 1. Region database | Schema constraints, migrations, idempotent queries, and uniqueness tests cover region coverage, classifications, chart representations, stock/listing/membership relationships | None |
+| 2. Import and administration CLI | CSV/legacy-JSON parsing, dry-run reports, placeholders, unclassified rows, partial-coverage state, conflict reports, atomic writes, and CLI contract tests | 1 |
+| 3. Region-aware selection state | Pure transition tests prove region/parent changes clear invalid descendants and preserve valid detail context | 1 |
+| 4. Database-backed hierarchy and proxies | AppTest proves region selection and US region -> sector -> industry views; tests prove no runtime hierarchy depends on hard-coded membership/proxy lists | 1, 3 |
+| 5. Progressive tapes and chart thumbnails | AppTest and chart tests prove row-specific price/volume thumbnails, 50-session SMA, adjacent columns, directional bar colors, and unavailable states for all three tape types | 3, 4 |
+| 6. Member-stock tape | Repository tests and AppTest prove unique stocks, multiple listings, placeholders, and explicit unavailable evidence | 2, 3, 4, 5 |
+| 7. Scoped market history | Provider/cache integration tests prove only verified active listings for the selected region/industry are requested and each row gets its own history | 6 |
+| 8. Peer-score domain and loading | Formula tests match contract 001; integration/AppTest prove complete cohort, cache reuse, explicit load, and visible failures | 6 |
+| 9. Stock detail | AppTest proves row-to-detail identity and return context; chart tests prove price, volume, and both moving-average states | 7, 8 |
+| 10. End-to-end and regression | Import/coverage/conflict cases, full hierarchy, thumbnail placement/direction, two-tab shell, focused quality gates, then full non-live suite | 2, 4-9 |
 
 Every implementation task should pair one observable behavior with focused automated evidence.
 Do not combine domain score formulas, remote retrieval, state transitions, and UI rendering into
@@ -221,14 +272,21 @@ one task.
   selected. Scores become available only after explicit score-load intent; unavailable and
   insufficient states remain visible. Peer scores are never computed from only the displayed
   page, selected stocks, or technically filtered rows.
-- Existing live provider, catalog, date/freshness, and source-error behavior remains authoritative.
-  The feature does not add another provider, fallback data path, or runtime fixture mode.
+- Replace runtime dependence on `STOCK_MEMBERSHIP_CATALOG` with the database repository. Import
+  reviewed local files and preserve source, classification, approval, and effective-date
+  provenance. A database with no valid import is an explicit setup state, not an empty market.
+- Existing live provider, date/freshness, and source-error behavior remains authoritative. Do not
+  add a second/fallback provider or runtime fixture mode. Enabling live database refresh requires
+  the application's selected provider's US coverage, terms, and rights to pass review first.
 
-Use the [progressive discovery contract](./contracts/progressive-discovery.md) for precise
-selection, data, and error-state expectations and the [quickstart](./quickstart.md) for runnable
+Use the [progressive discovery contract](./contracts/progressive-discovery.md) and
+[universe-management CLI contract](./contracts/universe-management-cli.md) for selection,
+ingestion, and error-state expectations; use the [quickstart](./quickstart.md) for runnable
 validation.
 
 ## Complexity Tracking
 
-No constitution violations or exceptions are required. The peer-score calculation is a necessary
-implementation of the chosen existing contract, not a new aggregate or future-facing abstraction.
+No constitution violations or exceptions are required. SQLite adds only the persistent capability
+explicitly requested and avoids a new runtime dependency. The peer-score calculation implements
+the chosen existing contract; the unselected live membership source remains gated rather than
+being guessed or generalized into a multi-provider system.

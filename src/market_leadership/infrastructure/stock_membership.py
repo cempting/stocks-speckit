@@ -1,11 +1,65 @@
 import json
+from dataclasses import dataclass
 from datetime import date
 from hashlib import sha256
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 from market_leadership.config import Settings
 from market_leadership.domain.stock_selection import MembershipCatalog, MembershipEntry
+from market_leadership.infrastructure.region_database import (
+    RegionDatabase,
+    RegionRecord,
+    StockMembershipRecord,
+)
+
+MembershipLoadState = Literal[
+    "available", "missing_database", "invalid_database", "empty_membership"
+]
+
+
+@dataclass(frozen=True, slots=True)
+class RegionMembershipResult:
+    state: MembershipLoadState
+    region: RegionRecord | None
+    coverage_state: str | None
+    coverage_description: str | None
+    revision: str | None
+    members: tuple[StockMembershipRecord, ...]
+
+
+def load_region_membership(
+    database: RegionDatabase,
+    *,
+    region_id: str,
+    classification_id: str,
+    industry_id: str,
+    as_of: date,
+) -> RegionMembershipResult:
+    if not database.path.exists():
+        return RegionMembershipResult("missing_database", None, None, None, None, ())
+    if not database.is_initialized():
+        return RegionMembershipResult("invalid_database", None, None, None, None, ())
+    region = database.get_region(region_id)
+    if region is None or database.get_classification_id(region_id) != classification_id:
+        return RegionMembershipResult(
+            "empty_membership",
+            region,
+            region.coverage_state if region else None,
+            region.coverage_description if region else None,
+            database.get_revision(),
+            (),
+        )
+    members = database.get_industry_members(region_id, classification_id, industry_id, as_of=as_of)
+    return RegionMembershipResult(
+        "available" if members else "empty_membership",
+        region,
+        region.coverage_state,
+        region.coverage_description,
+        database.get_revision(),
+        members,
+    )
+
 
 FIXTURE_CATALOG = (
     Path(__file__).parents[3] / "tests/fixtures/acceptance/fundamental_membership.json"

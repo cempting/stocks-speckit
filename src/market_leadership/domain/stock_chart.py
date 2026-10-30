@@ -80,3 +80,32 @@ def build_stock_chart_evidence(
         "available" if pd.notna(latest["sma50"]) else "insufficient",
         "available" if pd.notna(latest["sma150"]) else "insufficient",
     )
+
+
+def build_discovery_chart_preview(
+    history: pd.DataFrame,
+    *,
+    as_of: date,
+    limit: int | None = None,
+) -> pd.DataFrame:
+    """Build aligned price/volume preview data with close-direction labels."""
+    columns = ["close", "sma50", "volume", "direction"]
+    if history.empty:
+        return pd.DataFrame(columns=columns, dtype="object")
+    completed = history.loc[pd.DatetimeIndex(history.index).date <= as_of].sort_index().copy()
+    if completed.index.has_duplicates:
+        raise ValueError("Discovery chart sessions must be unique")
+    for column in ("close", "volume"):
+        if column not in completed.columns:
+            completed[column] = float("nan")
+        completed[column] = pd.to_numeric(completed[column], errors="coerce")
+    completed["sma50"] = completed["close"].rolling(window=50, min_periods=50).mean()
+    previous_close = completed["close"].shift()
+    completed["direction"] = "neutral"
+    completed.loc[completed["close"] > previous_close, "direction"] = "up"
+    completed.loc[completed["close"] < previous_close, "direction"] = "down"
+    if limit is not None:
+        if limit < 1:
+            raise ValueError("Preview limit must be positive")
+        completed = completed.tail(limit)
+    return completed.loc[:, columns]

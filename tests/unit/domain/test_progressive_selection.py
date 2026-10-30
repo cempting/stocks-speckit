@@ -14,6 +14,8 @@ def reconcile(
     instruments: dict[str, str] | None = None,
     fingerprint: str = "catalog-1",
     membership_date: date = date(2026, 10, 23),
+    region_id: str | None = None,
+    database_revision: str | None = None,
 ):
     return reconcile_progressive_selection(
         selection,
@@ -23,6 +25,8 @@ def reconcile(
         catalog_fingerprint=fingerprint,
         membership_date=membership_date,
         observation_date=date(2026, 10, 23),
+        region_id=region_id,
+        database_revision=database_revision,
     )
 
 
@@ -104,5 +108,40 @@ def test_catalog_change_clears_industry_and_stock_but_keeps_sector():
 
     assert selection.sector_id == "TECH"
     assert selection.visible_stage == "industries"
+    assert selection.industry_id is None
+    assert selection.instrument_id is None
+
+
+def test_region_change_clears_sector_and_all_descendants():
+    selection = reconcile(
+        ProgressiveSelection("TECH", "SOFT", "AAA", region_id="EU"),
+        industries={"SOFT": "TECH"},
+        instruments={"AAA": "SOFT"},
+        region_id="US",
+    )
+
+    assert selection.region_id == "US"
+    assert selection.visible_stage == "sectors"
+    assert selection.sector_id is None
+    assert selection.industry_id is None
+    assert selection.instrument_id is None
+
+
+def test_database_revision_change_preserves_only_valid_hierarchy():
+    selection = reconcile(
+        ProgressiveSelection(
+            "TECH",
+            "SOFT",
+            "AAA",
+            region_id="US",
+            database_revision="revision-1",
+        ),
+        industries={"SOFT": "TECH"},
+        instruments={"AAA": "SOFT"},
+        database_revision="revision-2",
+    )
+
+    assert selection.region_id == "US"
+    assert selection.sector_id == "TECH"
     assert selection.industry_id is None
     assert selection.instrument_id is None
