@@ -34,7 +34,8 @@ def canonicalize_daily_history(
                 raise ValueError(f"Daily history for {symbol} contains duplicate dates")
             frame.index = index
             frame.index.name = "date"
-            frame = frame.loc[(frame.index.date >= start) & (frame.index.date <= end)].sort_index()
+            mask = pd.Series((index.date >= start) & (index.date <= end), index=index)
+            frame = frame.loc[mask].sort_index()
             frame = frame.astype({"close": "float64", "volume": "float64"})
             if not np.isfinite(frame["close"]).all() or (frame["close"] <= 0).any():
                 raise ValueError(f"Daily history for {symbol} contains invalid close")
@@ -42,7 +43,7 @@ def canonicalize_daily_history(
                 raise ValueError(f"Daily history for {symbol} contains invalid volume")
         frame.attrs["source_id"] = source_id
         frame.attrs["available_on"] = (
-            frame.index[-1].date().isoformat() if not frame.empty else None
+            pd.DatetimeIndex(frame.index)[-1].date().isoformat() if not frame.empty else None
         )
         canonical[symbol] = frame
     return canonical
@@ -79,9 +80,10 @@ def canonicalize_fx_rates(
         raise ValueError("FX rates contain duplicate dates")
     if (canonical["available_on"] < canonical["date"]).any():
         raise ValueError("FX rate availability cannot precede its observation date")
-    canonical = canonical.loc[
-        (canonical["date"].dt.date <= as_of) & (canonical["available_on"].dt.date <= as_of)
-    ].sort_values("date", kind="stable")
+    mask: pd.Series[bool] = (canonical["date"].dt.date <= as_of) & (
+        canonical["available_on"].dt.date <= as_of
+    )
+    canonical = canonical.loc[mask].sort_values("date", kind="stable")
     canonical["close"] = canonical["close"].astype("float64")
     canonical["base_currency"] = pd.Series(base_currency, index=canonical.index, dtype="string")
     canonical["quote_currency"] = pd.Series(quote_currency, index=canonical.index, dtype="string")

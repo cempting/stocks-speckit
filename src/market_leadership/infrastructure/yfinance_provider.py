@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from datetime import date, timedelta
+from importlib import import_module
 from typing import Any, cast
 
 import pandas as pd
-import yfinance as yf
 
 from market_leadership.application.ports import DataPointRequest, ProviderCapability
 from market_leadership.infrastructure.provider_errors import (
@@ -12,6 +12,8 @@ from market_leadership.infrastructure.provider_errors import (
     retryable_status_code,
 )
 from market_leadership.infrastructure.provider_validation import canonicalize_daily_history
+
+yf = import_module("yfinance")
 
 
 class YFinanceProvider:
@@ -58,6 +60,7 @@ class YFinanceProvider:
         force: bool = False,
     ) -> dict[str, pd.DataFrame]:
         del force
+        downloaded: pd.DataFrame | None = None
         for attempt in range(self._retry_limit + 1):
             try:
                 downloaded = self._downloader(
@@ -83,6 +86,7 @@ class YFinanceProvider:
                     retryable=retryable,
                     status_code=status_code,
                 ) from None
+        assert downloaded is not None
         result = {symbol: self._extract_symbol(downloaded, symbol, symbols) for symbol in symbols}
         return canonicalize_daily_history(
             result,
@@ -114,7 +118,8 @@ class YFinanceProvider:
         else:
             return YFinanceProvider._empty_history()
 
-        normalized = symbol_frame.rename(columns=lambda column: str(column).lower())
+        normalized = symbol_frame.copy()
+        normalized.columns = [str(column).lower() for column in normalized.columns]
         if not {"close", "volume"}.issubset(normalized.columns):
             raise ValueError(f"Daily history for {symbol} lacks canonical columns")
         result = normalized.loc[:, ["close", "volume"]].dropna(how="all").sort_index().copy()

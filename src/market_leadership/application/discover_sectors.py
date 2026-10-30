@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import cast
 
 import pandas as pd
 
@@ -88,7 +87,7 @@ def discover_sectors_from_history(
         else None
     )
     sentiment = calculate_market_sentiment(benchmark_history, BENCHMARK)
-    benchmark_closes = cast(pd.Series, benchmark_history["close"])
+    benchmark_closes = benchmark_history["close"]
     sectors: list[SectorDiscovery] = []
 
     for name, symbol in SECTOR_PROXIES:
@@ -102,7 +101,7 @@ def discover_sectors_from_history(
                     f"No sector close is available on benchmark date {benchmark_as_of}"
                 )
             performance = calculate_performance(
-                cast(pd.Series, chart_history["close"]),
+                chart_history["close"],
                 benchmark_closes,
                 as_of=benchmark_as_of,
             )
@@ -148,9 +147,11 @@ def discover_sectors_from_snapshot(
         rows = prices.loc[prices["symbol"] == symbol, ["date", "close", "volume"]].copy()
         rows["date"] = pd.to_datetime(rows["date"], errors="raise")
         history = rows.set_index("date").sort_index()
-        history = history.loc[
-            (history.index.date >= as_of - timedelta(days=550)) & (history.index.date <= as_of)
-        ].astype({"close": "float64", "volume": "float64"})
+        dates = pd.DatetimeIndex(history.index).date
+        mask = pd.Series(
+            (dates >= as_of - timedelta(days=550)) & (dates <= as_of), index=history.index
+        )
+        history = history.loc[mask].astype({"close": "float64", "volume": "float64"})
         history.attrs.update({"source_id": source_id})
         histories[symbol] = history
     return discover_sectors_from_history(source_id, histories, as_of=as_of)

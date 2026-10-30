@@ -1,4 +1,4 @@
-"""Streamlit workflow for the sector discovery view."""
+"""Live-only Streamlit workflow for US sector and industry discovery."""
 
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -6,7 +6,6 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
 
-from market_leadership.application.compare_markets import MarketComparison, compare_markets
 from market_leadership.application.discover_sectors import (
     BENCHMARK,
     SECTOR_PROXIES,
@@ -14,478 +13,248 @@ from market_leadership.application.discover_sectors import (
     discover_sectors_from_history,
 )
 from market_leadership.application.market_sessions import latest_completed_us_session
-from market_leadership.bootstrap import (
-    build_fixture_market_context,
-    build_request_provider,
-)
+from market_leadership.bootstrap import build_request_provider
 from market_leadership.config import load_settings
-from market_leadership.infrastructure.snapshot_errors import (
-    SchemaMismatch,
-    SourceUnavailable,
+from market_leadership.domain.industry_momentum import industry_momentum_frame, industry_symbols
+from market_leadership.infrastructure.experimental_universe_catalog import (
+    load_experimental_catalog,
 )
-from market_leadership.ui.navigation import workflow_page
-from market_leadership.ui.performance_table import (
-    performance_table_height,
-    style_performance_table,
-)
+from market_leadership.ui.dataframe import render_dataframe
+from market_leadership.ui.performance_table import performance_table_height, style_performance_table
 from market_leadership.ui.sector_chart import build_sector_chart
-from market_leadership.ui.workflows.scoreboard import render_scoreboard
 
-DISCOVERY_CACHE_SCHEMA_VERSION = 2
-
-st.set_page_config(
-    page_title="US Sector Discovery",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
-dark_mode = bool(st.session_state.dark_mode)
-theme = (
-    {
-        "ink": "#edf3f7",
-        "muted": "#aebbc8",
-        "line": "#334451",
-        "paper": "#111820",
-        "surface": "#18232d",
-        "control": "#22313d",
-        "selected": "#3f2728",
-        "accent_text": "#ff9b91",
-    }
-    if dark_mode
-    else {
-        "ink": "#17212b",
-        "muted": "#64707d",
-        "line": "#dce2e7",
-        "paper": "#f7f8f6",
-        "surface": "#ffffff",
-        "control": "#e9eeea",
-        "selected": "#faecea",
-        "accent_text": "#a83d34",
-    }
-)
-
-st.markdown(
-    f"""
-    <style>
-        @import url(
-            'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap'
-        );
-    :root {{
-        --ink: {theme["ink"]};
-        --muted: {theme["muted"]};
-        --line: {theme["line"]};
-        --paper: {theme["paper"]};
-        --surface: {theme["surface"]};
-        --control: {theme["control"]};
-        --selected: {theme["selected"]};
-        --accent-text: {theme["accent_text"]};
-    }}
-    .stApp {{
-        background: var(--paper);
-        color: var(--ink);
-        font-family: 'DM Sans', sans-serif;
-    }}
-    [data-testid="stHeader"] {{ background: var(--paper); }}
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp p, .stApp label {{
-        color: var(--ink);
-    }}
-    h1, h2, h3 {{ font-family: 'DM Sans', sans-serif; letter-spacing: 0; }}
-    h1 {{ font-size: 2rem !important; font-weight: 700 !important; }}
-    [data-testid="stCaptionContainer"] p {{ color: var(--muted); }}
-    [data-baseweb="select"] > div,
-    [data-testid="stDateInput"] input {{
-        background: var(--surface);
-        border-color: var(--line);
-        color: var(--ink);
-    }}
-    [data-testid="stButton"] button[kind="secondary"] {{
-        background: var(--surface);
-        border-color: var(--line);
-        color: var(--ink);
-    }}
-    [data-testid="stButton"] button[kind="secondary"]:hover {{
-        background: var(--control);
-        border-color: var(--accent-text);
-        color: var(--ink);
-    }}
-    [data-testid="stButton"] button[kind="secondary"] p,
-    [data-variant="segmented_control"] p {{ color: inherit !important; }}
-    [data-variant="segmented_control"] {{
-        background: var(--surface) !important;
-        border-color: var(--line) !important;
-        color: var(--ink) !important;
-    }}
-    [data-variant="segmented_control"][data-selected="true"] {{
-        background: var(--selected) !important;
-        border-color: var(--accent-text) !important;
-        color: var(--accent-text) !important;
-    }}
-    [data-testid="stMetric"] {{
-        background: transparent;
-        border-left: 3px solid #6f8f7b;
-        padding-left: 1rem;
-    }}
-    [data-testid="stMetricLabel"] {{ color: var(--muted); }}
-    [data-testid="stDataFrame"] {{
-        border: 1px solid var(--line);
-        border-radius: 6px;
-        color-scheme: {"dark" if dark_mode else "light"};
-    }}
-    [data-testid="stDataFrameResizable"] {{ border-color: var(--line) !important; }}
-    .stDataFrameGlideDataEditor {{
-        --gdg-text-dark: {theme["ink"]} !important;
-        --gdg-text-medium: {theme["muted"]} !important;
-        --gdg-text-light: {theme["muted"]} !important;
-        --gdg-text-header: {theme["muted"]} !important;
-        --gdg-bg-cell: {theme["surface"]} !important;
-        --gdg-bg-cell-medium: {theme["surface"]} !important;
-        --gdg-bg-header: {theme["control"]} !important;
-        --gdg-bg-header-has-focus: {theme["line"]} !important;
-        --gdg-bg-header-hovered: {theme["line"]} !important;
-        --gdg-border-color: {theme["line"]} !important;
-        --gdg-horizontal-border-color: {theme["line"]} !important;
-    }}
-    .source-line {{ color: var(--muted) !important; font: 500 0.78rem 'IBM Plex Mono', monospace; }}
-    .section-rule {{ border-top: 1px solid var(--line); margin: 1.2rem 0 1rem; }}
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+DISCOVERY_CACHE_SCHEMA_VERSION = 3
 
 
 @st.cache_data(show_spinner=False)
 def _calculate_discovery(
-    provider_id: str,
-    as_of: date,
-    history: dict[str, pd.DataFrame],
-    cache_schema_version: int,
+    as_of: date, history: dict[str, pd.DataFrame], cache_schema_version: int
 ) -> DiscoveryResult:
-    del cache_schema_version  # Its value participates in Streamlit's cache key.
-    return discover_sectors_from_history(provider_id, history, as_of=as_of)
+    del cache_schema_version
+    return discover_sectors_from_history("yfinance", history, as_of=as_of)
 
 
 def load_discovery(
-    provider_id: str,
     source_cache_path: str,
     as_of: date,
     *,
     force_refresh: bool,
-    cache_schema_version: int,
     retry_limit: int,
-) -> DiscoveryResult:
-    provider = build_request_provider(
-        provider_id,
-        source_cache_path,
-        retry_limit=retry_limit,
-    )
+) -> tuple[DiscoveryResult, dict[str, pd.DataFrame]]:
+    provider = build_request_provider("yfinance", source_cache_path, retry_limit=retry_limit)
+    symbols = (BENCHMARK, *(symbol for _, symbol in SECTOR_PROXIES), *industry_symbols())
     history = provider.fetch_daily_history(
-        (BENCHMARK, *(symbol for _, symbol in SECTOR_PROXIES)),
+        symbols,
         start=as_of - timedelta(days=550),
         end=as_of,
         force=force_refresh,
     )
-    return _calculate_discovery(provider_id, as_of, history, cache_schema_version)
+    return _calculate_discovery(as_of, history, DISCOVERY_CACHE_SCHEMA_VERSION), history
 
 
-def provider_options(default_provider: str, massive_available: bool) -> list[str]:
-    if default_provider == "fixture":
-        return ["fixture"]
-    options = ["yfinance"]
-    if massive_available:
-        options.insert(0, "massive")
-    return options
-
-
-def render_fixture_comparison(comparison: MarketComparison) -> None:
-    for overview in comparison.markets:
-        st.subheader(f"{overview.name} ({overview.market_id})")
-        observed_on = overview.as_of.isoformat() if overview.as_of is not None else "Unavailable"
-        available_on = (
-            overview.source_available_on.isoformat()
-            if overview.source_available_on is not None
-            else "Unavailable"
-        )
-        coverage_start = (
-            overview.coverage_start.isoformat()
-            if overview.coverage_start is not None
-            else "Unavailable"
-        )
-        st.caption(
-            f"Benchmark {overview.benchmark_id} · {overview.currency} · "
-            f"{overview.calendar_id} · {observed_on} · "
-            f"{overview.return_basis} · source {overview.source_id} available "
-            f"{available_on} · coverage since {coverage_start}"
-        )
-        st.metric("Local regime", overview.regime)
-        if overview.freshness == "insufficient":
-            st.warning(f"{overview.market_id} local benchmark evidence is insufficient.")
-        elif overview.freshness != "current":
-            st.warning(f"{overview.market_id} benchmark or sector evidence is stale.")
-        if overview.sector_outcomes:
-            st.caption("Three-month local relative proxy outcomes; not weekly leadership ranks")
-            st.dataframe(
-                pd.DataFrame(
-                    [
-                        {
-                            "Sector": outcome.sector,
-                            "3 months vs local benchmark": outcome.relative_3m * 100,
-                            "Status": overview.freshness.title(),
-                        }
-                        for outcome in overview.sector_outcomes
-                    ]
-                ),
-                hide_index=True,
-                width="stretch",
-            )
-        else:
-            st.info("No dated sector outcomes are available for this market.")
-        if overview.global_context is not None:
-            st.caption(
-                f"Separate global benchmark {overview.global_context.benchmark_id} "
-                f"({overview.global_context.currency})"
-            )
-        elif overview.global_unavailable_reason is not None:
-            st.warning(overview.global_unavailable_reason)
-
-
-st.title("Discovery")
-experience_mode = st.segmented_control(
-    "Discovery mode",
-    options=("Weekly leadership", "US live daily", "US acceptance comparison"),
-    default="Weekly leadership",
-    key="discovery_experience_mode",
-    selection_mode="single",
-)
-if experience_mode == "Weekly leadership":
-    render_scoreboard(configure_page=False, show_title=False)
-    st.stop()
-
-settings = load_settings()
-selected_provider: str | None = None
-requested_as_of: date | None = None
-force_refresh = False
-
-(
-    title_column,
-    provider_column,
-    date_column,
-    refresh_column,
-    theme_column,
-) = st.columns([2.1, 1, 1, 0.8, 0.8])
-source_mode = (
-    "Live provider"
-    if experience_mode == "US live daily"
-    else "Acceptance fixture"
-)
-with title_column:
-    if source_mode == "Acceptance fixture":
-        st.title("Market Comparison")
-        st.caption("Controlled US sample · not live market data")
-    else:
-        st.title("US Sector Discovery · Live Daily")
-        st.caption("GICS sector leadership through liquid US-listed proxies")
-with provider_column:
-    if source_mode == "Live provider":
-        options = provider_options(settings.default_provider, settings.massive_available)
-        selected_provider = st.selectbox(
-            "Data provider",
-            options,
-            index=options.index(settings.default_provider)
-            if settings.default_provider in options
-            else 0,
-            format_func=lambda value: "Massive" if value == "massive" else value.title(),
-        )
-with date_column:
-    market_today = datetime.now(ZoneInfo("America/New_York")).date()
-    requested_as_of = st.date_input(
-        "As of",
-        value=date(2026, 10, 23) if source_mode == "Acceptance fixture" else market_today,
-        max_value=market_today,
+def _industry_chart(frame: pd.DataFrame, *, dark_mode: bool) -> None:
+    if len(frame) < 150:
+        st.info("Industry chart evidence is insufficient: fewer than 150 completed sessions.")
+        return
+    chart_history = frame.sort_index().copy()
+    chart_history["sma50"] = chart_history["close"].rolling(50, min_periods=50).mean()
+    chart_history["sma150"] = chart_history["close"].rolling(150, min_periods=150).mean()
+    trend = (
+        float(chart_history["sma50"].iloc[-1] / chart_history["sma50"].iloc[-21] - 1)
+        if pd.notna(chart_history["sma50"].iloc[-21])
+        else None
     )
-with refresh_column:
-    if source_mode == "Live provider":
-        st.write("")
-        st.write("")
-        force_refresh = st.button(
-            "Refresh data",
-            icon=":material/refresh:",
-            use_container_width=True,
-        )
-with theme_column:
-    st.write("")
-    st.write("")
-    if st.button(
-        "",
-        key="theme_mode_button",
-        icon=":material/light_mode:" if dark_mode else ":material/dark_mode:",
-        help="Switch to light mode" if dark_mode else "Switch to dark mode",
-        type="secondary",
-        width="stretch",
-    ):
-        st.session_state.dark_mode = not dark_mode
-        st.rerun()
+    st.caption(
+        "Industry-owned adjusted-close and official-session volume evidence; "
+        "historical analysis, not a recommendation or forecast."
+    )
+    st.caption(
+        f"50-session average: {chart_history['sma50'].iloc[-1]:.2f} · "
+        f"150-session average: {chart_history['sma150'].iloc[-1]:.2f} · "
+        f"50-session trend: {trend:.2%}" if trend is not None else "Trend evidence is insufficient."
+    )
+    st.altair_chart(build_sector_chart(chart_history, dark_mode=dark_mode), width="stretch")
 
-if source_mode == "Acceptance fixture":
-    if requested_as_of is None:
-        raise RuntimeError("Fixture observation date is unavailable")
+
+def _render_experimental_universe_catalog(path: str) -> None:
+    st.subheader("Experimental provider-label industry catalog")
+    st.caption(
+        "This is a provisional US-universe experiment, not the GICS momentum catalog. "
+        "It does not select stock proxies or assign market-cap bands until dated evidence is added."
+    )
     try:
-        comparison = compare_markets(
-            ("US",),
-            market_data=build_fixture_market_context(),
-            as_of=requested_as_of,
-        )
-    except (SourceUnavailable, SchemaMismatch, KeyError, ValueError):
-        st.error("Acceptance market context could not be loaded. Check the controlled fixture.")
-        st.stop()
-    render_fixture_comparison(comparison)
-    st.stop()
-
-try:
-    if selected_provider is None or requested_as_of is None:
-        raise RuntimeError("Live data controls are unavailable")
-    with st.spinner(f"Loading {selected_provider} market data..."):
-        discovery = load_discovery(
-            selected_provider,
-            settings.source_cache_path,
-            requested_as_of,
-            force_refresh=force_refresh,
-            cache_schema_version=DISCOVERY_CACHE_SCHEMA_VERSION,
-            retry_limit=settings.retry_limit,
-        )
-except Exception as error:
-    st.error("Market data could not be loaded. The previous cached result was not replaced.")
-    st.exception(error)
-    st.stop()
-
-st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
-st.markdown("#### S&P 500 sentiment")
-benchmark_date = discovery.benchmark_as_of
-benchmark_current = benchmark_date == latest_completed_us_session(discovery.as_of)
-if not benchmark_current:
-    observation = benchmark_date.isoformat() if benchmark_date is not None else "unavailable"
-    st.warning(
-        f"SPY close is unavailable for the requested completed session. "
-        f"Latest usable SPY close: {observation}. Results are stale or insufficient."
+        catalog = load_experimental_catalog(path)
+    except FileNotFoundError:
+        st.info("No experimental catalog has been generated yet.")
+        return
+    except (OSError, ValueError) as error:
+        st.error(f"Experimental industry catalog could not be loaded: {error}")
+        return
+    frame = pd.DataFrame(
+        [
+            {
+                "Sector": industry.sector,
+                "Industry": industry.industry,
+                "Members": industry.member_count,
+                "Sources": ", ".join(industry.source_ids),
+                "Classification conflicts": industry.classification_conflict_count,
+                "Market-cap band": "Unverified",
+                "Proxy status": "Awaiting qualification",
+            }
+            for industry in catalog.industries
+        ]
     )
-sentiment = discovery.sentiment
-metric_columns = st.columns(4)
-metric_columns[0].metric("Regime", sentiment.regime)
-metric_columns[1].metric(
-    "SPY close",
-    f"${sentiment.close:,.2f}" if sentiment.close is not None else "Unavailable",
-)
-metric_columns[2].metric(
-    "150-session average",
-    f"${sentiment.sma150:,.2f}" if sentiment.sma150 is not None else "Unavailable",
-)
-metric_columns[3].metric(
-    "Average trend",
-    sentiment.slope_state,
-    f"{sentiment.normalized_slope_pct:.3f}% / session"
-    if sentiment.normalized_slope_pct is not None
-    else None,
-)
-
-st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
-heading_column, mode_column = st.columns([2, 1])
-with heading_column:
-    st.subheader("Sector performance")
-    st.caption("Split-adjusted close returns over matching lookback periods")
-with mode_column:
-    performance_mode = st.segmented_control(
-        "Performance basis",
-        options=["Absolute", "vs S&P 500"],
-        default="Absolute",
-        selection_mode="single",
+    st.caption(
+        f"Retrieved {catalog.generated_at.date().isoformat()} · "
+        f"{catalog.member_count:,} classified securities · "
+        f"{len(catalog.industries)} provider-label industries"
     )
+    render_dataframe(frame, hide_index=True, height=700, width="stretch")
 
-performance_rows: list[dict[str, object]] = []
-for sector in discovery.sectors:
-    metrics = None
-    if sector.performance is not None:
-        metrics = (
-            sector.performance.absolute
-            if performance_mode == "Absolute"
-            else sector.performance.relative
-        )
-    performance_rows.append(
-        {
-            "Sector": sector.name,
-            "Proxy": sector.symbol,
-            "1 week": metrics["1w"] * 100 if metrics else None,
-            "1 month": metrics["1m"] * 100 if metrics else None,
-            "3 months": metrics["3m"] * 100 if metrics else None,
-            "6 months": metrics["6m"] * 100 if metrics else None,
-            "12 months": metrics["12m"] * 100 if metrics else None,
-            "Status": (
-                "Current"
-                if metrics and benchmark_current
-                else "Stale"
-                if metrics
-                else "Insufficient history"
-            ),
-        }
-    )
 
-performance_frame = pd.DataFrame(performance_rows)
-st.dataframe(
-    style_performance_table(performance_frame, dark_mode=dark_mode),
-    key=f"performance_table_{'dark' if dark_mode else 'light'}",
-    hide_index=True,
-    height=performance_table_height(len(performance_frame)),
-    width="stretch",
-    column_config={
-        "1 week": st.column_config.NumberColumn(format="%.2f%%"),
-        "1 month": st.column_config.NumberColumn(format="%.2f%%"),
-        "3 months": st.column_config.NumberColumn(format="%.2f%%"),
-        "6 months": st.column_config.NumberColumn(format="%.2f%%"),
-        "12 months": st.column_config.NumberColumn(format="%.2f%%"),
-    },
-)
+def render_discovery(*, configure_page: bool = True) -> None:
+    if configure_page:
+        st.set_page_config(page_title="Discovery", page_icon="📊", layout="wide")
+    settings = load_settings()
+    market_today = datetime.now(ZoneInfo("America/New_York")).date()
+    dark_mode = bool(st.session_state.get("dark_mode", False))
+    st.title("Discovery")
+    st.caption("Live US market evidence from yfinance. Historical outcomes are not forecasts.")
 
-source_label = (
-    f"SOURCE {discovery.provider_id.upper()} · REQUESTED {discovery.as_of.isoformat()}"
-    f" · SPY OBSERVED {benchmark_date.isoformat() if benchmark_date else 'UNAVAILABLE'}"
-    " · ADJUSTED DAILY BARS"
-)
-st.markdown(f'<p class="source-line">{source_label}</p>', unsafe_allow_html=True)
-selected_industry_sector = st.selectbox(
-    "Explore industries for sector",
-    options=[sector.name for sector in discovery.sectors],
-    index=None,
-    placeholder="Select a sector",
-    key="live_industry_parent_sector",
-)
-if selected_industry_sector is not None:
-    st.session_state["market_leadership.industry_handoff"] = {
-        "market_id": "US",
-        "mode": "live",
-        "sector_names": [selected_industry_sector],
-        "as_of": benchmark_date.isoformat() if benchmark_date else None,
-    }
-    industry_page = workflow_page("industry-discovery")
-    if industry_page is not None:
-        st.page_link(
-            industry_page,
-            label=f"Open live Industry Discovery for {selected_industry_sector}",
-            icon=":material/schema:",
-        )
-st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
-st.subheader("Sector tape")
-st.caption("Latest 260 sessions · adjusted close and SMA50 · official-session volume")
-
-chart_columns = st.columns(2)
-for index, sector in enumerate(discovery.sectors):
-    with chart_columns[index % 2]:
-        st.markdown(f"#### {sector.name} · `{sector.symbol}`")
-        if sector.history.empty:
-            st.warning("No chart history is available for this proxy.")
-        else:
-            st.altair_chart(
-                build_sector_chart(sector.history, dark_mode=dark_mode),
-                width="stretch",
+    date_column, refresh_column = st.columns((3, 1))
+    with date_column:
+        requested_as_of = st.date_input("As of", value=market_today, max_value=market_today)
+    with refresh_column:
+        st.write("")
+        force_refresh = st.button("Refresh data", use_container_width=True)
+    try:
+        with st.spinner("Loading yfinance market data..."):
+            discovery, history = load_discovery(
+                settings.source_cache_path,
+                requested_as_of,
+                force_refresh=force_refresh,
+                retry_limit=settings.retry_limit,
             )
+    except Exception as error:
+        st.error("Live yfinance market data could not be loaded; no fallback data is displayed.")
+        st.exception(error)
+        return
+
+    observed = discovery.benchmark_as_of
+    st.caption(
+        f"SOURCE YFINANCE · REQUESTED {requested_as_of.isoformat()} · "
+        f"OBSERVED {observed.isoformat() if observed else 'UNAVAILABLE'} · ADJUSTED DAILY BARS"
+    )
+    if observed != latest_completed_us_session(requested_as_of):
+        st.warning(
+            "The latest completed benchmark session is unavailable; "
+            "results are stale or insufficient."
+        )
+
+    heading_column, mode_column = st.columns([2, 1])
+    with heading_column:
+        st.subheader("Sector performance")
+        st.caption("Split-adjusted close returns over matching lookback periods")
+    with mode_column:
+        performance_mode = st.segmented_control(
+            "Performance basis",
+            options=["Absolute", "vs S&P 500"],
+            default="Absolute",
+            selection_mode="single",
+        )
+
+    sector_rows: list[dict[str, object]] = []
+    for sector in discovery.sectors:
+        metrics = None
+        if sector.performance is not None:
+            metrics = (
+                sector.performance.absolute
+                if performance_mode == "Absolute"
+                else sector.performance.relative
+            )
+        sector_rows.append(
+            {
+                "Sector": sector.name,
+                "Proxy": sector.symbol,
+                "1 week": metrics["1w"] * 100 if metrics else None,
+                "1 month": metrics["1m"] * 100 if metrics else None,
+                "3 months": metrics["3m"] * 100 if metrics else None,
+                "6 months": metrics["6m"] * 100 if metrics else None,
+                "12 months": metrics["12m"] * 100 if metrics else None,
+                "Status": (
+                    "Current"
+                    if metrics and observed == latest_completed_us_session(requested_as_of)
+                    else "Stale"
+                    if metrics
+                    else "Insufficient history"
+                ),
+            }
+        )
+    sector_frame = pd.DataFrame(sector_rows)
+    render_dataframe(
+        style_performance_table(sector_frame, dark_mode=dark_mode),
+        key=f"sector_performance_table_{'dark' if dark_mode else 'light'}",
+        hide_index=True,
+        height=performance_table_height(len(sector_frame)),
+        width="stretch",
+        column_config={
+            "1 week": st.column_config.NumberColumn(format="%.2f%%"),
+            "1 month": st.column_config.NumberColumn(format="%.2f%%"),
+            "3 months": st.column_config.NumberColumn(format="%.2f%%"),
+            "6 months": st.column_config.NumberColumn(format="%.2f%%"),
+            "12 months": st.column_config.NumberColumn(format="%.2f%%"),
+        },
+    )
+
+    st.subheader("Industry momentum")
+    available_sectors = tuple(name for name, _ in SECTOR_PROXIES)
+    selected_sectors = tuple(
+        st.multiselect("Parent sectors", available_sectors, default=list(available_sectors))
+    )
+    scope = ", ".join(selected_sectors) if selected_sectors else "no parent sectors"
+    st.caption(f"Trend scope: {scope} · adjusted-close returns")
+    industries = industry_momentum_frame(
+        history,
+        as_of=observed or requested_as_of,
+        sectors=selected_sectors,
+    )
+    if industries.empty:
+        st.info("No eligible industry data is available for the selected sector scope.")
+    else:
+        render_dataframe(
+            style_performance_table(industries, dark_mode=dark_mode),
+            hide_index=True,
+            height=performance_table_height(len(industries)),
+            width="stretch",
+            column_config={
+                "1 week": st.column_config.NumberColumn(format="%.2f%%"),
+                "1 month": st.column_config.NumberColumn(format="%.2f%%"),
+                "3 months": st.column_config.NumberColumn(format="%.2f%%"),
+                "6 months": st.column_config.NumberColumn(format="%.2f%%"),
+                "12 months": st.column_config.NumberColumn(format="%.2f%%"),
+            },
+        )
+        choices = industries.loc[industries["1 week"].notna(), ["Industry", "Representation"]]
+        if not choices.empty:
+            selected = st.selectbox(
+                "Inspect industry chart", choices["Industry"].tolist(), index=None
+            )
+            if selected is not None:
+                symbol = choices.loc[choices["Industry"].eq(selected), "Representation"].iloc[0]
+                _industry_chart(history[symbol], dark_mode=dark_mode)
+
+    _render_experimental_universe_catalog(settings.experimental_universe_catalog)
+
+    st.subheader("Sector tape")
+    for sector in discovery.sectors:
+        if sector.history.empty:
+            st.info(f"{sector.name}: no chart history is available.")
+        else:
+            st.markdown(f"#### {sector.name} · `{sector.symbol}`")
+            st.altair_chart(
+                build_sector_chart(sector.history, dark_mode=dark_mode), width="stretch"
+            )
+
+
+if __name__ == "__main__":
+    render_discovery()

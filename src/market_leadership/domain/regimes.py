@@ -16,11 +16,8 @@ class MarketSentiment:
 
 
 def calculate_market_sentiment(frame: pd.DataFrame, benchmark: str = "SPY") -> MarketSentiment:
-    closes = cast(pd.Series, frame["close"]).sort_index()
-    sma150 = cast(
-        pd.Series,
-        closes.rolling(window=150, min_periods=150).mean(),
-    )
+    closes = frame["close"].sort_index()
+    sma150 = closes.rolling(window=150, min_periods=150).mean()
     if closes.empty or pd.isna(closes.iloc[-1]) or pd.isna(sma150.iloc[-1]):
         return MarketSentiment(benchmark, "Insufficient", None, None, None, "Undefined")
 
@@ -37,7 +34,11 @@ def calculate_market_sentiment(frame: pd.DataFrame, benchmark: str = "SPY") -> M
         )
 
     averages = sma150.iloc[-20:].to_numpy(dtype=float)
-    slope = float(np.polyfit(np.arange(20, dtype=float), averages, 1)[0])
+    coefficients = cast(
+        np.ndarray[tuple[int], np.dtype[np.float64]],
+        np.polyfit(np.arange(20, dtype=float), averages, 1),
+    )
+    slope = float(coefficients[0])
     normalized_slope_pct = slope / latest_sma * 100
     if normalized_slope_pct > 0.025:
         slope_state = "Rising"

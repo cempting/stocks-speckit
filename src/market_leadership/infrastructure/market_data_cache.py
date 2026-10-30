@@ -8,7 +8,7 @@ import tempfile
 import uuid
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -164,6 +164,7 @@ class CachedMarketDataProvider:
             availability = manifest.get("source_availability_by_symbol")
             if not isinstance(coverage, dict) or not isinstance(availability, dict):
                 raise _CacheMiss
+            availability = cast(dict[str, object], availability)
             if coverage != {
                 "requested_start": request["start"],
                 "requested_end": request["end"],
@@ -278,7 +279,7 @@ def _to_records(
     start: date,
     end: date,
 ) -> tuple[pd.DataFrame, dict[str, str | None]]:
-    if not isinstance(result, dict) or set(result) - set(requested_symbols):
+    if set(result) - set(requested_symbols):
         raise ValueError("Daily history contains unexpected symbols")
     frames: list[pd.DataFrame] = []
     availability: dict[str, str | None] = {}
@@ -397,7 +398,7 @@ def _has_canonical_record_types(records: pd.DataFrame) -> bool:
 
 
 def _valid_numeric_records(records: pd.DataFrame) -> bool:
-    return (
+    return bool(
         all(records[column].map(math.isfinite).all() for column in ("close", "volume"))
         and (records["close"] > 0).all()
         and (records["volume"] >= 0).all()

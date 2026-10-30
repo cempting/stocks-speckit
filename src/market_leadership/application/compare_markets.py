@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, cast
 
-import exchange_calendars as xcals  # pyright: ignore[reportMissingTypeStubs]
 import numpy as np
 import pandas as pd
 
+from market_leadership.application.exchange_calendar import get_calendar
 from market_leadership.domain.models import Market
 from market_leadership.domain.regimes import calculate_market_sentiment
 
@@ -103,7 +103,7 @@ def _history(record: dict[str, Any], *, as_of: date) -> pd.DataFrame:
     last = min(date.fromisoformat(record["last_session"]), as_of)
     if last < first:
         return pd.DataFrame({"close": pd.Series(dtype="float64")})
-    sessions = xcals.get_calendar(record["calendar_id"]).sessions_in_range(first, last)
+    sessions = get_calendar(record["calendar_id"]).sessions_in_range(first, last)
     closes = float(record["first_close"]) + np.arange(len(sessions)) * float(
         record["close_change_per_session"]
     )
@@ -208,7 +208,7 @@ def compare_markets(
         else:
             regime = sentiment.regime.upper()
         required_session = (
-            xcals.get_calendar(market.calendar_id)
+            get_calendar(market.calendar_id)
             .date_to_session(as_of.isoformat(), direction="previous")
             .date()
         )

@@ -42,14 +42,18 @@ def _text(app: AppTest) -> str:
 
 
 def test_default_weekly_mode_does_not_request_live_data(discovery_app) -> None:
-    mode = next(widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode")
+    mode = next(
+        widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode"
+    )
     assert mode.value == "Weekly leadership"
     assert any("Discovery" in title.value for title in discovery_app.title)
     assert not discovery_app.exception
 
 
 def test_acceptance_comparison_is_us_only_and_explicitly_fixture_backed(discovery_app) -> None:
-    mode = next(widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode")
+    mode = next(
+        widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode"
+    )
     mode.set_value("US acceptance comparison").run(timeout=20)
 
     assert not discovery_app.exception
@@ -62,7 +66,9 @@ def test_acceptance_comparison_is_us_only_and_explicitly_fixture_backed(discover
 
 
 def test_live_mode_uses_explicit_provider_and_daily_as_of_controls(discovery_app) -> None:
-    mode = next(widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode")
+    mode = next(
+        widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode"
+    )
     mode.set_value("US live daily").run(timeout=20)
 
     assert not discovery_app.exception
@@ -88,14 +94,18 @@ def test_missing_weekly_snapshot_does_not_fall_back_to_provider(monkeypatch, tmp
     assert not app.dataframe
 
 
-def test_acceptance_fixture_failure_is_visible_without_local_path(discovery_app, monkeypatch) -> None:
+def test_acceptance_fixture_failure_is_visible_without_local_path(
+    discovery_app, monkeypatch
+) -> None:
     from market_leadership.infrastructure.snapshot_errors import SourceUnavailable
 
     def unavailable():
         raise SourceUnavailable("private/local/path/market_data.json", "market_context")
 
     monkeypatch.setattr("market_leadership.bootstrap.build_fixture_market_context", unavailable)
-    mode = next(widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode")
+    mode = next(
+        widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode"
+    )
     mode.set_value("US acceptance comparison").run(timeout=20)
 
     assert not discovery_app.exception
@@ -105,7 +115,9 @@ def test_acceptance_fixture_failure_is_visible_without_local_path(discovery_app,
 
 
 def test_historical_fixture_date_is_explicit(discovery_app) -> None:
-    mode = next(widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode")
+    mode = next(
+        widget for widget in discovery_app.segmented_control if widget.label == "Discovery mode"
+    )
     mode.set_value("US acceptance comparison").run(timeout=20)
     as_of = next(widget for widget in discovery_app.date_input if widget.label == "As of")
     as_of.set_value(date(2026, 10, 26)).run(timeout=20)

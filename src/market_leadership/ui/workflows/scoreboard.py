@@ -2,6 +2,7 @@
 
 from datetime import date
 
+import pandas as pd
 import streamlit as st
 
 from market_leadership.application.browse_scoreboard import browse_weekly_scoreboard
@@ -12,7 +13,6 @@ from market_leadership.infrastructure.snapshot_errors import IntegrityError, Sch
 from market_leadership.ui.components.ranking_table import render_ranking_table
 from market_leadership.ui.components.regime_summary import render_regime_summary
 from market_leadership.ui.workflows.industry_detail import render_industry_detail
-from market_leadership.ui.navigation import workflow_page
 
 
 def render_scoreboard(*, configure_page: bool = True, show_title: bool = True) -> None:
@@ -74,7 +74,8 @@ def render_scoreboard(*, configure_page: bool = True, show_title: bool = True) -
             key=f"weekly_sector_{board.market_id}",
         )
         if selected_sector is not None:
-            selected_row = board.entries.loc[board.entries["name"] == selected_sector]
+            mask: pd.Series[bool] = board.entries["name"] == selected_sector
+            selected_row = board.entries.loc[mask]
             if len(selected_row) != 1:
                 st.error(f"{board.market_id}: sector selection is ambiguous.")
                 continue
@@ -85,13 +86,7 @@ def render_scoreboard(*, configure_page: bool = True, show_title: bool = True) -
                 "sector_node_ids": [sector_node_id],
                 "as_of": board.as_of.isoformat(),
             }
-            industry_page = workflow_page("industry-discovery")
-            if industry_page is not None:
-                st.page_link(
-                    industry_page,
-                    label=f"Open Industry Discovery for {selected_sector}",
-                    icon=":material/schema:",
-                )
+            st.caption("Industry evidence follows; use the dated membership controls for grading.")
             try:
                 detail = inspect_industry(
                     repository,

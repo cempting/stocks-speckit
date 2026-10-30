@@ -1,7 +1,8 @@
 """Render supplied weekly ranking values without recalculating leadership."""
 
 import pandas as pd
-import streamlit as st
+
+from market_leadership.ui.dataframe import render_dataframe
 
 
 def render_ranking_table(entries: pd.DataFrame, *, industry: bool = False) -> None:
@@ -39,4 +40,4 @@ def render_ranking_table(entries: pd.DataFrame, *, industry: bool = False) -> No
         raise ValueError(f"weekly ranking is missing fields: {', '.join(sorted(missing))}")
     displayed = entries.loc[:, [field for field, _ in columns]].copy()
     displayed.columns = [label for _, label in columns]
-    st.dataframe(displayed, hide_index=True, width="stretch")
+    render_dataframe(displayed, hide_index=True, width="stretch")

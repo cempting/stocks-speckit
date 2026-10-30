@@ -11,15 +11,18 @@ from market_leadership.application.request_market_data import (
     RequestMarketData,
 )
 from market_leadership.config import Settings
+from market_leadership.domain.fundamentals import FundamentalBundle, FundamentalRequest
 from market_leadership.infrastructure.fixture_provider import (
     FixtureProvider,
     load_acceptance_market_context,
+    load_fundamental_fixture,
 )
 from market_leadership.infrastructure.market_data_cache import CachedMarketDataProvider
 from market_leadership.infrastructure.massive_provider import MassiveProvider
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
 from market_leadership.infrastructure.provider_catalog import ConfiguredProviderCatalog
 from market_leadership.infrastructure.yfinance_provider import YFinanceProvider
+from market_leadership.ui.cache import load_fundamental_bundle, refresh_fundamental_bundle
 from market_leadership.ui.navigation import WorkflowSpec, validate_workflows
 
 _DAILY_HISTORY_CAPABILITY = ProviderCapability(
@@ -29,6 +32,19 @@ _DAILY_HISTORY_CAPABILITY = ProviderCapability(
     currencies=frozenset({"USD"}),
     return_bases=frozenset({"adjusted"}),
 )
+
+
+def load_selected_fundamentals(
+    request: FundamentalRequest, *, refresh: bool = False
+) -> FundamentalBundle:
+    if request.provider_id == "fixture":
+        bundle = load_fundamental_fixture(request.symbol)
+        if request.cutoff != bundle.fetched_at.date():
+            raise ValueError("Synthetic financial evidence does not match the membership cutoff")
+        return bundle
+    if refresh:
+        return refresh_fundamental_bundle(request)
+    return load_fundamental_bundle(request)
 
 
 def build_workflow_registry(

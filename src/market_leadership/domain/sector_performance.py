@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
-from typing import Literal, cast
+from typing import Literal
 
 import pandas as pd
 
@@ -35,20 +35,15 @@ def _prepare_closes(closes: pd.Series, as_of: pd.Timestamp) -> pd.Series:
     return prepared
 
 
-def calculate_performance(
-    sector_closes: pd.Series,
-    benchmark_closes: pd.Series,
+def calculate_absolute_performance(
+    closes: pd.Series,
     *,
     as_of: date,
-) -> PerformanceResult:
-    as_of_timestamp = cast(pd.Timestamp, pd.Timestamp(as_of))
-    sector = _prepare_closes(sector_closes, as_of_timestamp)
-    benchmark = _prepare_closes(benchmark_closes, as_of_timestamp)
-    sector_latest = _close_on_or_before(sector, as_of_timestamp)
-    benchmark_latest = _close_on_or_before(benchmark, as_of_timestamp)
+) -> dict[PerformancePeriod, float]:
+    as_of_timestamp = pd.Timestamp(as_of)
+    prepared = _prepare_closes(closes, as_of_timestamp)
+    latest = _close_on_or_before(prepared, as_of_timestamp)
     absolute: dict[PerformancePeriod, float] = {}
-    relative: dict[PerformancePeriod, float] = {}
-
     periods: tuple[tuple[PerformancePeriod, pd.DateOffset], ...] = (
         ("1w", pd.DateOffset(days=7)),
         ("1m", pd.DateOffset(months=1)),
@@ -57,11 +52,21 @@ def calculate_performance(
         ("12m", pd.DateOffset(months=12)),
     )
     for period, offset in periods:
-        period_start = as_of_timestamp - offset
-        sector_return = sector_latest / _close_on_or_before(sector, period_start) - 1
-        benchmark_return = benchmark_latest / _close_on_or_before(benchmark, period_start) - 1
-        absolute[period] = sector_return
-        relative[period] = sector_return - benchmark_return
+        absolute[period] = latest / _close_on_or_before(prepared, as_of_timestamp - offset) - 1
+    return absolute
+
+
+def calculate_performance(
+    sector_closes: pd.Series,
+    benchmark_closes: pd.Series,
+    *,
+    as_of: date,
+) -> PerformanceResult:
+    absolute = calculate_absolute_performance(sector_closes, as_of=as_of)
+    benchmark_absolute = calculate_absolute_performance(benchmark_closes, as_of=as_of)
+    relative: dict[PerformancePeriod, float] = {}
+    for period, sector_return in absolute.items():
+        relative[period] = sector_return - benchmark_absolute[period]
 
     return PerformanceResult(absolute=absolute, relative=relative)
 

@@ -1,19 +1,13 @@
-from runpy import run_module
-
 import streamlit as st
 
-from market_leadership.bootstrap import build_workflow_registry
-from market_leadership.ui.workflows.industry_discovery import render_industry_discovery
-from market_leadership.ui.navigation import register_workflow_pages
+from market_leadership.config import load_settings
+from market_leadership.ui.workflows.discovery_page import render_discovery
+from market_leadership.ui.workflows.industry_deep_dive import render_industry_deep_dive
 
-
-def _render_discovery() -> None:
-    run_module("market_leadership.ui.workflows.discovery_page", run_name="__main__")
-
-
-workflows = build_workflow_registry(
-    _render_discovery,
-    render_industry_discovery,
-)
-navigation = st.navigation(register_workflow_pages(workflows))
-navigation.run()
+st.set_page_config(page_title="Market Leadership Screener", layout="wide")
+settings = load_settings()
+discovery_tab, industry_tab = st.tabs(("Discovery", "Industry Deep-Dive"))
+with discovery_tab:
+    render_discovery(configure_page=False)
+with industry_tab:
+    render_industry_deep_dive(settings)

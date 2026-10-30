@@ -88,5 +88,10 @@ def select_industry_proxy(
     )
     if not stocks:
         return None, "NO_QUALIFIED_REPRESENTATION"
-    selected = min(stocks, key=lambda candidate: (-candidate.market_cap, candidate.symbol))
+
+    def selection_key(candidate: IndustryProxyCandidate) -> tuple[float, str]:
+        assert candidate.market_cap is not None
+        return -candidate.market_cap, candidate.symbol
+
+    selected = min(stocks, key=selection_key)
     return selected, None

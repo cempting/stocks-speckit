@@ -35,7 +35,10 @@ grades, and unauthorized membership acquisition remain outside this plan.
 
 **Primary Dependencies**: Existing Streamlit `>=1.50,<2` (lock 1.66.1),
 yfinance `>=0.2.66,<1` (lock 0.2.66), pandas `>=2.2,<3`, NumPy and Altair already
-present. No new dependency is required. Use APIs supported by the manifest floor,
+present. No new runtime dependency is required. User-approved quality-gate
+remediation adds development-only `pandas-stubs`, `pyarrow-stubs`, and
+`types-jsonschema` to check the existing integrations without weakening strict
+typing. Narrow typed boundaries cover incomplete upstream annotations. Use APIs supported by the manifest floor,
 not new tab `.open`/`on_change` APIs without raising the dependency floor.
 
 **Storage**: `st.cache_data` for successful financial evidence and deterministic

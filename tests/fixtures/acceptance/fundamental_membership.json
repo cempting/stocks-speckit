@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "market": "US",
+  "classification": "Synthetic demonstration",
+  "source_id": "synthetic-fundamental-demo-v1",
+  "observation_date": "2026-10-23",
+  "evidence_mode": "fixture",
+  "coverage": "Synthetic examples only; not actual industry membership or investment evidence",
+  "approval_reference": "offline-synthetic-only",
+  "entries": [
+    {"instrument_id": "SYN-A", "company_id": "SYN-A", "symbol": "SYN-A", "name": "Synthetic Alpha", "exchange": "SYNTHETIC", "currency": "USD", "instrument_type": "stock", "sector_id": "TECH", "sector_name": "Information Technology", "industry_id": "SOFTWARE", "industry_name": "Software", "effective_from": "2020-01-01", "effective_to": null},
+    {"instrument_id": "SYN-B", "company_id": "SYN-B", "symbol": "SYN-B", "name": "Synthetic Beta", "exchange": "SYNTHETIC", "currency": "USD", "instrument_type": "stock", "sector_id": "TECH", "sector_name": "Information Technology", "industry_id": "SOFTWARE", "industry_name": "Software", "effective_from": "2020-01-01", "effective_to": null},
+    {"instrument_id": "SYN-C", "company_id": "SYN-C", "symbol": "SYN-C", "name": "Synthetic Gamma", "exchange": "SYNTHETIC", "currency": "USD", "instrument_type": "stock", "sector_id": "TECH", "sector_name": "Information Technology", "industry_id": "SOFTWARE", "industry_name": "Software", "effective_from": "2020-01-01", "effective_to": null},
+    {"instrument_id": "SYN-D", "company_id": "SYN-D", "symbol": "SYN-D", "name": "Synthetic Delta", "exchange": "SYNTHETIC", "currency": "USD", "instrument_type": "stock", "sector_id": "TECH", "sector_name": "Information Technology", "industry_id": "SOFTWARE", "industry_name": "Software", "effective_from": "2020-01-01", "effective_to": null},
+    {"instrument_id": "SYN-E", "company_id": "SYN-E", "symbol": "SYN-E", "name": "Synthetic Epsilon", "exchange": "SYNTHETIC", "currency": "USD", "instrument_type": "stock", "sector_id": "TECH", "sector_name": "Information Technology", "industry_id": "SOFTWARE", "industry_name": "Software", "effective_from": "2020-01-01", "effective_to": null},
+    {"instrument_id": "SYN-F", "company_id": "SYN-F", "symbol": "SYN-F", "name": "Synthetic Zeta", "exchange": "SYNTHETIC", "currency": "USD", "instrument_type": "stock", "sector_id": "TECH", "sector_name": "Information Technology", "industry_id": "SOFTWARE", "industry_name": "Software", "effective_from": "2020-01-01", "effective_to": null},
+    {"instrument_id": "SYN-G", "company_id": "SYN-G", "symbol": "SYN-G", "name": "Synthetic Chip", "exchange": "SYNTHETIC", "currency": "USD", "instrument_type": "stock", "sector_id": "TECH", "sector_name": "Information Technology", "industry_id": "CHIPS", "industry_name": "Semiconductors", "effective_from": "2020-01-01", "effective_to": null}
+  ]
+}

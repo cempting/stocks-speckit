@@ -8,6 +8,84 @@ def performance_table_height(row_count: int) -> int:
     return (row_count + 1) * 35 + 20
 
 
+def industry_performance_frame(entries: pd.DataFrame, *, parent_sector: str) -> pd.DataFrame:
+    required = {
+        "node_id",
+        "name",
+        "rank",
+        "absolute_1w",
+        "absolute_1m",
+        "proxy_type",
+        "observation_date",
+        "source_id",
+        "sufficiency",
+        "missing_reasons",
+    }
+    if missing := required.difference(entries.columns):
+        raise ValueError(f"industry performance is missing fields: {', '.join(sorted(missing))}")
+
+    frame = entries.loc[
+        :,
+        [
+            "node_id",
+            "name",
+            "rank",
+            "absolute_1w",
+            "absolute_1m",
+            "proxy_type",
+            "observation_date",
+            "source_id",
+            "sufficiency",
+            "missing_reasons",
+        ],
+    ].copy()
+    frame = frame.sort_values(["rank", "name", "node_id"], kind="stable", na_position="last")
+    weekly_return = frame["absolute_1w"]
+    frame["direction"] = weekly_return.map(
+        lambda value: (
+            "Insufficient"
+            if pd.isna(value)
+            else "Gaining"
+            if value > 0
+            else "Declining"
+            if value < 0
+            else "Neutral"
+        )
+    )
+    frame.insert(2, "sector", parent_sector)
+    frame = frame.rename(
+        columns={
+            "name": "Industry",
+            "sector": "Sector",
+            "rank": "Rank",
+            "absolute_1w": "1 week",
+            "absolute_1m": "1 month",
+            "direction": "Direction",
+            "proxy_type": "Proxy",
+            "observation_date": "Observed",
+            "source_id": "Source",
+            "sufficiency": "Sufficiency",
+            "missing_reasons": "Missing evidence",
+        }
+    )
+    return frame.loc[
+        :,
+        [
+            "Industry",
+            "Sector",
+            "Rank",
+            "1 week",
+            "1 month",
+            "Direction",
+            "Proxy",
+            "Observed",
+            "Source",
+            "Sufficiency",
+            "Missing evidence",
+        ],
+    ]
+
+
 def _mix_color(start: str, end: str, amount: float) -> str:
     start_rgb = tuple(int(start[index : index + 2], 16) for index in (1, 3, 5))
     end_rgb = tuple(int(end[index : index + 2], 16) for index in (1, 3, 5))
@@ -51,7 +129,7 @@ def style_performance_table(frame: pd.DataFrame, *, dark_mode: bool) -> Styler:
     header = "#22313d" if dark_mode else "#e9eeea"
     foreground = "#edf3f7" if dark_mode else "#17212b"
     styled = frame.style.set_properties(
-        **{"background-color": background, "color": foreground}
+        None, **{"background-color": background, "color": foreground}
     ).set_table_styles(
         [
             {

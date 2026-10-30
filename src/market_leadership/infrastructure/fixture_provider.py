@@ -1,19 +1,20 @@
 import json
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-import exchange_calendars as xcals
 import numpy as np
 import pandas as pd
 
+from market_leadership.application.exchange_calendar import get_calendar
 from market_leadership.application.ports import (
     ProviderCapability,
     WeeklyMarketInputs,
     WeeklyPriceHistory,
 )
 from market_leadership.application.weekly_calendar import latest_completed_market_week
+from market_leadership.domain.fundamentals import FinancialQuarter, FundamentalBundle
 from market_leadership.domain.models import (
     ClassificationLevel,
     ClassificationNode,
@@ -27,6 +28,62 @@ from market_leadership.infrastructure.snapshot_errors import SchemaMismatch, Sou
 _ACCEPTANCE_MARKETS = Path(__file__).parents[3] / "tests/fixtures/acceptance/market_data.json"
 
 
+def load_fundamental_fixture(symbol: str) -> FundamentalBundle:
+    path = _ACCEPTANCE_MARKETS.with_name("fundamental_statements.json")
+    document: object = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise ValueError("Synthetic financial fixture must be an object")
+    data = cast(dict[str, object], document)
+    symbols = data.get("symbols")
+    quarters = data.get("quarters")
+    if not isinstance(symbols, dict) or not isinstance(quarters, list):
+        raise ValueError("Synthetic financial fixture requires symbols and quarters")
+    overrides = cast(dict[str, object], symbols).get(symbol)
+    if not isinstance(overrides, dict):
+        raise ValueError(f"No synthetic financial fixture for {symbol}")
+    income: list[FinancialQuarter] = []
+    cash: list[FinancialQuarter] = []
+    balance: list[FinancialQuarter] = []
+    for raw in cast(list[object], quarters):
+        if not isinstance(raw, dict):
+            raise ValueError("Synthetic quarters must be objects")
+        row = {**cast(dict[str, object], raw), **cast(dict[str, object], overrides)}
+        period = date.fromisoformat(str(row["period"]))
+        for keys, target in (
+            (
+                (
+                    "revenue",
+                    "gross_profit",
+                    "operating_income",
+                    "ebit",
+                    "net_income",
+                    "diluted_eps",
+                ),
+                income,
+            ),
+            (("ocf", "capex", "fcf"), cash),
+            (("assets", "current_liabilities"), balance),
+        ):
+            values: list[tuple[str, float | None]] = []
+            for key in keys:
+                raw_value = row.get(key)
+                if raw_value is not None and not isinstance(raw_value, (int, float)):
+                    raise ValueError("Synthetic financial values must be numeric")
+                values.append((key, float(raw_value) if raw_value is not None else None))
+            target.append(FinancialQuarter(period, tuple(values)))
+    observed_on = date.fromisoformat(str(data["observation_date"]))
+    return FundamentalBundle(
+        symbol,
+        "fixture",
+        datetime.combine(observed_on, datetime.min.time(), UTC),
+        str(data["currency"]),
+        tuple(income),
+        tuple(cash),
+        tuple(balance),
+        ("Synthetic fixture only; not live financial evidence or investment advice",),
+    )
+
+
 def load_acceptance_market_context() -> dict[str, Any]:
     try:
         context = json.loads(_ACCEPTANCE_MARKETS.read_text(encoding="utf-8"))
@@ -36,7 +93,7 @@ def load_acceptance_market_context() -> dict[str, Any]:
         raise SchemaMismatch("market-acceptance", "context", "invalid JSON") from error
     if not isinstance(context, dict):
         raise SchemaMismatch("market-acceptance", "context", "expected a JSON object")
-    return context
+    return cast(dict[str, Any], context)
 
 
 _MARKETS = (
@@ -69,7 +126,7 @@ class _BenchmarkHistory:
             raise ValueError("fixture benchmark dates conflict with market or source availability")
         if not np.isfinite(self.first_close) or self.first_close <= 0:
             raise ValueError("fixture benchmark close must be positive")
-        xcals.get_calendar(self.market.calendar_id)
+        get_calendar(self.market.calendar_id)
 
 
 _BENCHMARKS = (
@@ -187,7 +244,7 @@ class FixtureProvider:
         if len({proxy.proxy_id for proxy in representations}) != len(representations):
             raise ValueError(f"duplicate representation for {market_id}")
 
-        sessions = xcals.get_calendar(market.calendar_id).sessions_in_range(first, completed)
+        sessions = get_calendar(market.calendar_id).sessions_in_range(first, completed)
         histories: dict[str, WeeklyPriceHistory] = {}
         for item in weekly["histories"]:
             if item["market_id"] != market_id:
@@ -276,7 +333,7 @@ class FixtureProvider:
             if benchmark is not None:
                 if start < benchmark.market.enabled_from or end > benchmark.available_on:
                     raise ValueError(f"{symbol} is outside its fixture benchmark availability")
-                sessions = xcals.get_calendar(benchmark.market.calendar_id).sessions_in_range(
+                sessions = get_calendar(benchmark.market.calendar_id).sessions_in_range(
                     benchmark.first_session, benchmark.last_session
                 )
                 closes = benchmark.first_close + (

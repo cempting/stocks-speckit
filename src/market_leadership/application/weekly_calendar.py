@@ -2,11 +2,11 @@
 
 from datetime import date, timedelta
 
-import exchange_calendars as xcals  # pyright: ignore[reportMissingTypeStubs]
+from market_leadership.application.exchange_calendar import get_calendar
 
 
 def latest_completed_market_week(calendar_id: str, as_of: date) -> date:
-    calendar = xcals.get_calendar(calendar_id)
+    calendar = get_calendar(calendar_id)
     monday = as_of - timedelta(days=as_of.weekday())
     for offset in (0, 7):
         start = monday - timedelta(days=offset)

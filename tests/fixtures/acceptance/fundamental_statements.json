@@ -1,0 +1,28 @@
+{
+  "source_id": "synthetic-fundamental-demo-v1",
+  "observation_date": "2026-10-23",
+  "currency": "USD",
+  "symbols": {
+    "SYN-A": {},
+    "SYN-B": {"gross_profit": null},
+    "SYN-C": {"net_income": 0},
+    "SYN-D": {"operating_income": 8},
+    "SYN-E": {"gross_profit": 0},
+    "SYN-F": {"diluted_eps": 0},
+    "SYN-G": {"operating_income": 4}
+  },
+  "quarters": [
+    {"period": "2023-12-31", "revenue": 80, "gross_profit": 32, "operating_income": -4, "ebit": 4, "net_income": 8, "diluted_eps": 0.8, "ocf": 10, "capex": -2, "assets": 180, "current_liabilities": 100},
+    {"period": "2024-03-31", "revenue": 84, "gross_profit": 34, "operating_income": -4, "ebit": 4, "net_income": 8, "diluted_eps": 0.8, "ocf": 10, "capex": -2, "assets": 180, "current_liabilities": 100},
+    {"period": "2024-06-30", "revenue": 86, "gross_profit": 35, "operating_income": -4, "ebit": 4, "net_income": 8, "diluted_eps": 0.8, "ocf": 10, "capex": -2, "assets": 180, "current_liabilities": 100},
+    {"period": "2024-09-30", "revenue": 88, "gross_profit": 36, "operating_income": -4, "ebit": 4, "net_income": 8, "diluted_eps": 0.8, "ocf": 10, "capex": -2, "assets": 180, "current_liabilities": 100},
+    {"period": "2024-12-31", "revenue": 90, "gross_profit": 36, "operating_income": -4, "ebit": 4, "net_income": 9, "diluted_eps": 0.9, "ocf": 11, "capex": -2, "assets": 190, "current_liabilities": 100},
+    {"period": "2025-03-31", "revenue": 92, "gross_profit": 37, "operating_income": -4, "ebit": 4, "net_income": 9, "diluted_eps": 0.9, "ocf": 11, "capex": -2, "assets": 190, "current_liabilities": 100},
+    {"period": "2025-06-30", "revenue": 94, "gross_profit": 38, "operating_income": -4, "ebit": 4, "net_income": 9, "diluted_eps": 0.9, "ocf": 11, "capex": -2, "assets": 190, "current_liabilities": 100},
+    {"period": "2025-09-30", "revenue": 96, "gross_profit": 38, "operating_income": -4, "ebit": 4, "net_income": 9, "diluted_eps": 0.9, "ocf": 11, "capex": -2, "assets": 190, "current_liabilities": 100},
+    {"period": "2025-12-31", "revenue": 100, "gross_profit": 40, "operating_income": -5, "ebit": 5, "net_income": 10, "diluted_eps": 1, "ocf": 12, "capex": -2, "assets": 200, "current_liabilities": 100},
+    {"period": "2026-03-31", "revenue": 100, "gross_profit": 40, "operating_income": -5, "ebit": 5, "net_income": 10, "diluted_eps": 1, "ocf": 12, "capex": -2, "assets": 200, "current_liabilities": 100},
+    {"period": "2026-06-30", "revenue": 100, "gross_profit": 40, "operating_income": -5, "ebit": 5, "net_income": 10, "diluted_eps": 1, "ocf": 12, "capex": -2, "assets": 200, "current_liabilities": 100},
+    {"period": "2026-09-30", "revenue": 100, "gross_profit": 40, "operating_income": -5, "ebit": 5, "net_income": 10, "diluted_eps": 1, "ocf": 12, "capex": -2, "assets": 200, "current_liabilities": 100}
+  ]
+}

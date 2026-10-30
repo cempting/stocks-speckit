@@ -9,7 +9,8 @@ appeared. The user explicitly chose this session's expanded three-tab plan as th
 authority and authorized reconciling that artifact. Its four uncompleted task IDs
 are retained below; its preview-only scope, 90-pixel charts, FCF-based Cash Conversion,
 negative-baseline YoY convention, and template-plan claims are superseded.
-No implementation or passing tests are claimed.
+The implementation and validation status is recorded below. Historical preview
+claims are not implementation evidence.
 
 ## Authoritative Scope and Contracts
 
@@ -38,7 +39,7 @@ No implementation or passing tests are claimed.
 
 **Goal**: Obtain typed, deterministic scorecards independently of rendering.
 
-- [ ] T001 Add failing tests in `tests/unit/test_fundamentals.py`, `tests/integration/test_yfinance_fundamentals.py`, and `tests/integration/test_fundamental_cache.py`; then implement typed records/pure formulas in `src/market_leadership/domain/fundamentals.py`, injected acquisition in `src/market_leadership/infrastructure/yfinance_fundamentals.py`, and keyed cache/refresh helpers in `src/market_leadership/ui/cache.py`. Cover all eight formulas, period/unit alignment, signed capex, zero/negative numerators, nonpositive denominators, missing/non-finite rows, EPS counts 0 through 8, incomplete/gapped windows, raw lookback retention, component errors/ambiguous empty responses, safe partial evidence, fresh reuse, TTL, key isolation, and targeted refresh under the data contract. Leave daily-history provider behavior unchanged.
+- [X] T001 Add failing tests in `tests/unit/test_fundamentals.py`, `tests/integration/test_yfinance_fundamentals.py`, and `tests/integration/test_fundamental_cache.py`; then implement typed records/pure formulas in `src/market_leadership/domain/fundamentals.py`, injected acquisition in `src/market_leadership/infrastructure/yfinance_fundamentals.py`, and keyed cache/refresh helpers in `src/market_leadership/ui/cache.py`. Cover all eight formulas, period/unit alignment, signed capex, zero/negative numerators, nonpositive denominators, missing/non-finite rows, EPS counts 0 through 8, incomplete/gapped windows, raw lookback retention, component errors/ambiguous empty responses, safe partial evidence, fresh reuse, TTL, key isolation, and targeted refresh under the data contract. Leave daily-history provider behavior unchanged.
 
 **Checkpoint**: Complete fixture statements yield known exact values; missing
 rows localize insufficiency; ambiguous/failing acquisition is observable and never
@@ -48,7 +49,7 @@ cached as successful missing data. No network is used in required tests.
 
 **Goal**: Establish the approved production journey using dated evidence.
 
-- [ ] T002 Add failing tests in `tests/unit/test_stock_selection.py`, `tests/integration/test_stock_membership.py`, and `tests/app/test_progressive_tabs.py`; then replace runtime routing in `src/market_leadership/app.py` with the three required tabs, extract callable discovery renderers from `src/market_leadership/ui/workflows/discovery_page.py` and `industry_discovery.py`, compose helpers through `bootstrap.py`, and add `domain/stock_selection.py`, `infrastructure/stock_membership.py`, and `ui/workflows/industry_deep_dive.py`. Extend `config.py` only for the documented catalog/source gate. Add synthetic dated catalog fixtures, validate provenance/coverage/identity/date/parent relationships, display eligible members, and maintain namespaced session-local stock IDs. Configure the page once; replace routed handoffs and whole-app stops with tab-safe flow. Test exact tab labels, parent-change invalidation, valid rerun retention, multi-session isolation, missing/invalid catalog behavior, unsupported provider/rights/historical contexts, no guessed membership, and zero financial calls from eager tab execution.
+- [X] T002 Add failing tests in `tests/unit/test_stock_selection.py`, `tests/integration/test_stock_membership.py`, and `tests/app/test_progressive_tabs.py`; then replace runtime routing in `src/market_leadership/app.py` with the three required tabs, extract callable discovery renderers from `src/market_leadership/ui/workflows/discovery_page.py` and `industry_discovery.py`, compose helpers through `bootstrap.py`, and add `domain/stock_selection.py`, `infrastructure/stock_membership.py`, and `ui/workflows/industry_deep_dive.py`. Extend `config.py` only for the documented catalog/source gate. Add synthetic dated catalog fixtures, validate provenance/coverage/identity/date/parent relationships, display eligible members, and maintain namespaced session-local stock IDs. Configure the page once; replace routed handoffs and whole-app stops with tab-safe flow. Test exact tab labels, parent-change invalidation, valid rerun retention, multi-session isolation, missing/invalid catalog behavior, unsupported provider/rights/historical contexts, no guessed membership, and zero financial calls from eager tab execution.
 
 **Checkpoint**: Offline fixtures support sector -> industry -> stock selection
 through the root app. Live limitations remain explicit. Existing discovery
@@ -59,7 +60,7 @@ not implicitly implemented.
 
 **Goal**: Prove the exact layout with controlled data before live integration.
 
-- [ ] T003 Add failing renderer/AppTest cases in `tests/app/test_fundamental_grading.py`; then implement `src/market_leadership/ui/components/fundamental_matrix.py` using the typed scorecard from T001. Assert exactly one structural three-column group per stock, exact 3/3/2 order, all eight labels, percentage/count formatting, dynamic evidence-specific or neutral commentary immediately below values, and exact missing-data pairs. Add native bar charts after commentary with height 60 and four-to-eight chronological comparable points; below four show the separate history limitation. Cover eight single-missing cases and all-missing, long comments, valid zero/negative values, invalid EPS counts, stock/evidence switches, four/five/eight/three-point histories, and formula-specific lookback limits. Capture chart data/specifications to verify height/order/count rather than relying only on text.
+- [X] T003 Add failing renderer/AppTest cases in `tests/app/test_fundamental_grading.py`; then implement `src/market_leadership/ui/components/fundamental_matrix.py` using the typed scorecard from T001. Assert exactly one structural three-column group per stock, exact 3/3/2 order, all eight labels, percentage/count formatting, dynamic evidence-specific or neutral commentary immediately below values, and exact missing-data pairs. Add native bar charts after commentary with height 60 and four-to-eight chronological comparable points; below four show the separate history limitation. Cover eight single-missing cases and all-missing, long comments, valid zero/negative values, invalid EPS counts, stock/evidence switches, four/five/eight/three-point histories, and formula-specific lookback limits. Capture chart data/specifications to verify height/order/count rather than relying only on text.
 
 **Checkpoint**: Fixture scorecards demonstrate the exact required matrix and
 truthful histories; missing current values and missing chart history are distinct.
@@ -69,17 +70,29 @@ No ninth metric, clipped commentary, zero padding, or fabricated eight-quarter c
 
 **Goal**: Complete the production flow, not just a preview.
 
-- [ ] T004 Add failing integration/AppTest cases, then implement `src/market_leadership/ui/workflows/fundamental_grading.py` and root-tab wiring for explicit Load/Refresh actions, five selected stocks per page, current request-context tokens, freshness/provenance, visible component errors, and safe partial results. Reuse T001 cache/reader and T003 renderer; do not duplicate them. Page/context changes clear invalid displayed evidence, require explicit loading, and never leak a previous stock's comments/charts. Ensure fixture mode is entirely offline and failed Refresh never silently uses old success. Update directly related `README.md` migration/source/catalog/freshness documentation; replace intentionally obsolete navigation expectations and retain Cloud entrypoint regression. Run the focused and full non-live/static checks in the quickstart, then inspect desktop/narrow layouts, long comments, two sessions, and six-stock pagination with browser tooling.
+- [X] T004 Add failing integration/AppTest cases, then implement `src/market_leadership/ui/workflows/fundamental_grading.py` and root-tab wiring for explicit Load/Refresh actions, five selected stocks per page, current request-context tokens, freshness/provenance, visible component errors, and safe partial results. Reuse T001 cache/reader and T003 renderer; do not duplicate them. Page/context changes clear invalid displayed evidence, require explicit loading, and never leak a previous stock's comments/charts. Ensure fixture mode is entirely offline and failed Refresh never silently uses old success. Update directly related `README.md` migration/source/catalog/freshness documentation; replace intentionally obsolete navigation expectations and retain Cloud entrypoint regression. Run the focused and full non-live/static checks in the quickstart, then inspect desktop/narrow layouts, long comments, two sessions, and six-stock pagination with browser tooling.
 
 **Checkpoint**: The fixture three-stage flow grades two or more selected stocks
 end-to-end. Fresh requests reuse evidence; refresh is key-scoped; eager rendering
 and unrelated widgets do not request data. Live activation remains gated by actual
 reviewed rights and catalog coverage, not by success of fixture tests.
 
+## Follow-up - Multi-Sector Discovery Detail
+
+**Goal**: Let users select one or more sectors, restrict the sector tape to that
+selection, and show each selected sector's contained industries in the existing
+performance-table style without fabricating live industry evidence.
+
+- [ ] T005 [US6] Add failing multi-sector AppTest coverage in `tests/app/test_discovery.py` and `tests/app/test_scoreboard.py` for ordered multi-selection, tape filtering, one industry-performance table per selected weekly sector, selection changes, and empty/no-valid-selection states.
+- [ ] T006 [US6] Replace single-sector selection with namespaced ordered multi-sector selection in `src/market_leadership/ui/workflows/discovery_page.py` and `src/market_leadership/ui/workflows/scoreboard.py`; preserve all-sector tape behavior until a selection is made, filter the tape to selected sectors thereafter, and pass every selected stable sector node ID in the industry handoff.
+- [ ] T007 [US6] Render the contained industries for every selected sector through `src/market_leadership/application/inspect_industry.py` and `src/market_leadership/ui/workflows/industry_detail.py`, reusing `src/market_leadership/ui/components/ranking_table.py` and `src/market_leadership/ui/performance_table.py` where their performance-table contracts apply; retain weekly snapshot provenance and display an actionable limitation rather than inventing a live industry table without verified dated coverage.
+- [ ] T008 [US6] Update the multi-sector discovery guidance in `README.md` and validate `tests/app/test_discovery.py`, `tests/app/test_scoreboard.py`, `tests/app/test_industry_discovery.py`, `tests/unit/ui/test_sector_chart.py`, `uv run ruff check src tests`, and `uv run pyright`.
+
 ## Dependencies and Execution Order
 
 ```text
 T001 financial contract -> T002 selection foundation -> T003 renderer -> T004 integration
+T005 multi-sector acceptance tests -> T006 selection/tape synchronization -> T007 industry tables -> T008 documentation and validation
 ```
 
 Keep the four existing task IDs sequential; there are no parallel markers because
@@ -93,6 +106,21 @@ fail-first validation, not an additional hidden test phase.
 | US3: missing evidence | T001, T003, T004 | Exact fallbacks and unaffected valid slots |
 | US4: three-step journey | T002, T004 | Dated stock selection and production grading handoff |
 | US5: quarterly history | T001, T003, T004 | Four-to-eight real bars or separate short-history status |
+| US6: multi-sector discovery detail | T005, T006, T007, T008 | Selected sectors filter the tape and expose their verified industry performance tables |
+
+## Parallel Execution
+
+The follow-up tasks intentionally have no `[P]` markers: their selection state,
+tape filtering, industry rendering, and acceptance tests share the same discovery
+workflow and must be completed in dependency order.
+
+## Implementation Strategy
+
+1. Complete T005 first to establish red acceptance cases for both discovery modes.
+2. Deliver T006 as the MVP: multi-select sectors and filter the sector tape.
+3. Complete T007 only with verified weekly industry evidence; retain the explicit
+   live-data limitation where that evidence is unavailable.
+4. Finish T008 with focused and static validation, then run the non-live regression.
 
 ## Required Completion Evidence
 
@@ -105,3 +133,61 @@ claiming success. No task is complete merely because design artifacts exist.
 The old routed URLs are intentionally retired, while existing discovery evidence,
 valid state, source disclosures, and any already implemented aggregate grades
 remain semantically unchanged. Do not claim the larger parent feature is complete.
+
+## Initial Implementation Evidence (2026-10-28)
+
+- T001, T002, and T003 were implemented after their absent behavior was confirmed
+  by failing tests. T004's production integration and README migration guidance are
+  implemented, but its final repository-wide quality gate remains blocked; it is
+  deliberately not marked complete.
+- The final focused feature/navigation command passed 78 tests, covering the root
+  entrypoint, dated membership, formulas, source failures, cache identity/expiry,
+  explicit loading, refresh, pagination, missing metrics, histories and isolation.
+- Existing weekly industry details remain inline in the first tab's discovery
+  renderer, rather than rendering the standalone industry view a second time and
+  duplicating panels. The standalone renderer is still callable and independently
+  tested; the production app uses no routed transitions.
+- The full non-live regression run passed 348 tests and failed four existing
+  `tests/app/test_discovery.py` cases. All four failures were independently reproduced
+  using the unmodified HEAD discovery source before updating navigation expectations.
+  The subsequently added ambiguous-symbol membership case passes in the focused run.
+- Ruff passes for feature-touched Python files. Repository-wide Ruff still reports
+  six existing E501 errors in unchanged `tests/app/test_market_selection.py`.
+- Strict Pyright reports 402 diagnostics repository-wide, including missing
+  pandas/yfinance stubs and partially unknown Streamlit signatures at two new UI
+  call sites. Domain calculations, membership validation and grading orchestration
+  have no reported type errors. No blanket diagnostic suppression was added.
+- Browser verification measured equal 336-pixel desktop columns and ordered
+  358-pixel stacked columns at a 390-pixel viewport, with no horizontal overflow.
+  Native charts are exactly 60 pixels high and have nonzero visible bar heights.
+  Blank axis titles prevent the titles from consuming the entire plotting area;
+  ticks, dates and tooltips remain available.
+- Browser checks also verified six-stock pagination, no scorecards before explicit
+  loading, a separately isolated session, and wrapping of a simulated long caption
+  without clipping. AppTest separately renders actual long commentary strings.
+- Temporary browser servers were stopped. No live market-data calls, rights
+  approval, merge approval, or exception to failing required checks is claimed.
+
+## Final Validation and Approved Gate Remediation (2026-10-28)
+
+- The user explicitly approved fixing all repository test, lint, and typing
+  blockers. All four tasks are now complete; the initial failures above are
+  historical evidence, not outstanding exceptions.
+- Development-only pandas, PyArrow, and JSON Schema stubs were added to the
+  manifest and lock. Narrow, verified integration protocols isolate incomplete
+  third-party annotations for calendars, provider clients, Streamlit rendering,
+  and manifest validation. Strict mode and diagnostic rules remain enabled.
+- Discovery tests now select the intended daily mode explicitly while preserving
+  the weekly default. Published daily snapshots are accessible through the existing
+  validated repository/cache path, without provider requests or live controls.
+- Final required gates: `uv run ruff check src tests` passes;
+  `uv run pyright` reports zero errors, warnings, or informational diagnostics;
+  `uv run pytest -q tests/app tests/integration tests/contract tests/unit -m "not live"`
+  passes all 353 tests (12 warnings).
+- Follow-up fixture-only browser verification confirmed that the typed Altair
+  construction still renders 11 sector charts, 22 price/average lines, 2,860 volume
+  bars, and both daily discovery tables without browser errors. Published snapshot
+  mode displays an actionable missing-snapshot warning and no live controls.
+- The earlier desktop/mobile, visible 60-pixel grading bars, long commentary,
+  session isolation, and six-stock paging checks remain applicable. Live financial
+  access is still gated by reviewed rights and an actual eligible membership catalog.

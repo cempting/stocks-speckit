@@ -26,6 +26,13 @@ analytical commentary underneath every metric value, and show "N/A" with
 - Source coverage may be shorter than eight quarters. Do not invent historical
   observations or a complete EPS Consistency count.
 
+## Clarifications
+
+### Session 2026-10-29
+
+- Q: How should the app comply with the single-runtime-provider policy while preserving legacy daily discovery? → A: Amend the constitution to allow separate providers by workflow.
+- Q: What versioning impact should be recorded for retiring the two routed URLs? → A: Minor pre-1.0 release impact.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Read the Exact Fundamental Matrix (Priority: P1)
@@ -235,7 +242,8 @@ or the required three-column structure.
   accessible alongside the updated matrix.
 - **FR-012**: The app MUST provide the three stages named in Story 4 as one
   progressive tabbed experience, replacing routed page transitions and providing
-  migration guidance for existing entry links.
+  migration guidance for existing entry links. Retiring `/discovery` and
+  `/industry-discovery` is a minor pre-1.0 release impact.
 - **FR-013**: Industry Deep-Dive MUST allow selection only from available dated,
   sourced industry stock membership, distinguish fixture from live evidence,
   display coverage limits, and pass stable stock identities to Tab 3.
@@ -327,5 +335,9 @@ or the required three-column structure.
 - No complete authorized live industry membership source has been established.
   The foundation supports a validated dated catalog and deterministic fixtures;
   live operation requires provenance, coverage, and display-rights review first.
+- The grading workflow uses yfinance. Legacy daily discovery may use its explicitly
+  selected provider only after a separately approved and ratified constitution
+  amendment permits distinct providers by workflow; until then, deployments must
+  comply with the existing single-source rule.
 - Desktop is the reference three-column view; narrow-screen reflow preserves
   reading order.

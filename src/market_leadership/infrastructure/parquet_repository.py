@@ -4,12 +4,14 @@ import os
 import re
 import shutil
 import tempfile
+from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 import pandas as pd
 from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema.exceptions import ValidationError
 
 from market_leadership.application.ports import SnapshotReference
 from market_leadership.infrastructure.snapshot_errors import (
@@ -237,7 +239,10 @@ class ParquetSnapshotRepository:
                 ) from error
             if len(frame) != table["rows"]:
                 raise IntegrityError(snapshot_id, table_name, "row count does not match manifest")
-            if any(not isinstance(column, str) for column in frame.columns):
+            if any(
+                not isinstance(column, str)
+                for column in cast(list[object], frame.columns.tolist())
+            ):
                 raise SchemaMismatch(snapshot_id, table_name, "column names must be strings")
             if frame.columns.has_duplicates:
                 raise SchemaMismatch(snapshot_id, table_name, "column names must be unique")
@@ -269,11 +274,14 @@ class ParquetSnapshotRepository:
             raise IntegrityError(snapshot_id, "manifest", "snapshot IDs are immutable")
         temporary = Path(tempfile.mkdtemp(prefix=".publishing-", dir=self._root))
         try:
-            table_records = []
+            table_records: list[dict[str, str | int]] = []
             for name, frame in sorted(tables.items()):
                 if _TABLE_NAME.fullmatch(name) is None:
                     raise ValueError(f"invalid snapshot table name: {name}")
-                if any(not isinstance(column, str) for column in frame.columns):
+                if any(
+                    not isinstance(column, str)
+                    for column in cast(list[object], frame.columns.tolist())
+                ):
                     raise ValueError(f"column names for {name} must be strings")
                 if frame.columns.has_duplicates:
                     raise ValueError(f"column names for {name} must be unique")
@@ -327,9 +335,13 @@ class ParquetSnapshotRepository:
         return manifest
 
 
+class _ManifestValidator(Protocol):
+    def iter_errors(self, instance: object) -> Iterator[ValidationError]: ...
+
+
 def _validate_manifest(manifest: Any, snapshot_id: str) -> None:
     errors = sorted(
-        _MANIFEST_VALIDATOR.iter_errors(manifest),
+        cast(_ManifestValidator, _MANIFEST_VALIDATOR).iter_errors(manifest),
         key=lambda error: tuple(str(part) for part in error.absolute_path),
     )
     if errors:
@@ -345,7 +357,7 @@ def _validate_manifest(manifest: Any, snapshot_id: str) -> None:
 
 def _validate_weekly_manifest(manifest: Any, snapshot_id: str) -> None:
     errors = sorted(
-        _WEEKLY_VALIDATOR.iter_errors(manifest),
+        cast(_ManifestValidator, _WEEKLY_VALIDATOR).iter_errors(manifest),
         key=lambda error: tuple(str(part) for part in error.absolute_path),
     )
     if errors:
@@ -381,7 +393,7 @@ def _validate_weekly_manifest(manifest: Any, snapshot_id: str) -> None:
 
 
 def _columns(frame: pd.DataFrame) -> list[dict[str, str]]:
-    return [{"name": name, "dtype": str(dtype)} for name, dtype in frame.dtypes.items()]
+    return [{"name": str(name), "dtype": str(dtype)} for name, dtype in frame.dtypes.items()]
 
 
 def _validate_weekly_frame(
@@ -389,7 +401,9 @@ def _validate_weekly_frame(
 ) -> None:
     if type(frame) is not pd.DataFrame:
         raise SchemaMismatch(snapshot_id, table_name, "table must be a DataFrame")
-    if any(not isinstance(name, str) or not name for name in frame.columns):
+    if any(
+        not isinstance(name, str) or not name for name in cast(list[object], frame.columns.tolist())
+    ):
         raise SchemaMismatch(snapshot_id, table_name, "column names must be nonempty strings")
     if frame.columns.has_duplicates:
         raise SchemaMismatch(snapshot_id, table_name, "column names must be unique")

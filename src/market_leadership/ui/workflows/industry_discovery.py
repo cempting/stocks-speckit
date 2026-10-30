@@ -6,11 +6,11 @@ from typing import cast
 import streamlit as st
 
 from market_leadership.application.browse_scoreboard import read_weekly_board
+from market_leadership.application.discover_sectors import SECTOR_PROXIES
 from market_leadership.application.inspect_industry import inspect_industry
 from market_leadership.bootstrap import build_snapshot_repository
 from market_leadership.config import load_settings
 from market_leadership.infrastructure.snapshot_errors import IntegrityError, SchemaMismatch
-from market_leadership.application.discover_sectors import SECTOR_PROXIES
 from market_leadership.ui.workflows.industry_detail import render_industry_detail
 
 _HANDOFF_KEY = "market_leadership.industry_handoff"
@@ -28,8 +28,9 @@ def _consume_handoff() -> dict[str, object] | None:
     return cast(dict[str, object], value)
 
 
-def render_industry_discovery() -> None:
-    st.set_page_config(page_title="Industry Discovery", layout="wide")
+def render_industry_discovery(*, configure_page: bool = True) -> None:
+    if configure_page:
+        st.set_page_config(page_title="Industry Discovery", layout="wide")
     st.title("Industry Discovery")
     st.caption(
         "Select US parent sectors to inspect their industries. Weekly fixture rankings and "
@@ -54,11 +55,16 @@ def render_industry_discovery() -> None:
     )
     if mode == "Live US":
         sector_names = [name for name, _ in SECTOR_PROXIES]
-        handoff_names = handoff.get("sector_names", []) if handoff else []
-        if not isinstance(handoff_names, list) or not all(
-            name in sector_names for name in handoff_names
-        ):
-            handoff_names = []
+        supplied_names: object = handoff.get("sector_names", []) if handoff else []
+        handoff_names = (
+            [
+                name
+                for name in cast(list[object], supplied_names)
+                if isinstance(name, str) and name in sector_names
+            ]
+            if isinstance(supplied_names, list)
+            else []
+        )
         st.multiselect(
             "Sectors",
             options=sector_names,
@@ -80,19 +86,19 @@ def render_industry_discovery() -> None:
     except (IntegrityError, SchemaMismatch):
         st.error("The weekly sector snapshot failed validation; no industries were displayed.")
         return
-    if sector_board.entries.empty:
+    if sector_board.entries.empty or sector_board.as_of is None:
         st.info("No completed US weekly sector snapshot is available to select parent sectors.")
         return
 
     sectors_by_name = {
-        str(row["name"]): str(row["node_id"])
-        for _, row in sector_board.entries.iterrows()
+        str(row["name"]): str(row["node_id"]) for _, row in sector_board.entries.iterrows()
     }
     if handoff is not None:
         requested_ids = handoff.get("sector_node_ids")
         if not isinstance(requested_ids, list) or not requested_ids:
             st.error("Industry navigation context has no parent sector.")
             return
+        requested_ids = cast(list[object], requested_ids)
         handoff_as_of = handoff.get("as_of")
         if handoff_as_of is not None and handoff_as_of != sector_board.as_of.isoformat():
             st.error("The selected sector week has changed; choose the parent sector again.")

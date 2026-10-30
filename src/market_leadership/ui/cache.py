@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -12,8 +13,19 @@ from market_leadership.application.request_market_data import (
     RequestedMarketData,
     RequestMarketData,
 )
+from market_leadership.domain.fundamentals import (
+    FundamentalBundle,
+    FundamentalRequest,
+    FundamentalScorecard,
+    build_scorecard,
+)
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
 from market_leadership.infrastructure.snapshot_errors import IntegrityError, SchemaMismatch
+from market_leadership.infrastructure.yfinance_fundamentals import (
+    TickerFactory,
+    read_fundamentals,
+    ticker_factory,
+)
 
 
 @st.cache_data(show_spinner=False)
@@ -69,3 +81,42 @@ def refresh_market_data(
     request: DataPointRequest,
 ) -> RequestedMarketData:
     return request_use_case.execute(request, force=True)
+
+
+@st.cache_data(ttl=3600, max_entries=256, show_spinner=False)
+def _cached_fundamentals(
+    request: FundamentalRequest,
+    _factory: TickerFactory,
+    _now: datetime,
+) -> FundamentalBundle:
+    return read_fundamentals(request, _factory, now=_now)
+
+
+def load_fundamental_bundle(
+    request: FundamentalRequest,
+    *,
+    _factory: TickerFactory = ticker_factory,
+    now: datetime | None = None,
+) -> FundamentalBundle:
+    current = now or datetime.now(UTC)
+    evidence = _cached_fundamentals(request, _factory, current)
+    if (current - evidence.fetched_at).total_seconds() >= 3600:
+        _cached_fundamentals.clear(request, _factory, current)
+        evidence = _cached_fundamentals(request, _factory, current)
+    return evidence
+
+
+def refresh_fundamental_bundle(
+    request: FundamentalRequest,
+    *,
+    _factory: TickerFactory = ticker_factory,
+    now: datetime | None = None,
+) -> FundamentalBundle:
+    current = now or datetime.now(UTC)
+    _cached_fundamentals.clear(request, _factory, current)
+    return load_fundamental_bundle(request, _factory=_factory, now=current)
+
+
+@st.cache_data(max_entries=256, show_spinner=False)
+def cached_scorecard(bundle: FundamentalBundle, history_window: int = 8) -> FundamentalScorecard:
+    return build_scorecard(bundle, history_window)

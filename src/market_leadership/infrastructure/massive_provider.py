@@ -1,10 +1,10 @@
 import os
 from collections.abc import Iterable
 from datetime import date
-from typing import Any, cast
+from importlib import import_module
+from typing import Protocol, cast
 
 import pandas as pd
-from massive import RESTClient
 
 from market_leadership.infrastructure.provider_errors import (
     ProviderRequestError,
@@ -14,19 +14,44 @@ from market_leadership.infrastructure.provider_errors import (
 from market_leadership.infrastructure.provider_validation import canonicalize_daily_history
 
 
+class Aggregate(Protocol):
+    @property
+    def timestamp(self) -> int | None: ...
+
+    @property
+    def close(self) -> float | None: ...
+
+    @property
+    def volume(self) -> float | None: ...
+
+
+class AggregateClient(Protocol):
+    def list_aggs(
+        self, *, ticker: str, multiplier: int, timespan: str,
+        from_: str, to: str, adjusted: bool, sort: str, limit: int,
+    ) -> Iterable[Aggregate]: ...
+
+
+class _MassiveAPI(Protocol):
+    def RESTClient(self, *, api_key: str) -> AggregateClient: ...
+
+
+_massive = cast(_MassiveAPI, import_module("massive"))
+
+
 class MassiveProvider:
     provider_id = "massive"
 
     def __init__(
         self,
-        client: Any | None = None,
+        client: AggregateClient | None = None,
         api_key: str | None = None,
         retry_limit: int = 2,
     ) -> None:
         if retry_limit < 0:
             raise ValueError("retry_limit must be non-negative")
         self._retry_limit = retry_limit
-        self._client: Any
+        self._client: AggregateClient
         if client is not None:
             self._client = client
             return
@@ -34,7 +59,7 @@ class MassiveProvider:
         resolved_key = api_key or os.getenv("MASSIVE_API_KEY")
         if not resolved_key:
             raise ValueError("MASSIVE_API_KEY is required for the Massive provider")
-        self._client = RESTClient(api_key=resolved_key)
+        self._client = _massive.RESTClient(api_key=resolved_key)
 
     def fetch_daily_history(
         self,
@@ -57,11 +82,10 @@ class MassiveProvider:
         )
 
     def _fetch_symbol(self, *, symbol: str, start: date, end: date) -> pd.DataFrame:
+        records: list[dict[str, pd.Timestamp | float]] = []
         for attempt in range(self._retry_limit + 1):
             try:
-                aggregates = cast(
-                    Iterable[Any],
-                    self._client.list_aggs(
+                aggregates = self._client.list_aggs(
                         ticker=symbol,
                         multiplier=1,
                         timespan="day",
@@ -70,20 +94,21 @@ class MassiveProvider:
                         adjusted=True,
                         sort="asc",
                         limit=50_000,
-                    ),
                 )
-                records = [
-                    {
-                        "date": pd.to_datetime(item.timestamp, unit="ms", utc=True)
+                records = []
+                for item in aggregates:
+                    if item.close is None or item.timestamp is None:
+                        continue
+                    if item.volume is None:
+                        raise ValueError("Daily history aggregate has no reported volume")
+                    records.append({
+                        "date": pd.Timestamp(item.timestamp, unit="ms", tz="UTC")
                         .tz_convert("America/New_York")
                         .tz_localize(None)
                         .normalize(),
                         "close": float(item.close),
                         "volume": float(item.volume),
-                    }
-                    for item in aggregates
-                    if item.close is not None and item.timestamp is not None
-                ]
+                    })
                 break
             except Exception as error:
                 retryable = is_retryable_provider_failure(error)
