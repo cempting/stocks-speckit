@@ -173,3 +173,94 @@ def test_cli_rejects_missing_exchange_and_bad_input_with_nonzero_status(
 
     assert status != 0
     assert "exchange" in capsys.readouterr().err.lower()
+
+
+def test_validate_cli_checks_selected_database_without_modifying_it(
+    tmp_path: Path, capsys
+) -> None:
+    database = tmp_path / "universe.sqlite"
+    original = tmp_path / "original.csv"
+    original.write_text(
+        "InstrumentId,Ticker,Name,Exchange,Sector,Industry\n"
+        "stock-a,AAA,Alpha,NASDAQ,Technology,Cloud\n",
+        encoding="utf-8",
+    )
+    assert (
+        main(
+            [
+                "import",
+                "--region",
+                "US",
+                "--classification",
+                "TEST",
+                "--source-id",
+                "source-a",
+                "--coverage",
+                "reviewed",
+                "--approval-reference",
+                "review-1",
+                "--database",
+                str(database),
+                str(original),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    conflicting = tmp_path / "conflicting.csv"
+    conflicting.write_text(
+        "InstrumentId,Ticker,Name,Exchange,Sector,Industry\n"
+        "stock-a,AAA,Alpha,NASDAQ,Finance,Banks\n",
+        encoding="utf-8",
+    )
+
+    status = main(
+        [
+            "validate",
+            "--region",
+            "US",
+            "--classification",
+            "TEST",
+            "--source-id",
+            "source-b",
+            "--database",
+            str(database),
+            str(conflicting),
+        ]
+    )
+    capture = capsys.readouterr()
+
+    assert status != 0
+    assert "conflict" in f"{capture.out} {capture.err}".lower()
+
+
+def test_validate_cli_does_not_initialize_missing_database(
+    tmp_path: Path, capsys
+) -> None:
+    database = tmp_path / "not-created.sqlite"
+    source = tmp_path / "members.csv"
+    source.write_text(
+        "Ticker,Name,Sector,Industry\nAAA,Alpha,Technology,Cloud\n",
+        encoding="utf-8",
+    )
+
+    status = main(
+        [
+            "validate",
+            "--region",
+            "US",
+            "--classification",
+            "TEST",
+            "--source-id",
+            "source-a",
+            "--exchange",
+            "NASDAQ",
+            "--database",
+            str(database),
+            str(source),
+        ]
+    )
+
+    assert status == 0
+    assert not database.exists()
+    assert "validated" in capsys.readouterr().out.lower()

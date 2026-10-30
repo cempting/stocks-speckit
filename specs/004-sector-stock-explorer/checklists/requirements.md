@@ -31,6 +31,15 @@
 
 ## Notes
 
+- Reconciled against the accepted 2026-10-30 implementation: FR-025-FR-032, SC-012-SC-015,
+  and User Story 2 scenarios 6-10 define preserved layout/controls, Ticker/column order,
+  double-height charts, calendar windows, formatting/colors, and reviewed ETF mappings.
+- User-visible outcomes are in the spec; Streamlit/Altair sizing, state keys, palette values,
+  cropping/calculation flow, and concrete test locations are in the plan.
+- Quality review found no new clarification markers. Existing implementation evidence is
+  distinguished from pending permanent regression work T034-T035. Reconciliation does not
+  certify every acceptance criterion or authorize an application redesign.
+
 - The stock tape shows all three existing scorecard scores where available. The project does not
   define a new aggregate score.
 - Price thumbnails include the 50 Simple Moving Average when supported by sufficient history; an

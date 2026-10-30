@@ -1,6 +1,7 @@
 from datetime import date
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from streamlit.testing.v1 import AppTest
 
@@ -186,3 +187,72 @@ def test_stock_detail_discloses_scores_until_explicitly_loaded(
         "Not loaded",
         "Not loaded",
     ]
+
+
+@pytest.mark.parametrize("missing", ["close", "volume"])
+def test_detail_renders_available_series_when_other_series_is_missing(
+    missing: str,
+) -> None:
+    def app_script(missing: str) -> None:
+        from datetime import date
+
+        import pandas as pd
+
+        from market_leadership.domain.stock_chart import build_stock_chart_evidence
+        from market_leadership.domain.stock_selection import MembershipEntry
+        from market_leadership.ui.components.stock_detail import render_stock_detail
+
+        history = pd.DataFrame(
+            {"close": [10.0, 11.0], "volume": [100.0, 110.0]},
+            index=pd.date_range("2026-10-22", periods=2),
+        )
+        history[missing] = float("nan")
+        member = MembershipEntry(
+            "instrument", "company", "AAA", "Alpha", "NASDAQ", "USD",
+            "sector", "Sector", "industry", "Industry", date(2020, 1, 1), None,
+        )
+        render_stock_detail(
+            member,
+            build_stock_chart_evidence("instrument", history, as_of=date(2026, 10, 23)),
+            scorecard=None, score_state="not_loaded", score_reason=None,
+            dark_mode=False, on_return=lambda: None,
+        )
+
+    app = AppTest.from_function(app_script, args=(missing,)).run()
+    assert not app.exception
+    assert len(app.get("vega_lite_chart") or app.get("arrow_vega_lite_chart")) == 1
+    missing_label = "Price" if missing == "close" else "Volume"
+    assert any(f"{missing_label}: Insufficient" == item.value for item in app.caption)
+
+
+@pytest.mark.parametrize("missing", ["close", "volume"])
+def test_independent_history_survives_member_tape_to_detail_pipeline(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, missing: str
+) -> None:
+    class PartialProvider(FixtureProvider):
+        def fetch_daily_history(
+            self, symbols: tuple[str, ...], *, start: date, end: date, force: bool = False
+        ) -> dict[str, pd.DataFrame]:
+            history = super().fetch_daily_history(symbols, start=start, end=end, force=force)
+            for symbol in ("AAA", "BBB"):
+                if symbol in history:
+                    history[symbol][missing] = float("nan")
+            return history
+
+    app = _run_app(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        "market_leadership.bootstrap.build_request_provider",
+        lambda *args, **kwargs: PartialProvider(),
+    )
+    app = _select_cloud_industry(app)
+    assert not app.exception
+    available_label = "Price" if missing == "volume" else "Volume"
+    missing_label = "Volume" if missing == "volume" else "Price"
+    assert not any(item.value == f"{available_label} unavailable" for item in app.caption)
+    assert sum(item.value == f"{missing_label} unavailable" for item in app.caption) == 2
+    app.selectbox("market_leadership.progressive_discovery.stock_picker").select(
+        "instrument-aaa"
+    ).run()
+    assert not app.exception
+    assert len(app.get("vega_lite_chart") or app.get("arrow_vega_lite_chart")) == 1
+    assert any(item.value == f"{missing_label}: Insufficient" for item in app.caption)

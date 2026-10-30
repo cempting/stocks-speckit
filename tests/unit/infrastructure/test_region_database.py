@@ -185,3 +185,55 @@ def test_entity_representations_are_region_and_date_scoped(tmp_path: Path) -> No
         database.get_entity_representations("EU", "TEST", "industry", as_of=date(2026, 10, 30))
         == ()
     )
+
+
+def test_overlapping_same_industry_memberships_return_one_security(tmp_path: Path) -> None:
+    database = RegionDatabase(tmp_path / "universe.sqlite")
+    for source_id, ticker, start in (
+        ("first", "AAA", "2020-01-01"),
+        ("second", "AAA.B", "2021-01-01"),
+    ):
+        source = _write_csv(
+            tmp_path / f"{source_id}.csv",
+            f"stock-a,{ticker},Alpha,NASDAQ,Technology,Cloud,{start}\n",
+        )
+        import_reviewed_file(
+            database, source, region_id="US", classification_id="TEST",
+            source_id=source_id, exchange_id=None, coverage="test",
+            approval_reference="review",
+        )
+    members = database.get_industry_members(
+        "US", "TEST", "test-cloud", as_of=date(2026, 10, 30)
+    )
+    assert len(members) == 1
+    assert len(members[0].listings) == 2
+    historical = database.get_industry_members(
+        "US", "TEST", "test-cloud", as_of=date(2020, 6, 1)
+    )
+    assert len(historical) == 1
+    assert len(historical[0].listings) == 1
+
+
+def test_classification_selection_uses_requested_effective_date(tmp_path: Path) -> None:
+    database = RegionDatabase(tmp_path / "universe.sqlite")
+    database.initialize()
+    source = _write_csv(
+        tmp_path / "source.csv", "stock-a,AAA,Alpha,NASDAQ,Technology,Cloud,2020-01-01\n"
+    )
+    import_reviewed_file(
+        database, source, region_id="US", classification_id="CURRENT",
+        source_id="source", exchange_id=None, coverage="test", approval_reference="review",
+    )
+    with database.connect() as connection:
+        connection.execute(
+            "UPDATE classifications SET effective_from='2020-01-01', "
+            "effective_to='2029-12-31' WHERE classification_id='CURRENT'"
+        )
+        connection.execute(
+            "INSERT INTO classifications "
+            "(classification_id,region_id,name,source_id,effective_from) "
+            "VALUES ('FUTURE','US','Future','source','2030-01-01')"
+        )
+    assert database.get_classification_id("US", as_of=date(2019, 1, 1)) is None
+    assert database.get_classification_id("US", as_of=date(2026, 10, 30)) == "CURRENT"
+    assert database.get_classification_id("US", as_of=date(2030, 1, 1)) == "FUTURE"

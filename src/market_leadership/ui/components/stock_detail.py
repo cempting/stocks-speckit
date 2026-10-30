@@ -48,8 +48,10 @@ def render_stock_detail(
         ):
             if state != "available":
                 st.caption(f"{label}: {state.title()}")
-        if chart.price_state == "available":
+        if chart.price_state == "available" or chart.volume_state == "available":
             frame = chart.history.copy()
+            if chart.price_state != "available":
+                frame["close"] = float("nan")
             if chart.volume_state != "available":
                 frame["volume"] = float("nan")
             st.altair_chart(build_sector_chart(frame, dark_mode=dark_mode), width="stretch")

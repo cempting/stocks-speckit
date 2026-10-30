@@ -57,6 +57,36 @@ overwrite locally reviewed classifications.
 The local CSVs are candidate inputs, not evidence that the full US region is covered. Record
 coverage and rights in the source review before treating the region as complete.
 
+Validation uses the selected `--database` read-only to detect conflicts with existing reviewed
+identities and memberships; a missing database does not prevent file validation. Import
+quarantines each conflicting row without leaving orphan stocks or classification records. An
+all-rejected file changes only its audit records, not the published hierarchy, coverage, or
+revision. Matching reviewed rows can resolve placeholders and add classification without
+downgrading previously accepted states.
+
+Coverage descriptions combine contributing reviewed sources. A chart-only import adds its
+limited scope alongside exchange coverage, rather than replacing it. The next accepted import
+also reconstructs contributing sources from existing regional provenance; it does not certify
+complete regional coverage.
+
+### Existing databases and import replay
+
+Schema version 1 remains supported; no database rebuild is required. New import-run
+fingerprints persist a digest of the review/import context as well as the file hash.
+Replaying the same file requires the original region, classification, source, approval,
+coverage, and exchange arguments and returns the original diagnostics with zero inserted rows.
+
+Legacy runs storing only a raw file hash cannot prove their original context and are rejected
+on replay with actionable guidance. After reviewing the input and provenance again, use a new
+source ID; existing records and audit history are retained. This also applies to legacy
+second-exchange imports under an existing classification. Do not remove historical runs to
+bypass the check.
+
+Coverage recovery uses surviving regional listing, membership, classification, and
+representation provenance. Historical scope with no surviving provenance cannot be recovered
+automatically. Future combined-source history is stored under the existing metadata key
+`regional_reviewed_coverage:{region_id}` without a schema migration.
+
 ## Add reviewed chart representations
 
 Discovery only requests price history for representations recorded in the database. Import a
@@ -117,6 +147,13 @@ the 50-session SMA is calculated before cropping so shorter windows retain their
 The selection persists when navigating between sector, industry, and stock tapes, and does not
 change the return columns or stock-detail chart. **Performance basis** sits to the right of the
 heading and switches return columns between absolute and benchmark-relative outcomes.
+
+Unavailable or incomplete member histories remain retryable. Successful members are reused
+independently, and Refresh replaces only the matching symbols/date/request cache entries.
+Independently usable price or volume stays visible when its sibling series is insufficient;
+short price histories explicitly disclose an insufficient 50-session SMA in that chart cell.
+The stock tape/detail does not request hidden industry proxies or load financial scores
+without the explicit score-load action.
 
 ## Focused automated validation
 
@@ -204,3 +241,37 @@ Using a validated local import and deterministic market-data/fundamental fixture
 
 Live provider runs are optional and cannot replace deterministic evidence for empty, partial,
 stale, invalid, or insufficient cases.
+
+## Convergence preservation evidence (2026-10-30)
+
+Browser verification used a fresh temporary server, a temporary reviewed-format database with
+all 11 explicit ETF mappings, and an injected deterministic provider. Synthetic evidence was
+prominently labeled; no user database was rebuilt and no live-data permission was inferred.
+
+At a 1920x1080 viewport:
+
+- The heading, period, and basis controls shared the same top coordinate, with left positions
+  80, 672, and 1264 pixels respectively. The two root tabs remained Discovery and Industry
+  Deep-Dive.
+- All 22 separate price/volume plots measured exactly 84 pixels high. The first pair was
+  adjacent at the same vertical coordinate.
+- All 55 return cells retained colored two-decimal percentages. Selecting a different preview
+  period left the return-cell contents unchanged.
+- Each period was selected and its rendered price-path point count matched the inclusive
+  synthetic calendar window:
+
+  | Period | Points | Charts | Plot height | App exceptions |
+  |--------|-------:|-------:|------------:|---------------:|
+  | 1w | 6 | 22 | 84 px | 0 |
+  | 1m | 23 | 22 | 84 px | 0 |
+  | 3m | 67 | 22 | 84 px | 0 |
+  | 6m | 132 | 22 | 84 px | 0 |
+  | 1y | 262 | 22 | 84 px | 0 |
+
+These are deterministic UI observations, not live coverage or user-study measurements. The
+temporary server is stopped after verification.
+
+Final automated quality gates passed: **455 non-live tests**, with one live test deselected,
+Ruff, strict Pyright, and `git diff --check`. The root-app missing-database cases used an
+explicitly absent test database path; populated user databases were left unchanged.
+Twelve existing dependency deprecation warnings remain.

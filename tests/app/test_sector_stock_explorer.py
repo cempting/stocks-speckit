@@ -118,6 +118,127 @@ def test_thumbnail_period_and_performance_basis_persist_across_tapes(
     assert any(item.label == "AAA · Alpha" for item in app.button)
 
 
+def test_cleared_performance_controls_use_preserved_defaults(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = _run_discovery(monkeypatch, tmp_path)
+    RegionDatabase(tmp_path / "market-universe.sqlite").add_entity_representation(
+        region_id="US", classification_id="TEST", entity_type="sector",
+        entity_id="test-technology", exchange_id="NASDAQ", symbol="AAA",
+        source_id="controlled-test", approval_reference="test-only",
+        effective_from=date(2020, 1, 1),
+    )
+    app.run()
+    initial_cells = [item.proto.body for item in app.get("html")]
+    initial_charts = [
+        item.proto.spec for item in (app.get("vega_lite_chart") or app.get("arrow_vega_lite_chart"))
+    ]
+    prefix = "market_leadership.progressive_discovery."
+    assert app.segmented_control(prefix + "performance_basis").options == [
+        "Absolute", "vs S&P 500"
+    ]
+    app.segmented_control(prefix + "thumbnail_period").set_value("1w").run()
+    app.segmented_control(prefix + "performance_basis").set_value("vs S&P 500").run()
+    app.segmented_control(prefix + "thumbnail_period").set_value(None).run()
+    app.segmented_control(prefix + "performance_basis").set_value(None).run()
+    assert not app.exception
+    assert any("Sector performance" == item.value for item in app.subheader)
+    assert [item.proto.body for item in app.get("html")] == initial_cells
+    assert [
+        item.proto.spec for item in (app.get("vega_lite_chart") or app.get("arrow_vega_lite_chart"))
+    ] == initial_charts
+
+
+@pytest.mark.parametrize("label", ["Sector", "Industry"])
+def test_entity_tape_preserves_complete_column_and_row_order(label: str) -> None:
+    from market_leadership.ui.workflows.discovery_page import _build_entity_tape
+
+    frame = _build_entity_tape(
+        entity_rows=(("first", "First"), ("second", "Second")),
+        label=label, representation_by_id={}, history={},
+        benchmark=pd.Series(dtype="float64"), requested_as_of=date(2026, 10, 30),
+        observed_as_of=None, performance_mode="Absolute",
+    )
+    assert frame.columns.tolist() == [
+        "Price chart", "Volume chart", label, "Ticker", "1 week", "1 month",
+        "3 months", "6 months", "12 months", "Status",
+    ]
+    assert frame[label].tolist() == ["First", "Second"]
+    assert frame["Ticker"].tolist() == ["Unavailable", "Unavailable"]
+    assert frame["Status"].tolist() == ["Chart representation unavailable"] * 2
+
+
+def test_stock_views_do_not_request_hidden_industry_proxy(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    requests: list[tuple[str, ...]] = []
+
+    class Provider(FixtureProvider):
+        def fetch_daily_history(
+            self, symbols: tuple[str, ...], *, start: date, end: date, force: bool = False
+        ) -> dict[str, pd.DataFrame]:
+            requests.append(symbols)
+            return super().fetch_daily_history(symbols, start=start, end=end, force=force)
+
+    monkeypatch.setattr(
+        "market_leadership.bootstrap.build_request_provider", lambda *args, **kwargs: Provider()
+    )
+    database_path = _create_database(tmp_path)
+    database = RegionDatabase(database_path)
+    database.add_entity_representation(
+        region_id="US", classification_id="TEST", entity_type="industry",
+        entity_id="test-cloud", exchange_id="NASDAQ", symbol="AAA",
+        source_id="controlled-test", approval_reference="test-only",
+        effective_from=date(2020, 1, 1),
+    )
+    monkeypatch.setenv("MARKET_UNIVERSE_DATABASE_PATH", str(database_path))
+    monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path))
+    app = AppTest.from_file(ROOT / "src/market_leadership/ui/workflows/discovery_page.py").run()
+    prefix = "market_leadership.progressive_discovery."
+    app.selectbox(prefix + "sector").select("test-technology").run()
+    assert ("SPY", "AAA") in requests
+    requests.clear()
+    app.selectbox(prefix + "industry").select("test-cloud").run()
+    assert not app.exception
+    assert ("SPY", "AAA") not in requests
+    assert all(symbol in {"SPY", "AAA", "BBB"} for call in requests for symbol in call)
+    assert ("AAA", "BBB") in requests
+    requests.clear()
+    app.selectbox(prefix + "stock_picker").select("instrument-a").run()
+    assert not app.exception
+    assert all(call == ("SPY",) for call in requests)
+
+
+def test_discovery_and_deep_dive_ignore_future_classification(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    app = _run_discovery(monkeypatch, tmp_path)
+    with RegionDatabase(tmp_path / "market-universe.sqlite").connect() as connection:
+        connection.execute(
+            "UPDATE classifications SET effective_from='2020-01-01', "
+            "effective_to='2029-12-31' WHERE classification_id='TEST'"
+        )
+        connection.execute(
+            "INSERT INTO classifications (classification_id,region_id,name,source_id,"
+            "effective_from) VALUES ('FUTURE','US','Future','controlled-test','2030-01-01')"
+        )
+    app.date_input[0].set_value(date(2026, 10, 30)).run()
+    assert not app.exception
+    assert app.selectbox("market_leadership.progressive_discovery.sector").options == [
+        "Financials", "Technology"
+    ]
+    app.date_input[0].set_value(date(2019, 1, 1)).run()
+    assert not app.exception
+    assert any("No reviewed classification" in item.value for item in app.info)
+    deep_dive = AppTest.from_file(
+        ROOT / "src/market_leadership/ui/workflows/industry_deep_dive.py"
+    ).run()
+    assert not deep_dive.exception
+    assert deep_dive.selectbox("market_leadership.screening.sector").options == [
+        "Financials", "Technology"
+    ]
+
+
 def test_thumbnail_period_does_not_change_performance_returns() -> None:
     from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS
     from market_leadership.ui.workflows.discovery_page import _build_entity_tape

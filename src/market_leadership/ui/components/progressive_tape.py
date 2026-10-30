@@ -247,7 +247,7 @@ def _render_visual_tape(frame: pd.DataFrame, *, key: str, selectable: bool) -> t
     ]
     weights = [1.3, 1.3, *([1.0] * len(content_columns))]
     headings = st.columns(weights)
-    headings[0].caption("Price + 50-session SMA")
+    headings[0].caption("Price + 50MA")
     headings[1].caption("Volume by price direction")
     for heading, label in zip(headings[2:], content_columns, strict=True):
         heading.caption(label)
@@ -268,6 +268,12 @@ def _render_visual_tape(frame: pd.DataFrame, *, key: str, selectable: bool) -> t
                 st.caption("Price unavailable")
             else:
                 st.altair_chart(chart, width="stretch", key=f"{key}_price_{row_index}")
+                records = _chart_records(row[price_column])
+                if records and not any(
+                    isinstance(value := point.get("sma50"), (int, float)) and isfinite(value)
+                    for point in records
+                ):
+                    st.caption("50-session SMA: Insufficient")
         with cells[1]:
             chart = build_volume_thumbnail(row[volume_column])
             if chart is None:

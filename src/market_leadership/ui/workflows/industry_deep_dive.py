@@ -90,11 +90,11 @@ def render_industry_deep_dive(settings: Settings | None = None) -> tuple[Members
         f"Coverage: {region.coverage_state.upper()} · {region.coverage_description} · "
         f"As of {region.coverage_as_of.isoformat()}"
     )
-    classification_id = database.get_classification_id(region_id)
+    as_of = date.today()
+    classification_id = database.get_classification_id(region_id, as_of=as_of)
     if classification_id is None:
         st.info("This region has no active reviewed classification.")
         return ()
-    as_of = date.today()
     sectors = database.get_sectors(region_id, classification_id, as_of=as_of)
     if not sectors:
         st.info("No active sectors are available in this region.")

@@ -10,6 +10,7 @@ from market_leadership.application.discover_sectors import (
 )
 from market_leadership.application.load_stock_history import (
     StockHistoryBatch,
+    StockHistorySeries,
     load_stock_history,
 )
 from market_leadership.application.ports import DataPointRequest, SnapshotReference
@@ -139,20 +140,22 @@ def _request_member_history(
     return load_stock_history(provider, symbols, as_of=as_of, force=force_refresh)
 
 
-@st.cache_data(ttl=3600, max_entries=64, show_spinner=False)
-def _cached_member_history(
+class _HistoryCacheMiss(Exception):
+    pass
+
+
+@st.cache_data(ttl=3600, max_entries=2048, show_spinner=False)
+def _cached_member_series(
     source_cache_path: str,
-    symbols: tuple[str, ...],
+    symbol: str,
     as_of: date,
     retry_limit: int,
-) -> StockHistoryBatch:
-    return _request_member_history(
-        source_cache_path,
-        symbols,
-        as_of,
-        retry_limit,
-        force_refresh=False,
-    )
+    _seed: tuple[str, StockHistorySeries] | None = None,
+) -> tuple[str, StockHistorySeries]:
+    # A missing entry raises instead of caching unavailable or incomplete evidence.
+    if _seed is None:
+        raise _HistoryCacheMiss
+    return _seed
 
 
 def load_member_history(
@@ -163,15 +166,38 @@ def load_member_history(
     retry_limit: int,
     force_refresh: bool = False,
 ) -> StockHistoryBatch:
-    if force_refresh:
-        return _request_member_history(
+    if not symbols or len(set(symbols)) != len(symbols):
+        raise ValueError("Stock history requires a nonempty, duplicate-free member set")
+    cached: dict[str, StockHistorySeries] = {}
+    provider_id = "yfinance"
+    for symbol in symbols:
+        if force_refresh:
+            _cached_member_series.clear(source_cache_path, symbol, as_of, retry_limit)
+            continue
+        try:
+            provider_id, cached[symbol] = _cached_member_series(
+                source_cache_path, symbol, as_of, retry_limit
+            )
+        except _HistoryCacheMiss:
+            continue
+    missing = tuple(symbol for symbol in symbols if symbol not in cached)
+    if missing:
+        batch = _request_member_history(
             source_cache_path,
-            symbols,
+            missing,
             as_of,
             retry_limit,
-            force_refresh=True,
+            force_refresh=force_refresh,
         )
-    return _cached_member_history(source_cache_path, symbols, as_of, retry_limit)
+        provider_id = batch.provider_id
+        for item in batch.series:
+            cached[item.symbol] = item
+            if item.state == "available":
+                _cached_member_series(
+                    source_cache_path, item.symbol, as_of, retry_limit,
+                    _seed=(provider_id, item),
+                )
+    return StockHistoryBatch(provider_id, as_of, tuple(cached[symbol] for symbol in symbols))
 
 
 @st.cache_data(max_entries=256, show_spinner=False)

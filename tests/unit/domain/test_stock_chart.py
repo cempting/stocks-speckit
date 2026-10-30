@@ -1,6 +1,7 @@
 from datetime import date
 
 import pandas as pd
+import pytest
 
 from market_leadership.domain.stock_chart import (
     build_discovery_chart_preview,
@@ -94,3 +95,20 @@ def test_discovery_preview_excludes_future_observations_and_calculates_exact_sma
     assert len(preview) == 55
     assert preview["sma50"].iloc[:49].isna().all()
     assert preview["sma50"].iloc[49] == sum(range(1, 51)) / 50
+
+
+@pytest.mark.parametrize("missing", ["close", "volume"])
+def test_missing_column_keeps_other_series_and_observation_date(missing: str) -> None:
+    history = _history(160).drop(columns=[missing])
+    chart = build_stock_chart_evidence(
+        "instrument-a", history, as_of=history.index[-1].date()
+    )
+    assert chart.observed_on == history.index[-1].date()
+    assert len(chart.history) == len(history)
+    assert (chart.price_state if missing == "close" else chart.volume_state) == "insufficient"
+    assert (chart.volume_state if missing == "close" else chart.price_state) == "available"
+    assert chart.sma50_state == ("insufficient" if missing == "close" else "available")
+    assert chart.sma150_state == ("insufficient" if missing == "close" else "available")
+    preview = build_discovery_chart_preview(history, as_of=chart.requested_as_of)
+    if missing == "close":
+        assert preview["direction"].eq("neutral").all()

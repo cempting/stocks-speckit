@@ -234,7 +234,7 @@ def _render_member_tape(
         evidence = history_by_symbol.get(symbol)
         history = getattr(evidence, "history", pd.DataFrame(columns=["close", "volume"]))
         state = (
-            getattr(evidence, "state", "unavailable")
+            getattr(evidence, "price_state", "unavailable")
             if member.resolution_state == "identified" and listing is not None
             else "placeholder"
             if member.resolution_state == "placeholder"
@@ -439,11 +439,6 @@ def render_discovery(*, configure_page: bool = True) -> None:
         f"Coverage: {region.coverage_state.upper()} · {region.coverage_description} · "
         f"As of {region.coverage_as_of.isoformat()}"
     )
-    classification_id = database.get_classification_id(selected_region_id)
-    if classification_id is None:
-        st.info("No reviewed classification is available for this region.")
-        return
-
     market_today = datetime.now(ZoneInfo("America/New_York")).date()
     date_column, refresh_column = st.columns((3, 1))
     with date_column:
@@ -451,6 +446,12 @@ def render_discovery(*, configure_page: bool = True) -> None:
     with refresh_column:
         st.write("")
         force_refresh = st.button("Refresh data", use_container_width=True)
+    classification_id = database.get_classification_id(
+        selected_region_id, as_of=requested_as_of
+    )
+    if classification_id is None:
+        st.info("No reviewed classification is available for this region and date.")
+        return
     sectors = database.get_sectors(selected_region_id, classification_id, as_of=requested_as_of)
     if not sectors:
         st.info("This region has no active sectors in its reviewed classification.")
@@ -515,7 +516,11 @@ def render_discovery(*, configure_page: bool = True) -> None:
         as_of=requested_as_of,
     )
     representation_by_id = {item.entity_id: item.symbol for item in representations}
-    representation_symbols = tuple(dict.fromkeys(representation_by_id.values()))
+    representation_symbols = (
+        tuple(dict.fromkeys(representation_by_id.values()))
+        if selected_industry_id is None
+        else ()
+    )
     settings = load_settings()
     try:
         with st.spinner("Loading yfinance market data..."):

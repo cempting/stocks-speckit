@@ -349,9 +349,10 @@ class RegionDatabase:
             ).fetchall()
         return tuple(_region_from_row(row) for row in rows)
 
-    def get_classification_id(self, region_id: str) -> str | None:
+    def get_classification_id(self, region_id: str, *, as_of: date | None = None) -> str | None:
         if not self.is_initialized():
             return None
+        day = (as_of or date.today()).isoformat()
         with self.connect() as connection:
             row = connection.execute(
                 """
@@ -359,10 +360,12 @@ class RegionDatabase:
                 FROM classifications c
                 JOIN regions r ON r.region_id = c.region_id
                 WHERE r.region_id = ? AND r.status = 'active'
+                  AND c.effective_from <= ?
+                  AND (c.effective_to IS NULL OR c.effective_to >= ?)
                 ORDER BY c.effective_from DESC, c.classification_id
                 LIMIT 1
                 """,
-                (region_id,),
+                (region_id, day, day),
             ).fetchone()
         return str(row["classification_id"]) if row else None
 
@@ -440,7 +443,7 @@ class RegionDatabase:
         with self.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT DISTINCT
+                SELECT
                     st.instrument_id, st.company_id, st.name, st.resolution_state,
                     st.classification_state, i.sector_id, s.name AS sector_name,
                     i.industry_id, i.name AS industry_name,
@@ -456,7 +459,8 @@ class RegionDatabase:
                   AND m.effective_from <= ? AND (m.effective_to IS NULL OR m.effective_to >= ?)
                   AND i.effective_from <= ? AND (i.effective_to IS NULL OR i.effective_to >= ?)
                   AND s.effective_from <= ? AND (s.effective_to IS NULL OR s.effective_to >= ?)
-                ORDER BY st.instrument_id
+                  AND c.effective_from <= ? AND (c.effective_to IS NULL OR c.effective_to >= ?)
+                ORDER BY st.instrument_id, m.effective_from DESC
                 """,
                 (
                     region_id,
@@ -469,10 +473,17 @@ class RegionDatabase:
                     day,
                     day,
                     day,
+                    day,
+                    day,
                 ),
             ).fetchall()
             members: list[StockMembershipRecord] = []
+            seen_instruments: set[str] = set()
             for row in rows:
+                instrument_id = str(row["instrument_id"])
+                if instrument_id in seen_instruments:
+                    continue
+                seen_instruments.add(instrument_id)
                 listing_rows = connection.execute(
                     """
                     SELECT listing_id, exchange_id, symbol, provider_symbol, currency,

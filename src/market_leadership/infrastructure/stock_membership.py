@@ -41,7 +41,10 @@ def load_region_membership(
     if not database.is_initialized():
         return RegionMembershipResult("invalid_database", None, None, None, None, ())
     region = database.get_region(region_id)
-    if region is None or database.get_classification_id(region_id) != classification_id:
+    if (
+        region is None
+        or database.get_classification_id(region_id, as_of=as_of) != classification_id
+    ):
         return RegionMembershipResult(
             "empty_membership",
             region,

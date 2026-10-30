@@ -38,6 +38,9 @@ classification, and conflicting memberships. A placeholder must be explicitly id
 placeholder and must not invent a tradable ticker. Listings with valid identity but missing
 classification can be retained as unclassified, not assigned to a fabricated industry.
 Conflicting or invalid rows are never resolved through source priority.
+When the target database exists, validation also checks its reviewed identities, listing
+attributes, classification parents, and overlapping memberships without writing to it.
+Validation remains usable before initialization.
 
 ### `import`
 
@@ -56,6 +59,18 @@ quarantined; valid non-conflicting rows may be committed with a `committed_parti
 the region marked partial/unverified. Re-importing the same input is idempotent. Local reviewed
 classifications and membership remain authoritative. A partial import returns a nonzero status
 with counts and issue details so automation cannot mistake it for a complete import.
+Each quarantined row leaves no dependent records behind. If every row is rejected, published
+hierarchy, coverage, and revision remain unchanged; import-run and issue audit records may still
+be recorded. An accepted matching-identity row can promote a placeholder or unclassified stock,
+but incomplete later rows never downgrade reviewed identification or classification.
+
+Idempotent replay requires the original region, classification, source, approval, coverage,
+and exchange context. It returns persisted diagnostics and counts with zero inserted rows.
+Source-specific coverage is retained alongside the combined regional scope; chart-only imports
+do not replace exchange coverage or imply complete stock membership.
+Schema version 1 is retained. Legacy runs containing only a file hash cannot establish the
+original import context and are not replayed; re-review the input under a new source ID rather
+than deleting historical runs or rebuilding the database.
 
 ### `represent`
 

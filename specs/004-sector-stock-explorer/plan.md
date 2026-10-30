@@ -22,6 +22,69 @@ price direction. The selected-stock detail retains its price/volume chart, 50/15
 averages, and peer scores. Unavailable or unresolved records remain explicit rather than
 fabricated.
 
+## Implemented Sector Performance Preservation Baseline
+
+This section reverse-documents the accepted implementation as of 2026-10-30, not a rebuild or
+redesign. [Spec](./spec.md) FR-025-FR-032 / SC-012-SC-015 and the
+[UI contract](./contracts/progressive-discovery.md) govern subsequent work. Preserve the existing
+feature directory and completed task history. Presentation/behavior changes require explicit
+user approval and coordinated artifact/test updates. This reconciliation changes documentation
+only; ordinary data, coverage, and freshness changes remain expected.
+
+### Implementation invariants
+
+- `discovery_page.render_discovery` uses `st.columns((2, 2, 2))` for heading, Thumbnail period,
+  Performance basis, left to right. Keep active-stage titles, hierarchy selectors, coverage,
+  provenance, refresh, and insufficiency messages.
+- Single-selection segmented controls use session keys
+  `market_leadership.progressive_discovery.thumbnail_period` and
+  `market_leadership.progressive_discovery.performance_basis`. Ordered options/defaults are
+  `1w, 1m, 3m, 6m, 1y` / `3m` and `Absolute, vs S&P 500` / `Absolute`.
+  Cleared selections use those defaults; parent callbacks do not reset these controls.
+- Calendar windows subtract pandas `DateOffset` (one week, one/three/six months, one year)
+  from the requested as-of date. Pass `preview_start` through `_build_entity_tape` /
+  `_render_member_tape` to `attach_chart_series` / `build_stock_tape_frame`.
+  `_preview_payloads` calculates SMA/direction before inclusive cropping, without modifying
+  source history. The selected-stock detail retains its full history.
+- `_build_entity_tape` keeps the spec's column order and `Ticker` label, not `Representation`.
+  Keep repository name/ID ordering; do not introduce implicit ranking or row filtering.
+- `_render_visual_tape` keeps Streamlit columns, row-specific Altair previews, and styled
+  return cells, not a plain dataframe that drops charts/colors. Row weights remain
+  `[1.3, 1.3, 1.0, ...]`. Price (with/without SMA) and volume plots have nominal width 135,
+  height 84; `width="stretch"` adapts to cells, so 135 is not a fixed browser width.
+- `performance_column_styles` is the shared palette producer for Styler and HTML cells.
+  Keep independent per-column positive/negative normalization; light neutral/gain/loss
+  colors `#f4f6f5` / `#5f9f75` / `#d66d65`, dark colors
+  `#18232d` / `#166534` / `#991b1b`, foregrounds `#17212b` / `#edf3f7`.
+  Return cells use `:.2f` plus `%`, right alignment, 0.5rem padding, 0.25rem corners, and
+  tabular numerals. Missing cells say `Unavailable` without a gain/loss background.
+- `calculate_performance` remains authoritative: completed closes on/before calendar
+  boundaries, relative values subtracting SPY returns, then percentage display. Preview
+  selection does not enter return calculations or provider history-range keys. Preserve
+  requested/observed session and stale/insufficient behavior.
+- FR-032's 11 sector ETF mappings are reviewed effective-dated database records, not an
+  automatic `SECTOR_PROXIES` fallback. ETF listings have no industry membership. The local
+  setup records mappings from 2026-10-30; earlier requests without an active mapping remain
+  unavailable. Local database contents are deployment state, not clean-checkout defaults.
+
+### Preservation evidence
+
+`tests/unit/ui/test_progressive_tape.py` covers both price branches at 84x135, all five windows
+for entity/stock payloads, SMA warmup, first-visible direction, empty windows, and light/dark
+colored rendering. `tests/app/test_sector_stock_explorer.py` covers Ticker, options/defaults,
+cross-stage persistence, cleared-control behavior, complete column order, and unchanged returns
+for short/long preview windows. `tests/integration/test_region_discovery.py` verifies all 11
+reviewed mappings, their effective-date boundaries, absent industry fallback, and unchanged
+memberships. `tests/unit/ui/test_performance_table.py` covers shared palettes.
+
+[Tasks](./tasks.md) T034-T035 and T047 protect, rather than redesign, this baseline.
+The [quickstart evidence](./quickstart.md#convergence-preservation-evidence-2026-10-30) records
+fresh-browser geometry, colored cells, and all five periods at a wide viewport. These observed
+checks do not replace permanent automated protection. Use temporary databases and injected providers.
+Some root-app tests assume a missing database: for those runs, point
+`MARKET_UNIVERSE_DATABASE_PATH` at an explicitly absent test path if the default is populated;
+never delete the user's database to satisfy a test.
+
 ## Technical Context
 
 **Language/Version**: Python `>=3.12,<3.13`.

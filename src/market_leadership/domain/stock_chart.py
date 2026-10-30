@@ -43,6 +43,9 @@ def build_stock_chart_evidence(
     completed = history.loc[pd.DatetimeIndex(history.index).date <= as_of].sort_index().copy()
     if completed.index.has_duplicates:
         raise ValueError("Stock chart sessions must be unique")
+    for column in ("close", "volume"):
+        if column not in completed.columns:
+            completed[column] = float("nan")
     close_valid = (
         "close" in completed.columns
         and not completed["close"].empty
@@ -59,7 +62,7 @@ def build_stock_chart_evidence(
         return StockChartEvidence(
             instrument_id,
             as_of,
-            None,
+            pd.DatetimeIndex(completed.index)[-1].date() if not completed.empty else None,
             completed,
             "insufficient",
             "available" if volume_valid else "insufficient",

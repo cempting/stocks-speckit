@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-30
 
-**Status**: Draft
+**Status**: Implemented; Sector performance preservation baseline recorded 2026-10-30
 
 **Input**: User description: "Show progressive sector, industry, and stock tapes with chart
 thumbnails and a detailed stock view; add a 50-simple moveing average to price thumbnails and an
@@ -17,7 +17,7 @@ Original feature description: "1. when no sector is selected, the app show the s
 5. the industry momentum shall contain a thumbnails of the industry chart at the first column
 6. the contained stocks view shows a thumbnail chart, ticker, name, price, score
 7. the user may click on a stock and the will jump into a detailed stock view page
-8. the detailed stock view page contains chart (price, volume, 50SMA, 150 SMA) scoreboard , further things to come"
+8. the detailed stock view page contains chart (price, volume, 50MA, 150MA) scoreboard , further things to come"
 
 ## Clarifications
 
@@ -28,6 +28,15 @@ Original feature description: "1. when no sector is selected, the app show the s
 - Q: How should the existing US ticker lists be represented when seeding the database? → A: Treat US as one region, combine its stock records across exchanges, and retain each exchange as a listing of the stock rather than a separate universe.
 - Q: How should the app choose among separate named US universes before sector and industry filtering? → A: Scope discovery by region instead of named index universes; the initial US region includes stocks listed across its exchanges.
 - Q: What should the data-management tooling do when local files and the approved live source disagree about a stock's region, sector, or industry? → A: Treat reviewed local files as authoritative for those classifications and report live-source differences without overwriting them.
+
+### Accepted presentation baseline (2026-10-30)
+
+The current Sector performance implementation is the accepted baseline, not a redesign proposal.
+Future implementation, task generation, and refactoring MUST preserve FR-025-FR-032 unless the
+user explicitly approves a change and the affected specification, plan, contract, tasks, and
+regression evidence are updated together. Ordinary changes in market values, freshness status,
+reviewed mappings, and source coverage remain expected. This reconciliation updates the existing
+feature artifacts only; it does not request application changes or a new feature.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -113,6 +122,22 @@ the 50-session average when enough history exists, and use the required directio
    insufficient, **When** its tape is displayed, **Then** the affected evidence is identified
    and is not presented as valid data.
 
+6. **Given** the sector tape on a wide viewport, **When** its heading row renders, **Then**
+   "Sector performance" is left, "Thumbnail period" is middle, and "Performance basis" is right.
+7. **Given** any tape, **When** the user chooses `1w`, `1m`, `3m`, `6m`, or `1y`, **Then**
+   both thumbnails use that calendar window ending at the selected as-of date, retain their
+   supported 50-session average and prior-close direction context, and do not change return
+   columns, latest stock price, membership, or the stock-detail chart. Default is `3m`.
+8. **Given** chosen period and basis controls, **When** navigating between hierarchy tapes,
+   **Then** both choices persist; clearing either uses `3m` or `Absolute`, respectively.
+9. **Given** positive, negative, zero, and missing returns in light or dark mode, **When**
+   sector/industry rows render, **Then** gains are green, losses red, zero neutral, and missing
+   values show "Unavailable" without gain/loss coloring. Valid values show two decimals and
+   a percent sign; intensity scales independently for each period and sign.
+10. **Given** the reviewed US sector mappings, **When** sector performance renders, **Then**
+    charts/returns use the explicitly mapped ETF labeled "Ticker", not a member-stock
+    aggregate. Absent or inactive mappings remain explicitly unavailable.
+
 ### User Story 3 - Inspect an Individual Stock (Priority: P2)
 
 As an investor, I want to open a detailed view for a stock from its tape, so I can inspect its
@@ -172,6 +197,11 @@ simple moving averages, and scorecard information.
   presented as a valid empty market.
 - A region whose sources are partial or unverified shows its coverage scope and status instead of
   implying that its industry results contain every stock in that region.
+
+- A selected thumbnail window has no observations: show unavailable chart cells rather than
+  borrowing older observations outside the window or changing valid return values.
+- A short window still uses earlier observations to calculate its SMA and first visible
+  volume bar's direction; cropping does not restart either calculation.
 
 ## Requirements *(mandatory)*
 
@@ -249,6 +279,37 @@ simple moving averages, and scorecard information.
   completeness state (`complete`, `partial`, or `unverified`) and MUST NOT describe partial or
   unverified results as all stocks in that region.
 
+- **FR-025**: On a wide viewport, the active tape heading, "Thumbnail period", and "Performance
+  basis" MUST appear in one row, left to right. Preserve the active-stage titles "Sector
+  performance", "Industry momentum", and "Contained stocks".
+- **FR-026**: Thumbnail period MUST offer exactly `1w`, `1m`, `3m`, `6m`, `1y` in that order,
+  defaulting to `3m`. Both thumbnails MUST include available observations from the inclusive
+  calendar-window start through the selected as-of date, excluding future observations.
+- **FR-027**: Cropping MUST follow SMA and prior-close direction calculation on the full
+  available completed history. Period changes MUST NOT change performance returns, latest
+  stock price, stock-detail history, or membership.
+- **FR-028**: Performance basis MUST offer "Absolute" and "vs S&P 500", defaulting to
+  "Absolute". The latter MUST subtract the benchmark's matching-period return from the
+  entity's return, not calculate a return ratio. Both choices MUST persist across hierarchy
+  navigation; cleared selections MUST use their default behavior.
+- **FR-029**: Sector tape columns MUST remain ordered: "Price + 50-session SMA", "Volume by
+  price direction", "Sector", "Ticker", "1 week", "1 month", "3 months", "6 months",
+  "12 months", "Status". Industry rows replace "Sector" with "Industry".
+  "Ticker" MUST NOT revert to "Representation".
+- **FR-030**: Both thumbnail plot heights MUST remain 84 pixels across all tapes and period
+  choices. Price and supported SMA overlay MUST remain in the first chart; directional volume
+  MUST remain in the separate adjacent chart with its existing explanatory legend.
+- **FR-031**: All five sector/industry return columns MUST preserve readable light/dark
+  gain/loss palettes: green gains, red losses, neutral zero, independently scaled by period
+  and sign. Valid returns MUST be right-aligned two-decimal percentages. Missing returns
+  MUST say "Unavailable" without gain/loss coloring. Chart rendering MUST retain cell colors.
+- **FR-032**: The accepted US sector chart basis MUST use explicit reviewed ETF mappings:
+  Communication Services/XLC, Consumer Discretionary/XLY, Consumer Staples/XLP, Energy/XLE,
+  Financials/XLF, Health Care/XLV, Industrials/XLI, Information Technology/XLK, Materials/XLB,
+  Real Estate/XLRE, Utilities/XLU. Mapping availability MUST respect effective dates.
+  Mappings MUST NOT create ETF industry memberships, be silently inferred from names, or
+  replace an unavailable industry chart with its parent sector chart.
+
 ### Key Entities *(include if feature involves data)*
 
 - **Sector**: A market grouping with an identity, performance observations, and chart history.
@@ -303,6 +364,18 @@ simple moving averages, and scorecard information.
   the database setup action and none is presented as a valid empty market.
 - **SC-011**: In controlled partial or unverified coverage cases, 100% of region views identify
   the coverage state and none claims complete regional stock coverage.
+
+- **SC-012**: All five thumbnail choices produce the exact selected calendar window for
+  available price/volume observations in controlled cases, while 100% of return values and
+  latest stock prices remain unchanged.
+- **SC-013**: In both light and dark controlled cases, all five return columns preserve the
+  gain/loss/zero/missing conventions and two-decimal percentage formatting.
+- **SC-014**: On a wide viewport, all three header elements retain left-to-right order, the
+  sector tape retains all ten labeled columns, and both plots remain 84 pixels high for
+  every period choice.
+- **SC-015**: All 11 reviewed US sector mappings resolve to the accepted tickers without
+  changing memberships; both control choices survive valid hierarchy transitions in
+  controlled navigation cases.
 
 ## Assumptions
 

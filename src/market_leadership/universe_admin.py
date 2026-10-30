@@ -96,6 +96,7 @@ def main(argv: list[str] | None = None) -> int:
                 classification_id=arguments.classification,
                 source_id=arguments.source_id,
                 exchange_id=arguments.exchange,
+                database=database,
             )
             _print_report(report)
             return 1 if any(issue.severity == "error" for issue in report.issues) else 0

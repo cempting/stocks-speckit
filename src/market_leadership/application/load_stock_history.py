@@ -17,6 +17,8 @@ class StockHistorySeries:
     observed_on: date | None
     state: str
     reason: str | None = None
+    price_state: str = "unavailable"
+    volume_state: str = "unavailable"
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,27 +76,10 @@ def load_stock_history(
                 )
             )
             continue
-        if not {"close", "volume"}.issubset(history.columns):
-            series.append(
-                StockHistorySeries(
-                    symbol,
-                    pd.DataFrame(columns=["close", "volume"], dtype="float64"),
-                    None,
-                    "insufficient",
-                    "The member history is missing close or volume evidence.",
-                )
-            )
-            continue
         eligible = history.loc[
-            pd.DatetimeIndex(history.index).date <= as_of, ["close", "volume"]
-        ].sort_index()
-        values_valid = (
-            not eligible.empty
-            and not eligible.index.has_duplicates
-            and all(isfinite(float(value)) and float(value) > 0 for value in eligible["close"])
-            and all(isfinite(float(value)) and float(value) >= 0 for value in eligible["volume"])
-        )
-        if not values_valid:
+            pd.DatetimeIndex(history.index).date <= as_of
+        ].reindex(columns=["close", "volume"]).sort_index()
+        if eligible.empty or eligible.index.has_duplicates:
             series.append(
                 StockHistorySeries(
                     symbol,
@@ -105,12 +90,24 @@ def load_stock_history(
                 )
             )
             continue
+        states: dict[str, str] = {}
+        for column in ("close", "volume"):
+            values = pd.to_numeric(eligible[column], errors="coerce")
+            valid = values.map(lambda value: isfinite(float(value))) & (
+                values > 0 if column == "close" else values >= 0
+            )
+            eligible[column] = values.where(valid)
+            states[column] = "available" if valid.all() else "insufficient"
+        complete = all(state == "available" for state in states.values())
         series.append(
             StockHistorySeries(
                 symbol,
                 eligible,
                 pd.DatetimeIndex(eligible.index)[-1].date(),
-                "available",
+                "available" if complete else "insufficient",
+                None if complete else "Close or volume evidence is incomplete; see series states.",
+                states["close"],
+                states["volume"],
             )
         )
     return StockHistoryBatch(provider.provider_id, as_of, tuple(series))

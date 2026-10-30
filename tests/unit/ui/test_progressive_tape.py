@@ -145,6 +145,37 @@ def test_thumbnail_window_without_observations_is_unavailable():
     assert frame["Volume chart"].iloc[0] == "Unavailable"
 
 
+@pytest.mark.parametrize("count,expected", [(10, True), (80, False)])
+def test_price_cell_discloses_insufficient_sma_without_changing_plot_height(
+    count: int, expected: bool
+) -> None:
+    def app_script(count: int) -> None:
+        from datetime import date
+
+        import pandas as pd
+
+        from market_leadership.ui.components.progressive_tape import (
+            attach_chart_series,
+            render_chart_tape,
+        )
+
+        history = pd.DataFrame(
+            {"close": range(1, count + 1), "volume": [100.0] * count},
+            index=pd.bdate_range(end="2026-10-30", periods=count),
+        )
+        frame = attach_chart_series(
+            pd.DataFrame({"Sector": ["Short"]}),
+            identity_column="Sector",
+            history_by_id={"Short": history},
+            preview_start=date(2026, 10, 23),
+        )
+        render_chart_tape(frame, key="sma-disclosure")
+
+    app = AppTest.from_function(app_script, args=(count,)).run()
+    assert not app.exception
+    assert any("50-session SMA: Insufficient" == item.value for item in app.caption) == expected
+
+
 def test_stock_tape_contains_identity_price_and_three_explicit_score_states():
     frame = build_stock_tape_frame(
         (

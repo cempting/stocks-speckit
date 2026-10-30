@@ -97,6 +97,33 @@ No separate project-wide framework is required. The database and its first consu
 - [X] T025 [P] Update `specs/004-sector-stock-explorer/contracts/universe-management-cli.md` and `specs/004-sector-stock-explorer/quickstart.md` to document the implemented reviewed-file inputs, database lifecycle, import/validation commands, approval gate, and focused verification workflow.
 - [X] T026 Run the focused feature tests and quality checks from `specs/004-sector-stock-explorer/quickstart.md`, then run `uv run ruff check src/market_leadership tests`, `uv run pyright`, and `uv run pytest -m "not live"`; resolve feature-caused failures without weakening existing checks.
 
+## Phase 7: Preserve the Accepted Sector Performance Baseline
+
+**Scope**: Reverse-document the existing implementation under FR-025-FR-032 / SC-012-SC-015,
+not rebuild it. Completed items record inspected implementation and existing evidence, not
+newly executed code changes. Preserve all earlier task IDs and completion history.
+
+### Completed implementation and reconciliation
+
+- [X] T027 [US2] Record the accepted heading/controls, labels/order, chart size, period/basis behavior, colors, ETF basis, and explicit change-approval rule in `specs/004-sector-stock-explorer/spec.md`, `specs/004-sector-stock-explorer/plan.md`, and `specs/004-sector-stock-explorer/contracts/progressive-discovery.md`; retain this feature and leave runtime code unchanged during reconciliation.
+- [X] T028 [US2] Preserve the implemented left/middle/right header and namespaced control persistence in `src/market_leadership/ui/workflows/discovery_page.py`; existing defaults/options/navigation checks are in `tests/app/test_sector_stock_explorer.py`.
+- [X] T029 [US2] Preserve inclusive calendar-window cropping after SMA/direction calculation in `src/market_leadership/ui/components/progressive_tape.py`; all five windows, warmup, first-visible direction, and empty-window behavior are covered by `tests/unit/ui/test_progressive_tape.py`.
+- [X] T030 [US2] Preserve 84-pixel height and nominal 135-pixel width for price with/without SMA and volume in `src/market_leadership/ui/components/progressive_tape.py`; exact chart-spec dimensions are covered by `tests/unit/ui/test_progressive_tape.py`.
+- [X] T031 [US2] Preserve shared light/dark per-period/per-sign colors, two-decimal percentages, neutral zero, and uncolored missing values in `src/market_leadership/ui/performance_table.py` and `src/market_leadership/ui/components/progressive_tape.py`; existing checks are in `tests/unit/ui/test_progressive_tape.py` and `tests/unit/ui/test_performance_table.py`.
+- [X] T032 [US2] Preserve Ticker and the independence of preview windows from the five returns in `src/market_leadership/ui/workflows/discovery_page.py`; existing tests in `tests/app/test_sector_stock_explorer.py` prove the heading and unchanged sufficient returns for short/long windows.
+- [X] T033 [US2] Document reviewed ETF setup and implemented controls/formatting in `specs/004-sector-stock-explorer/quickstart.md`; reconcile `specs/004-sector-stock-explorer/checklists/requirements.md` without treating ignored local database contents as clean-checkout defaults.
+
+### Remaining regression protection (no presentation changes)
+
+- [X] T034 [US2] Extend `tests/app/test_sector_stock_explorer.py` and `tests/integration/test_region_discovery.py` with deterministic baseline assertions for complete ordered sector/industry columns, cleared-control defaults, and all 11 FR-032 mappings; use temporary databases to prove effective-date filtering, missing-mapping states, and unchanged membership counts. Do not seed runtime fallback mappings or modify UI behavior to pass tests.
+- [X] T035 [US2] After T034, run focused tests from `specs/004-sector-stock-explorer/quickstart.md` and verify a fresh browser session at a wide viewport retains heading/period/basis order, both 84-pixel plots, colored percentages, and all five selectable windows. Record observed results in `specs/004-sector-stock-explorer/quickstart.md`; report discrepancies rather than redesigning the baseline.
+
+**Dependencies**: T027 records accepted behavior from T028-T032 and follows original US2 work
+(T017-T020). T033 follows T027. T034 follows T027-T033; T035 follows T034.
+T028-T032 are completed implementation history, not instructions to replace the UI.
+The original reconciliation implemented no runtime changes. T034-T035 were subsequently
+completed during convergence implementation; the quickstart records automated and browser evidence.
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -174,3 +201,51 @@ Task: T022 Extend stock-detail AppTest cases in tests/app/test_stock_detail.py
 - Every task uses the required checklist format: unchecked checkbox, sequential ID, optional `[P]`, story label for story tasks, and exact file path(s).
 - The live membership refresh remains disabled until the single selected provider passes the required coverage, terms, and display-rights review; tasks must not select or substitute an unreviewed provider.
 - No source-priority merge, fabricated classification, proxy-chart substitution, or score aggregate is introduced.
+
+## Phase 8: Convergence
+
+Assessment date: 2026-10-30. These tasks address verified implementation gaps; they do not
+authorize a redesign of FR-025-FR-032. Retain all earlier task IDs, checkbox states, and the
+accepted Sector performance layout, dimensions, controls, labels, palettes, and calculations.
+The existing feature suite passed 74 tests, but targeted temporary-database/provider checks
+reproduced the gaps below. Live membership refresh remains approval-gated as planned; this
+phase does not authorize enabling it or selecting a new provider.
+
+- [X] T036 [US2] CRITICAL — Fix unsuccessful member-history caching and refresh persistence in `src/market_leadership/ui/cache.py`: an empty provider response is cached as an unavailable batch, a forced refresh returns recovered evidence, and the next ordinary call returns the old unavailable batch. Cache only successful evidence, keep per-member failures explicit and retryable, and replace/invalidate the matching successful-cache entry on refresh without clearing unrelated scopes. Add recovering-provider, partial-batch, and refresh-then-rerun regressions in `tests/integration/test_stock_evidence.py` per Constitution application constraint on successful-only caching and scoped refresh, T019 (contradicts). Finding F1.
+
+- [X] T037 [US2] CRITICAL — Remove hidden industry-proxy history requests when the stock tape/detail is active in `src/market_leadership/ui/workflows/discovery_page.py`; a controlled stock-tape navigation currently requests `('SPY', 'PPP')` for an invisible industry proxy before requesting member symbols `('AAA', 'BBB')`. Restrict requests to evidence required by the active view, retaining any benchmark request needed for the visible provenance/freshness contract, all explicit score-load gates, and the accepted header/control presentation. Add recording-provider tests for stock-tape/detail navigation in `tests/app/test_sector_stock_explorer.py` and `tests/integration/test_stock_evidence.py` per Constitution IV and the application active-view request constraint, plan: Phase 1 data flow steps 2-5 (contradicts). Finding F2.
+
+- [X] T038 [US1] Deduplicate effective-dated membership results by stable `instrument_id` in `src/market_leadership/infrastructure/region_database.py` and reconcile accepted overlapping same-industry records in `src/market_leadership/infrastructure/universe_import.py` without losing listing/source history. Two reviewed listings for the same instrument, with membership starts in 2020 and 2021, currently return two member rows on 2026-10-30 because `SELECT DISTINCT` includes membership dates. Add differing-start/overlapping-period and multi-listing tests in `tests/unit/infrastructure/test_region_database.py` and `tests/integration/test_region_discovery.py`; prove each stock is returned/scored once and historical queries remain correct per FR-016, SC-006, US1/AC7, T001/T006/T009 (partial). Finding F3.
+
+- [X] T039 [US1] Make row quarantine and rejected publication atomic in `src/market_leadership/infrastructure/universe_import.py`: validate identity/listing conflicts before publishing dependent records or use transactional row isolation, and preserve the prior published hierarchy, stocks, memberships, coverage, and revision when no rows are accepted. A rejected conflicting listing currently leaves an orphan stock and new sector, while rejected classification input changes region coverage metadata. Keep actionable import-run/issues audit records without publishing rejected data. Add database-snapshot regressions for all-rejected and mixed accepted/quarantined inputs in `tests/unit/infrastructure/test_universe_import.py` per T002/T007, plan: atomic import/publication decision and referenced data-model rejection invariant (contradicts). Finding F4.
+
+- [X] T040 [US1] Reconcile stored stock states after reviewed imports in `src/market_leadership/infrastructure/universe_import.py` rather than leaving the first `INSERT OR IGNORE` state forever: a placeholder receiving a verified listing remains `placeholder` and is still excluded from live requests; likewise an unclassified stock receiving reviewed membership must reflect its accepted classification. Preserve stable identity, report conflicting changes, and do not downgrade already verified/classified evidence on an incomplete later row. Add promotion/state-coherence tests in `tests/unit/infrastructure/test_universe_import.py` and request-eligibility tests in `tests/integration/test_stock_evidence.py` per FR-021, US1/AC8, T006/T007/T019 (partial). Finding F5.
+
+- [X] T041 [US1] Make reviewed-file validation detect existing local-source conflicts using the target `--database` in `src/market_leadership/universe_admin.py` and `src/market_leadership/infrastructure/universe_import.py`. Currently the validate command accepts a database option but never consults it, so a file that conflicts with stored reviewed membership reports zero conflicts before import rejects it. Share conflict checks with import, also detect inconsistent identity/name/parent values within input, and keep validation read-only and usable before database initialization. Add CLI and importer regressions in `tests/integration/test_universe_admin.py` and `tests/unit/infrastructure/test_universe_import.py` per FR-023, US1/AC11, T002/T003/T007 (partial). Finding F6.
+
+- [X] T042 [US1] Restore persisted conflict diagnostics and enforce matching review/import context on idempotent replay in `src/market_leadership/infrastructure/universe_import.py` and, if required, `src/market_leadership/infrastructure/region_database.py`. A repeated database-conflicting file currently keeps `rejected` status but returns zero conflicts and no issues because only fresh parse issues are returned. Validate source/approval/region/classification context before the early return; preserve accurate original row issues/counts with `inserted_rows=0`, and document any necessary schema migration without overwriting existing databases. Add repeat-partial/rejected and changed-context tests in `tests/unit/infrastructure/test_universe_import.py` and `tests/integration/test_universe_admin.py` per T002/T007/T025 and plan: idempotent imports with reviewed provenance (partial). Finding F7.
+
+- [X] T043 [US2] Preserve independent price/volume evidence end-to-end in `src/market_leadership/application/load_stock_history.py`, `src/market_leadership/domain/stock_chart.py`, and `src/market_leadership/ui/components/stock_detail.py`, with necessary wiring in `src/market_leadership/ui/workflows/discovery_page.py`. Valid closes with missing volume currently become an empty insufficient history, hiding both price and latest-price evidence; detail also gates all chart rendering on price availability. Preserve validated available series, identify only affected series as unavailable/insufficient, and show independently usable volume without fabricating prices. Add pipeline/detail tests in `tests/integration/test_stock_evidence.py`, `tests/unit/domain/test_stock_chart.py`, and `tests/app/test_stock_detail.py` per FR-011/FR-017, US2/AC5, US3/AC4, T014/T019/T023 (partial). Finding F8.
+
+- [X] T044 [US2] Expose insufficient/unavailable 50-session SMA state within existing price-chart cells in `src/market_leadership/ui/components/progressive_tape.py` while retaining the available price line, 84-pixel plot height, current column order, and all baseline controls/colors. Currently `build_price_thumbnail` silently returns a price-only chart when no SMA exists, with no row-specific insufficiency indication despite the shared SMA heading. Add component/AppTest coverage for short histories and cropped windows with/without valid warmup in `tests/unit/ui/test_progressive_tape.py` and `tests/app/test_sector_stock_explorer.py` per FR-019, US2/AC5, T014/T018 (partial). Finding F9.
+
+- [X] T045 [US1] Select active classifications by the requested as-of date in `src/market_leadership/infrastructure/region_database.py` and wire that date consistently through `src/market_leadership/infrastructure/stock_membership.py`, `src/market_leadership/ui/workflows/discovery_page.py`, and `src/market_leadership/ui/workflows/industry_deep_dive.py`. `get_classification_id` currently selects the newest classification without effective-date filtering; a future 2030 classification hides valid 2026 sectors and can make historical membership look empty. Add future/expired/current classification and historical-navigation tests in `tests/unit/infrastructure/test_region_database.py`, `tests/integration/test_region_discovery.py`, and `tests/app/test_sector_stock_explorer.py` per FR-014/FR-016, T001/T006/T009, plan: dated database-query semantics (partial). Finding F10.
+
+- [X] T046 [US1] Preserve truthful region-wide coverage scope across accepted imports in `src/market_leadership/infrastructure/universe_import.py` and `src/market_leadership/infrastructure/region_database.py`: source-specific provenance must not unconditionally replace the region's combined reviewed scope, especially when importing the 11 unclassified chart ETF listings after exchange memberships. Retain source coverage records, preserve partial/unverified completeness semantics, and add sequential exchange/chart-only import tests in `tests/unit/infrastructure/test_universe_import.py` plus coverage-disclosure checks in `tests/integration/test_region_discovery.py` per FR-024, SC-011, US1/AC12, T007/T011 (contradicts). Finding F11.
+
+- [X] T047 [US2] Complete the already-pending T034 then T035 preservation checks rather than creating a parallel redesign: add exact ordered sector/industry label, cleared-control default, and all-11-reviewed-mapping assertions in `tests/app/test_sector_stock_explorer.py` and `tests/integration/test_region_discovery.py`, including effective-date/missing-mapping behavior and unchanged stock memberships. After relevant convergence fixes, run the focused quality gates, verify the existing wide-screen header/controls, both 84-pixel plots, colored percentages, and all five periods in a fresh browser session, and record actual results in `specs/004-sector-stock-explorer/quickstart.md`. Use temporary reviewed test inputs, not runtime fallback mappings; report any baseline discrepancy without silently redesigning it per T034/T035, FR-025-FR-032, SC-014/SC-015, plan: preservation evidence (partial). Finding F12.
+
+### Convergence dependencies and validation
+
+- T039 precedes T040-T042 and T046 because accepted/quarantined publication boundaries must be
+  correct before state, replay, and coverage reconciliation. T038 can be assessed independently,
+  but coordinate edits to the same importer/repository files.
+- T036 and T043 must be validated together for partial-series caching and refresh behavior;
+  neither is permission to hide failed members or repeat successful requests unnecessarily.
+- T037, T044, and T045 must preserve FR-025-FR-032 while correcting data/request/state behavior.
+- T047 follows T036-T046 and completes existing T034 before existing T035. Keep the original
+  T034/T035 entries and update their checkboxes only when their evidence is actually complete.
+- Write reproducing tests before fixes. Run focused importer/repository/CLI, cache/history,
+  component, and AppTest selectors for each affected behavior, then Ruff, Pyright, and the
+  non-live regression suite. Use temporary databases and injected providers/clocks; never
+  delete or rebuild a user's populated database as a test shortcut.
