@@ -43,6 +43,35 @@ def test_reader_constructs_one_ticker_and_normalizes_all_components():
     assert build_scorecard(evidence).metrics[0].value == 0.4
 
 
+@pytest.mark.parametrize(
+    ("market_cap", "expected"),
+    [
+        (10_000_000_000, 10_000_000_000.0),
+        (None, None),
+        ("not-a-number", None),
+        (float("nan"), None),
+        (float("inf"), None),
+        (0, None),
+        (-1, None),
+    ],
+)
+def test_reader_retains_only_valid_current_profile_market_cap(
+    market_cap: object, expected: float | None
+) -> None:
+    class Capitalized(FakeTicker):
+        info = {
+            "symbol": "TEST",
+            "financialCurrency": "USD",
+            "marketCap": market_cap,
+        }
+
+    evidence = read_fundamentals(FundamentalRequest("TEST"), lambda _: Capitalized())
+    assert evidence.market_cap == expected
+    assert evidence.market_cap_as_of == (
+        evidence.fetched_at.date() if expected is not None else None
+    )
+
+
 def test_empty_component_is_uncached_acquisition_error_with_safe_partial_evidence():
     class EmptyCash(FakeTicker):
         quarterly_cashflow = pd.DataFrame()

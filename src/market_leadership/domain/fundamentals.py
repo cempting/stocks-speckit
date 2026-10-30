@@ -66,6 +66,8 @@ class FundamentalBundle:
     cash: tuple[FinancialQuarter, ...]
     balance: tuple[FinancialQuarter, ...]
     warnings: tuple[str, ...] = ()
+    market_cap: float | None = None
+    market_cap_as_of: date | None = None
 
     @property
     def fingerprint(self) -> str:

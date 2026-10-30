@@ -255,6 +255,7 @@ def _render_member_tape(
                 if score
                 else ("placeholder" if member.resolution_state == "placeholder" else "not_loaded"),
                 score_reason=score.reason if score else None,
+                market_cap=score.market_cap if score else None,
                 resolution_state=member.resolution_state,
             )
         )

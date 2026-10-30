@@ -30,6 +30,7 @@ class StockTapeRow:
     scorecard: PeerScorecard | None = None
     score_state: str = "not_loaded"
     score_reason: str | None = None
+    market_cap: float | None = None
     resolution_state: str = "identified"
 
 
@@ -64,18 +65,47 @@ def attach_chart_series(
     return result
 
 
-def _score_text(score: BlockPeerScore | None, state: str) -> str:
-    if score is not None and score.state == "available" and score.value is not None:
-        if isfinite(score.value) and 0 <= score.value <= 100:
-            return f"{score.value:.1f}"
-        return "Unavailable"
+def _overall_score_text(scorecard: PeerScorecard | None, state: str) -> str:
     if state == "error":
         return "Error"
-    if score is not None and score.state == "insufficient":
-        return "Insufficient"
     if state == "not_loaded":
         return "Not loaded"
-    return "Unavailable"
+    if state == "insufficient":
+        return "Insufficient"
+    if scorecard is None:
+        return "Unavailable"
+
+    components: tuple[BlockPeerScore, ...] = (
+        scorecard.quality,
+        scorecard.growth,
+        scorecard.cash_flow,
+    )
+    if any(component.state == "insufficient" for component in components):
+        return "Insufficient"
+    if not all(
+        component.state == "available"
+        and component.value is not None
+        and isfinite(component.value)
+        and 0 <= component.value <= 100
+        for component in components
+    ):
+        return "Unavailable"
+    score = sum(
+        component.value for component in components if component.value is not None
+    ) / len(components)
+    return f"{score:.1f}"
+
+
+def _cap_type_text(market_cap: float | None, *, state: str, resolution_state: str) -> str:
+    if state in ("error", "not_loaded", "placeholder") or resolution_state == "placeholder":
+        return "Unavailable"
+    if market_cap is None or not isfinite(market_cap) or market_cap <= 0:
+        return "Unavailable"
+    if market_cap >= 10_000_000_000:
+        return "Large"
+    if market_cap >= 2_000_000_000:
+        return "Mid"
+    return "Small"
 
 
 def build_stock_tape_frame(
@@ -92,31 +122,12 @@ def build_stock_tape_frame(
                     else row.ticker
                 ),
                 "Name": row.name,
-                "Price": (
-                    f"{float(row.history['close'].iloc[-1]):.2f}"
-                    if row.price_state == "available"
-                    and not row.history.empty
-                    and isfinite(float(row.history["close"].iloc[-1]))
-                    else row.price_state.title()
+                "CAP Type": _cap_type_text(
+                    row.market_cap,
+                    state=row.score_state,
+                    resolution_state=row.resolution_state,
                 ),
-                "Chart status": (
-                    "Available"
-                    if row.price_state == "available"
-                    else f"{row.price_state.title()}: {row.price_reason}"
-                    if row.price_reason
-                    else row.price_state.title()
-                ),
-                "Observed": row.observed_on.isoformat() if row.observed_on else "Unavailable",
-                "Quality": _score_text(
-                    row.scorecard.quality if row.scorecard else None, row.score_state
-                ),
-                "Growth": _score_text(
-                    row.scorecard.growth if row.scorecard else None, row.score_state
-                ),
-                "Cash Flow": _score_text(
-                    row.scorecard.cash_flow if row.scorecard else None, row.score_state
-                ),
-                "Score status": row.score_reason or row.score_state.replace("_", " ").title(),
+                "Total Score": _overall_score_text(row.scorecard, row.score_state),
                 "Instrument ID": row.instrument_id,
                 "Resolution": row.resolution_state,
             }
@@ -247,7 +258,7 @@ def _render_visual_tape(frame: pd.DataFrame, *, key: str, selectable: bool) -> t
     ]
     weights = [1.3, 1.3, *([1.0] * len(content_columns))]
     headings = st.columns(weights)
-    headings[0].caption("Price + 50MA")
+    headings[0].caption("Price + 50 MA")
     headings[1].caption("Volume by price direction")
     for heading, label in zip(headings[2:], content_columns, strict=True):
         heading.caption(label)
@@ -273,7 +284,7 @@ def _render_visual_tape(frame: pd.DataFrame, *, key: str, selectable: bool) -> t
                     isinstance(value := point.get("sma50"), (int, float)) and isfinite(value)
                     for point in records
                 ):
-                    st.caption("50-session SMA: Insufficient")
+                    st.caption("50 MA: Insufficient")
         with cells[1]:
             chart = build_volume_thumbnail(row[volume_column])
             if chart is None:

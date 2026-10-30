@@ -51,6 +51,14 @@ def _scorecard(instrument_id: str) -> PeerScorecard:
     return PeerScorecard(instrument_id, quality, growth, cash_flow)
 
 
+def _available_scorecard(instrument_id: str) -> PeerScorecard:
+    metric = MetricPeerScore("metric", 1.0, 62.5, 5, "available")
+    quality = BlockPeerScore("Quality", 60.0, "available", (metric, metric))
+    growth = BlockPeerScore("Growth", 75.0, "available", (metric, metric))
+    cash_flow = BlockPeerScore("Cash Flow", 90.0, "available", (metric, metric))
+    return PeerScorecard(instrument_id, quality, growth, cash_flow)
+
+
 def test_chart_previews_are_joined_by_each_rows_own_identity():
     rows = pd.DataFrame({"ID": ["sector-a", "sector-b"]})
 
@@ -130,7 +138,14 @@ def test_thumbnail_period_filters_both_series_without_losing_sma_warmup(
             history["close"].rolling(50).mean().loc[expected.index[0]]
         )
         assert volume[0]["direction"] == "up"
-    assert stock_frame["Price"].iloc[0] == "400.00"
+    assert stock_frame.columns.tolist()[:6] == [
+        "Price chart",
+        "Volume chart",
+        "Ticker",
+        "Name",
+        "CAP Type",
+        "Total Score",
+    ]
 
 
 def test_thumbnail_window_without_observations_is_unavailable():
@@ -173,10 +188,10 @@ def test_price_cell_discloses_insufficient_sma_without_changing_plot_height(
 
     app = AppTest.from_function(app_script, args=(count,)).run()
     assert not app.exception
-    assert any("50-session SMA: Insufficient" == item.value for item in app.caption) == expected
+    assert any("50 MA: Insufficient" == item.value for item in app.caption) == expected
 
 
-def test_stock_tape_contains_identity_price_and_three_explicit_score_states():
+def test_stock_tape_contains_identity_cap_type_and_total_score_states():
     frame = build_stock_tape_frame(
         (
             StockTapeRow(
@@ -186,16 +201,44 @@ def test_stock_tape_contains_identity_price_and_three_explicit_score_states():
                 history=_history((10, 12)),
                 price_state="available",
                 observed_on=date(2026, 10, 20),
-                scorecard=_scorecard("instrument-a"),
+                scorecard=_available_scorecard("instrument-a"),
                 score_state="available",
+                market_cap=10_000_000_000,
             ),
             StockTapeRow(
                 instrument_id="instrument-b",
                 ticker="BBB",
                 name="Beta",
+                history=_history((8, 10)),
+                price_state="available",
+                scorecard=_scorecard("instrument-b"),
+                score_state="available",
+                market_cap=2_000_000_000,
+            ),
+            StockTapeRow(
+                instrument_id="instrument-c",
+                ticker="CCC",
+                name="Gamma",
                 history=pd.DataFrame(columns=["close", "volume"]),
                 price_state="unavailable",
                 score_state="not_loaded",
+            ),
+            StockTapeRow(
+                instrument_id="instrument-d",
+                ticker="DDD",
+                name="Delta",
+                history=pd.DataFrame(columns=["close", "volume"]),
+                price_state="unavailable",
+                score_state="error",
+            ),
+            StockTapeRow(
+                instrument_id="instrument-placeholder",
+                ticker="Unresolved placeholder",
+                name="Unresolved",
+                history=pd.DataFrame(columns=["close", "volume"]),
+                price_state="placeholder",
+                score_state="placeholder",
+                resolution_state="placeholder",
             ),
         )
     )
@@ -203,27 +246,66 @@ def test_stock_tape_contains_identity_price_and_three_explicit_score_states():
     assert [[point["close"] for point in row] for row in frame["Price chart"].iloc[:1]] == [
         [10, 12]
     ]
-    assert frame["Observed"].tolist() == ["2026-10-20", "Unavailable"]
-    assert [frame[column].iloc[0] for column in ("Ticker", "Name", "Price")] == [
+    assert frame.columns.tolist() == [
+        "Price chart",
+        "Volume chart",
+        "Ticker",
+        "Name",
+        "CAP Type",
+        "Total Score",
+        "Instrument ID",
+        "Resolution",
+    ]
+    assert [frame[column].iloc[0] for column in ("Ticker", "Name", "CAP Type")] == [
         "AAA",
         "Alpha",
-        "12.00",
+        "Large",
     ]
-    assert [frame[column].iloc[0] for column in ("Quality", "Growth", "Cash Flow")] == [
-        "62.5",
-        "Insufficient",
-        "Insufficient",
-    ]
-    assert [frame[column].iloc[1] for column in ("Ticker", "Name", "Price")] == [
-        "BBB",
-        "Beta",
+    assert frame["CAP Type"].tolist() == [
+        "Large",
+        "Mid",
+        "Unavailable",
+        "Unavailable",
         "Unavailable",
     ]
-    assert [frame[column].iloc[1] for column in ("Quality", "Growth", "Cash Flow")] == [
+    assert frame["Total Score"].tolist() == [
+        "75.0",
+        "Insufficient",
         "Not loaded",
-        "Not loaded",
-        "Not loaded",
+        "Error",
+        "Unavailable",
     ]
+
+
+@pytest.mark.parametrize(
+    ("market_cap", "expected"),
+    [
+        (10_000_000_000, "Large"),
+        (2_000_000_000, "Mid"),
+        (1, "Small"),
+        (None, "Unavailable"),
+        (0, "Unavailable"),
+        (float("nan"), "Unavailable"),
+    ],
+)
+def test_stock_tape_classifies_current_capitalization(
+    market_cap: float | None, expected: str
+) -> None:
+    frame = build_stock_tape_frame(
+        (
+            StockTapeRow(
+                instrument_id="instrument-a",
+                ticker="AAA",
+                name="Alpha",
+                history=_history((10, 12)),
+                price_state="available",
+                score_state="available",
+                market_cap=market_cap,
+            ),
+        )
+    )
+
+    assert frame["CAP Type"].tolist() == [expected]
 
 
 def test_price_and_volume_chart_columns_are_adjacent_and_keep_direction_states():
@@ -263,6 +345,36 @@ def test_price_and_volume_chart_columns_are_adjacent_and_keep_direction_states()
     assert frame["Price chart"].iloc[1] == "Unavailable"
     assert frame["Volume chart"].iloc[1] == "Unavailable"
     assert "price direction" in frame.attrs["volume_legend"].lower()
+
+
+def test_stock_tape_keeps_chart_evidence_without_metadata_columns():
+    frame = build_stock_tape_frame(
+        (
+            StockTapeRow(
+                instrument_id="instrument-a",
+                ticker="AAA",
+                name="Alpha",
+                history=pd.DataFrame(columns=["close", "volume"]),
+                price_state="unavailable",
+                score_state="not_loaded",
+            ),
+            StockTapeRow(
+                instrument_id="instrument-placeholder",
+                ticker="Unresolved placeholder",
+                name="Unresolved",
+                history=pd.DataFrame(columns=["close", "volume"]),
+                price_state="placeholder",
+                score_state="placeholder",
+                resolution_state="placeholder",
+            ),
+        )
+    )
+
+    assert "Observed" not in frame.columns
+    assert "Chart status" not in frame.columns
+    assert frame["Price chart"].tolist() == ["Unavailable", "Unavailable"]
+    assert frame["Volume chart"].tolist() == ["Unavailable", "Unavailable"]
+    assert frame["Ticker"].tolist() == ["AAA", "Unresolved placeholder"]
 
 
 def test_missing_price_and_volume_series_are_reported_independently():

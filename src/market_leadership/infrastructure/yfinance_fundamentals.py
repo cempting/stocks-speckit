@@ -165,10 +165,16 @@ def read_fundamentals(
                 break
     profile = components.get("info")
     currency = ""
+    market_cap: float | None = None
     if isinstance(profile, Mapping) and profile:
         profile = cast(Mapping[str, object], profile)
         currency_value = profile.get("financialCurrency")
         currency = currency_value if isinstance(currency_value, str) else ""
+        raw_market_cap = profile.get("marketCap")
+        if isinstance(raw_market_cap, Real):
+            candidate = float(raw_market_cap)
+            if candidate > 0 and pd.notna(candidate) and candidate != float("inf"):
+                market_cap = candidate
         if profile.get("symbol") != request.symbol:
             errors.append("info: symbol identity mismatch")
             components.clear()
@@ -197,6 +203,8 @@ def read_fundamentals(
         tables[1],
         tables[2],
         tuple(errors),
+        market_cap,
+        fetched_at.date() if market_cap is not None else None,
     )
     if errors:
         raise FundamentalAcquisitionError(tuple(errors), bundle)

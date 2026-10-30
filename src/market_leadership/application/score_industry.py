@@ -31,6 +31,8 @@ class StockScoreEvidence:
     scorecard: PeerScorecard
     state: str
     reason: str | None = None
+    market_cap: float | None = None
+    market_cap_as_of: date | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +56,7 @@ def score_industry(
 
     facts: list[PeerFacts] = []
     errors: dict[str, str] = {}
+    market_caps: dict[str, tuple[float | None, date | None]] = {}
     for member in active_members:
         request = FundamentalRequest(
             member.symbol,
@@ -62,6 +65,7 @@ def score_industry(
         )
         try:
             bundle = loader(request, refresh=refresh)
+            market_caps[member.instrument_id] = (bundle.market_cap, bundle.market_cap_as_of)
             facts.append(adapt_yfinance_peer_facts(bundle, instrument_id=member.instrument_id))
         except (ProviderRequestError, ValueError) as error:
             errors[member.instrument_id] = str(error)
@@ -79,6 +83,7 @@ def score_industry(
             errors.get(scorecard.instrument_id)
             or scorecard.quality.reason
             or "Verified point-in-time peer evidence is insufficient.",
+            *market_caps.get(scorecard.instrument_id, (None, None)),
         )
         for scorecard in scorecards
     )

@@ -301,6 +301,8 @@ def test_score_orchestration_loads_the_complete_active_industry_cohort():
             (),
             (),
             (),
+            market_cap=2_000_000_000,
+            market_cap_as_of=date(2026, 10, 30),
         )
 
     result = score_industry(
@@ -315,6 +317,8 @@ def test_score_orchestration_loads_the_complete_active_industry_cohort():
     assert all(stock.scorecard.quality.value is None for stock in result.stocks)
     assert result.stocks[0].reason is not None
     assert "publication vintages" in result.stocks[0].reason
+    assert all(stock.market_cap == 2_000_000_000 for stock in result.stocks)
+    assert all(stock.market_cap_as_of == date(2026, 10, 30) for stock in result.stocks)
 
 
 def test_provider_symbols_exclude_unresolved_and_nonprimary_listings():

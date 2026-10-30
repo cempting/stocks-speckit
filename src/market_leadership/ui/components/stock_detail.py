@@ -43,7 +43,7 @@ def render_stock_detail(
         for label, state in (
             ("Price", chart.price_state),
             ("Volume", chart.volume_state),
-            ("50-session SMA", chart.sma50_state),
+            ("50 MA", chart.sma50_state),
             ("150-session SMA", chart.sma150_state),
         ):
             if state != "available":

@@ -65,7 +65,7 @@ def test_discovery_shows_only_sector_tape_until_sector_is_selected(
     assert not any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value == "Contained stocks" for item in app.subheader)
     assert any("Coverage: PARTIAL" in item.value for item in app.caption)
-    assert any("Price + 50-session SMA" in item.value for item in app.caption)
+    assert any("Price + 50 MA" in item.value for item in app.caption)
     assert any("Volume by price direction" in item.value for item in app.caption)
     assert any(item.value == "Ticker" for item in app.caption)
     assert not any(item.value == "Representation" for item in app.caption)
@@ -83,7 +83,7 @@ def test_sector_and_industry_selection_replaces_tape_and_shows_all_members(
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value == "Sector performance" for item in app.subheader)
-    assert any("Price + 50-session SMA" in item.value for item in app.caption)
+    assert any("Price + 50 MA" in item.value for item in app.caption)
     app.selectbox("market_leadership.progressive_discovery.industry").select("test-cloud").run(
         timeout=20
     )
@@ -93,8 +93,16 @@ def test_sector_and_industry_selection_replaces_tape_and_shows_all_members(
     assert any(item.label == "AAA · Alpha" for item in app.button)
     assert any(item.label == "BBB · Beta" for item in app.button)
     assert any("Unresolved placeholder" in item.label for item in app.button)
-    assert any("Price + 50-session SMA" in item.value for item in app.caption)
+    assert any("Price + 50 MA" in item.value for item in app.caption)
     assert any("Volume by price direction" in item.value for item in app.caption)
+    assert any(item.value == "CAP Type" for item in app.caption)
+    assert any(item.value == "Total Score" for item in app.caption)
+    assert not any(
+        item.value in {"Quality", "Growth", "Cash Flow", "Score status", "Observed", "Chart status"}
+        for item in app.caption
+    )
+    assert any(item.value == "Not loaded" for item in app.markdown)
+    assert any(item.label == "Load peer scores" for item in app.button)
 
 
 def test_thumbnail_period_and_performance_basis_persist_across_tapes(
