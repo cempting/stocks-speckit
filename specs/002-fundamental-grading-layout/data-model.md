@@ -1,5 +1,11 @@
 # Data Model: Fundamental Grading Layout
 
+> **2026-10-31 alignment:** The independent membership-catalog/evidence-mode fields below are
+> historical foundation contracts, not runtime mode choices or a post-cutover file format.
+> [Feature 010](../010-manifest-csv-catalogs/spec.md) supplies membership through one activated
+> regional stock CSV/hierarchy release, with stable instrument/listing identities and effective
+> review evidence. Preserve financial bundles, quarterly history, and explicit missing metrics.
+
 Use frozen typed dataclasses/finite enums following existing domain patterns.
 These are internal contracts, not a new persistence schema or public service.
 

@@ -1,12 +1,12 @@
 # US Live Industry Proxy Contract
 
-> Historical source review and live-only contract, not the current tab workflow.
-> Candidate research remains useful, but the revised [data contract](market-data-provider.md)
-> governs current selection: stable instrument IDs resolve equal market caps, no benchmark
-> comparison is required, and one week means five completed-session intervals. No candidate
-> is enabled merely by retaining this document.
+> Historical source review, not a current proxy-selection or runtime fallback contract.
+> [Feature 010](../../010-manifest-csv-catalogs/spec.md) and features 007-008 require exact
+> reviewed file-backed ETF mappings or explicitly approved basket alternatives. The largest-stock,
+> fixed benchmark symbol, and snapshot-mode instructions below are superseded for the app.
+> Candidate research remains useful but enables no production listing or GICS mapping.
 
-## Status
+## Historical Status (not current runtime instructions)
 
 **Live industry proxy catalog is not enabled.** The source review below identifies candidate
 instruments only. It does not establish a license to publish their daily prices or derived returns,

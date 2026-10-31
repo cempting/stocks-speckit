@@ -1,0 +1,2 @@
+ListingId,RegionId,InstrumentId,InstrumentType,Ticker,ProviderSymbol,Name,Exchange,Currency,IsPrimary,ResolutionState,EffectiveFrom,EffectiveTo,SourceId,ApprovalReference
+test-etf-listing,US,test-etf,etf,TEST_ETF,TEST_ETF,Test ETF,TESTEX,USD,true,verified,2020-01-01,,test-source,test-approval

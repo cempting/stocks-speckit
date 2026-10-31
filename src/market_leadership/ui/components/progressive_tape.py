@@ -1,6 +1,6 @@
 """Row-specific chart previews and stock evidence projections for Discovery tapes."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from math import isfinite
@@ -90,9 +90,9 @@ def _overall_score_text(scorecard: PeerScorecard | None, state: str) -> str:
         for component in components
     ):
         return "Unavailable"
-    score = sum(
-        component.value for component in components if component.value is not None
-    ) / len(components)
+    score = sum(component.value for component in components if component.value is not None) / len(
+        components
+    )
     return f"{score:.1f}"
 
 
@@ -244,17 +244,27 @@ def _chart_records(series: object) -> list[dict[str, object]] | None:
     return records
 
 
-def _render_visual_tape(frame: pd.DataFrame, *, key: str, selectable: bool) -> tuple[int, ...]:
+def _render_visual_tape(
+    frame: pd.DataFrame,
+    *,
+    key: str,
+    selectable: bool,
+    on_entity_select: Callable[[str], None] | None = None,
+) -> tuple[int, ...]:
     price_column = "Price chart"
     volume_column = "Volume chart"
     if price_column not in frame.columns or volume_column not in frame.columns:
         render_dataframe(frame, hide_index=True, key=key)
         return ()
     st.caption(str(frame.attrs.get("volume_legend", "")))
+    hidden_columns = ("Instrument ID", "Resolution", "Node ID")
+    if "Industry" in frame.columns:
+        hidden_columns += ("Status", "Representation")
     content_columns = [
         column
         for column in frame.columns
-        if column not in (price_column, volume_column, "Instrument ID", "Resolution")
+        if column not in (price_column, volume_column, *hidden_columns)
+        and (not selectable or column != "Name")
     ]
     weights = [1.3, 1.3, *([1.0] * len(content_columns))]
     headings = st.columns(weights)
@@ -294,7 +304,19 @@ def _render_visual_tape(frame: pd.DataFrame, *, key: str, selectable: bool) -> t
         for cell, column in zip(cells[2:], content_columns, strict=True):
             value = row[column]
             with cell:
-                if selectable and column == "Ticker":
+                if on_entity_select is not None and column in ("Sector", "Industry"):
+                    help_text = str(row["Status"])
+                    if column == "Industry":
+                        help_text += f"\nRepresentation: {row['Representation']}"
+                    st.button(
+                        str(value),
+                        key=f"{key}_select_{row['Node ID']}",
+                        help=help_text,
+                        on_click=on_entity_select,
+                        args=(str(row["Node ID"]),),
+                        use_container_width=True,
+                    )
+                elif selectable and column == "Ticker":
                     button_label = f"{value} · {row['Name']}"
                     if st.button(
                         button_label,
@@ -318,8 +340,9 @@ def render_chart_tape(
     frame: pd.DataFrame,
     *,
     key: str,
+    on_select: Callable[[str], None] | None = None,
 ) -> None:
-    _render_visual_tape(frame, key=key, selectable=False)
+    _render_visual_tape(frame, key=key, selectable=False, on_entity_select=on_select)
 
 
 def render_selectable_stock_tape(frame: pd.DataFrame, *, key: str) -> tuple[int, ...]:

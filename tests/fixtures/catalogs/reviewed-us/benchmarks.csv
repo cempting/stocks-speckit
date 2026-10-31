@@ -1,0 +1,3 @@
+BenchmarkId,RegionId,Purpose,Label,ListingId,EffectiveFrom,EffectiveTo,SourceId,ApprovalReference
+test-comparison,US,sp500_comparison,Test comparison,test-etf-listing,2020-01-01,,test-source,test-approval
+test-sentiment,US,market_sentiment,Test sentiment,test-etf-listing,2020-01-01,,test-source,test-approval

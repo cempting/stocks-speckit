@@ -1,5 +1,10 @@
 # ETF Universe and Industry Proxy Sources
 
+**2026-10-31 authority**: This is research/source guidance, not an approved catalog or permission
+for a new online collector. [Feature 010](../010-manifest-csv-catalogs/spec.md) governs registered
+CSV catalogs, the consolidated manifest, file-only governance, and exact reviewer-led approval.
+Only yfinance remains the runtime market-data provider; source projects/catalogs are not executed.
+
 ## Recommended source hierarchy
 
 Use exchange symbol directories to establish that a US-listed ETF exists, then enrich those symbols
@@ -28,7 +33,7 @@ taxonomy using the issuer objective, benchmark and holdings. Name matching alone
 Exclude inverse, leveraged, option-income, single-stock and defined-outcome products unless a
 workflow explicitly asks for them.
 
-Choose a representative proxy deterministically using, in order:
+Rank research candidates for explicit suitability review using, in order; ranking is not approval:
 
 1. Taxonomy and holdings purity for the target industry.
 2. Sufficient listing history and complete adjusted-price coverage.
@@ -37,10 +42,11 @@ Choose a representative proxy deterministically using, in order:
 5. Expense ratio, tracking difference and concentration.
 6. Stable ticker ordering as the final tie-breaker.
 
-Common seed candidates include `XBI` for biotechnology, `SOXX` for semiconductors, `IGV` for
+Illustrative research candidates include `XBI` for biotechnology, `SOXX` for semiconductors, `IGV` for
 software, `ITA` for aerospace and defense, `IYT` for transportation, `XHB` for homebuilders, `KRE`
 for regional banks, `OIH` for oil services, and `XME` for metals and mining. These are candidates,
-not hard-coded winners; the dated selection record must explain why each proxy was chosen.
+not runtime seeds or hard-coded winners; exact reviewed classification, verified listing,
+source approval, and a dated suitability decision are required before publication.
 
 ## Refresh and local storage
 
@@ -50,14 +56,15 @@ Keep reference metadata separate from price history:
 - Refresh product metadata weekly; refresh holdings daily only when holdings purity is recalculated.
 - Fetch adjusted daily prices from the explicitly selected provider after the latest completed
   session. `yfinance` remains the default personal-use source and must never be silently replaced.
-- Store canonical tables as Parquet with a JSON manifest containing source URL/provider, retrieval
-  timestamp, normalized request, schema version, coverage and SHA-256 checksum.
-- Publish immutable generation directories and atomically replace a small `CURRENT` pointer. A
-  failed refresh therefore leaves the prior valid generation readable.
+- Maintain reviewed regional stocks, hierarchy, and ETF catalog data in CSV sources registered
+  by the consolidated manifest, with content/scope/date/review identities. Retained research,
+  approval, and provenance records are file-only; exact formats await feature 010 planning.
+- Validate and activate one coherent release. Failed publication leaves the prior active release
+  unchanged; altered active source identity is reported rather than hidden behind stale success.
 - Use request fingerprints for exact cache identity. `force=True` bypasses reads but publishes only
   after a complete successful write.
 
-SQLite is unnecessary at the present scale: the workload reads whole time-series slices and rarely
-updates individual rows. Parquet is smaller and type-preserving, while JSON keeps provenance and
-integrity checks inspectable. Reconsider DuckDB or SQLite only when the application needs ad hoc
-cross-fund queries, concurrent writers, or incremental row-level updates.
+The user selected files-only for catalog/review workflows, not a derived SQLite/DuckDB query store
+or Parquet catalog alternative. Market-price histories and existing response caches are separate
+from this decision and are not redesigned here. A different catalog authority would require a
+new explicit user decision, not activation based on these historical performance suggestions.

@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Updated**: 2026-10-28 (planning scope confirmed by user)
+**Updated**: 2026-10-31 (catalog alignment; original layout scope retained)
 
 **Input**: Modify Tab 3 (Fundamental Grading) to reproduce a three-column layout:
 Quality contains Gross Margin, Operating Margin, and ROCE; Growth contains Sales YoY,
@@ -14,6 +14,19 @@ EPS YoY, and EPS Consistency displayed as X/8 quarters; Cash Flow contains Cash
 Conversion and FCF Margin. Stack each column's metrics vertically, place dynamic
 analytical commentary underneath every metric value, and show "N/A" with
 "Data not available" for missing metrics.
+
+## Current Application and Catalog Authority
+
+The [feature 010 specification](../010-manifest-csv-catalogs/spec.md) governs stock identity,
+membership, review evidence, and release validation. Stock selections come from one regional
+stock CSV with exact industry references and the reviewed hierarchy, not a separately configured
+JSON catalog or catalog database. Synthetic catalogs remain isolated automated-test inputs.
+
+The Tab 3/three-step foundation scenarios below are historical layout requirements: feature 003
+removed that root tab and runtime evidence-mode controls. They do not authorize restoring either.
+Financial scorecards consumed by current stock surfaces retain their layout/evidence semantics.
+The single-provider rule in constitution v3.0.0 remains binding; the earlier requested amendment
+below was not permission to switch providers. See the [authority map](../README.md).
 
 ## Planning Clarifications
 
@@ -244,9 +257,10 @@ or the required three-column structure.
   progressive tabbed experience, replacing routed page transitions and providing
   migration guidance for existing entry links. Retiring `/discovery` and
   `/industry-discovery` is a minor pre-1.0 release impact.
-- **FR-013**: Industry Deep-Dive MUST allow selection only from available dated,
-  sourced industry stock membership, distinguish fixture from live evidence,
-  display coverage limits, and pass stable stock identities to Tab 3.
+- **FR-013**: Industry Deep-Dive MUST allow selection only from dated, reviewed membership in
+  the activated manifest-backed regional stock CSV and hierarchy. It MUST display coverage
+  limits and pass stable instrument/listing identities to available scorecard surfaces.
+  Fixtures MUST remain test-only, never a selectable runtime catalog or fallback.
 - **FR-014**: Stock selections MUST be session-local, survive valid reruns, and
   clear only when invalidated by a parent/evidence context change.
 - **FR-015**: Metric blocks MUST use compact label/value/commentary presentation
@@ -263,6 +277,10 @@ or the required three-column structure.
   unchanged fresh evidence MUST reuse that evidence; refresh MUST affect only the
   requested stock/context, and failures MUST remain visible rather than becoming
   successful cached results.
+- **FR-018**: Catalog-only changes MUST require no application-code edits and no legacy catalog
+  database. A newly activated release MUST retain valid stock selections and invalidate affected
+  selections/peer results; missing, invalid, or altered required sources MUST block affected
+  member display with an actionable explanation rather than an embedded-listing fallback.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -304,6 +322,9 @@ or the required three-column structure.
 - **SC-009**: Two identical fresh grading requests cause one financial retrieval
   operation; targeted refresh causes one new operation for that stock and none
   for unrelated stocks. A failed operation is never reused as successful evidence.
+- **SC-010**: In controlled manifest release changes, 100% of retained selections reference valid
+  effective members and zero invalid members are requested. The same catalog handoff works with
+  the legacy catalog database unavailable; invalid source cases produce no guessed stock requests.
 
 ## Assumptions
 
@@ -332,9 +353,9 @@ or the required three-column structure.
   new peer-scoring algorithms from the larger parent feature are not implicitly
   included. Existing discovery calculations are reused with accurate labels;
   legacy weekly evidence is not relabelled as one-day/one-week price performance.
-- No complete authorized live industry membership source has been established.
-  The foundation supports a validated dated catalog and deterministic fixtures;
-  live operation requires provenance, coverage, and display-rights review first.
+- No complete authorized live industry membership source is supplied automatically.
+  Runtime membership uses the reviewed regional CSV/hierarchy release; deterministic fixtures
+  support automated tests only. Provenance, coverage, and display-rights review remain required.
 - The grading workflow uses yfinance. Legacy daily discovery may use its explicitly
   selected provider only after a separately approved and ratified constitution
   amendment permits distinct providers by workflow; until then, deployments must

@@ -1,5 +1,11 @@
 # Implementation Plan: Progressive Stock Screener
 
+> **2026-10-31 alignment:** This is historical planning, not the current root-tab/universe
+> configuration. Follow the [authority map](../README.md) and [feature 010](../010-manifest-csv-catalogs/spec.md).
+> Catalog/review storage is manifest-managed and file-only; automatic largest-stock proxies and
+> static qualification catalogs are not runtime authority. Preserve applicable financial/technical
+> formulas; reconcile unfinished tasks before execution. The active feature remains 010.
+
 **Feature**: `001-market-leadership-screener` | **Date**: 2026-10-28
 **Working branch**: `main` | **Spec**: [spec.md](spec.md)
 

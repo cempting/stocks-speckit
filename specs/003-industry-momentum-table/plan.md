@@ -1,5 +1,11 @@
 # Implementation Plan: Simplified Live Discovery
 
+> **2026-10-31 alignment:** Preserve the two-tab, live-yfinance, no-fallback UI decisions.
+> [Feature 010](../010-manifest-csv-catalogs/spec.md) replaces independent membership/catalog
+> configuration with one manifest-backed reviewed file release shared by both tabs.
+> Hierarchy, ETF/benchmark listings, regional stock CSVs, and reviewer histories are file-only;
+> the existing market-data cache is unchanged. Reconcile catalog integration before further implementation.
+
 **Branch**: `003-industry-momentum-table` | **Date**: 2026-10-29 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/003-industry-momentum-table/spec.md`

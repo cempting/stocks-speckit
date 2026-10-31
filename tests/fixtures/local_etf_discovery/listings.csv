@@ -1,0 +1,4 @@
+InstrumentId,Ticker,Name,Exchange,Sector,Industry,EffectiveFrom
+soxx,SOXX,Controlled semiconductor ETF,NASDAQ,Technology,Semiconductors,2020-01-01
+smh,SMH,Controlled alternative ETF,NASDAQ,Technology,Semiconductors,2020-01-01
+skyy,SKYY,Controlled cloud ETF,NASDAQ,Technology,Cloud,2020-01-01

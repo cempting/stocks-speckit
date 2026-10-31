@@ -6,6 +6,31 @@ status: living
 
 # Decision log
 
+## Application catalog decision (2026-10-31)
+
+**D-F010 — File-only manifest authority.** The user selected file-only catalog/review storage
+and one stock CSV per region with industry references and an industry-to-sector hierarchy.
+The [feature 010 specification](010-manifest-csv-catalogs/spec.md) supersedes conflicting earlier
+application storage, configuration, fixed ticker, and automatic proxy defaults.
+The manifest consolidates reviewed hierarchy, stock/listing, sector/industry/sub-industry ETF,
+benchmark, and retained research/governance sources. Exact classification scope, listing
+verification, effective dates, manual approvals, basket weights, and provenance remain required.
+No catalog SQLite dependency, automatic largest-stock/index/basket substitute, production fixture,
+or hardcoded ETF/stock/benchmark list is a post-cutover authority.
+
+This is an application-scoped supersession, not a deletion of educational domain history.
+In particular, D-R20/D-R21/D-R24 and D-DEF-01 do not require automatic proxy creation, complete
+GICS coverage, or extra ranking levels in the current screener. Missing reviewed representation
+remains visible; baskets are explicitly approved under feature 008. D-R42's global taxonomy
+aspiration does not extend feature 010 beyond its initial reviewed US GICS scope. Example symbols
+and benchmark names are domain/research references, never approved production listing seeds.
+See the [cross-feature authority map](README.md) for preserved UI and calculation requirements.
+
+The implemented database workflows and prior test results remain pre-cutover evidence.
+Export/reconciliation and file-only runtime refactoring must be planned and implemented before
+claiming the migration is complete; current schemas/commands must not be rewritten as if that
+work had already occurred.
+
 These decisions settle conflicts between sources, and places where the sources leave a value unset. They are binding and override the source documents. Each D-L, D-C, D-OPEN and D-R entry was decided by the product owner on 2026-10-26; D-DEF entries are reviewable practitioner defaults. Round-2 and round-3 decisions on open points (`D-R01`…`D-R45`) follow the domain decisions. The remaining open points were closed with documented practitioner defaults (`D-DEF-01`…`D-DEF-42`, section "Defaults by recommendation"); these are binding until the user reviews them. No open point remains (see [open-points.md](open-points.md)). Aspect specs cite these entries as `D-…`.
 
 ## Structural decisions

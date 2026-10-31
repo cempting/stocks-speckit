@@ -40,6 +40,7 @@ class IndustryScoreResult:
     analysis_cutoff: date
     eligible_instrument_ids: tuple[str, ...]
     stocks: tuple[StockScoreEvidence, ...]
+    cohort_fingerprint: str | None = None
 
 
 def score_industry(
@@ -48,6 +49,7 @@ def score_industry(
     cutoff: date,
     refresh: bool = False,
     loader: FundamentalLoader = load_selected_fundamentals,
+    cohort_fingerprint: str | None = None,
 ) -> IndustryScoreResult:
     active_members = tuple(entry for entry in members if entry.active_on(cutoff))
     ids = tuple(entry.instrument_id for entry in active_members)
@@ -87,4 +89,4 @@ def score_industry(
         )
         for scorecard in scorecards
     )
-    return IndustryScoreResult(cutoff, ids, stocks)
+    return IndustryScoreResult(cutoff, ids, stocks, cohort_fingerprint)

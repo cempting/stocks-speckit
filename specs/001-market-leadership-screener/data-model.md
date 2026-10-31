@@ -1,5 +1,11 @@
 # Data Model: Progressive Stock Screener
 
+> **2026-10-31 alignment:** These historical view/calculation records do not define catalog
+> persistence. [Feature 010](../010-manifest-csv-catalogs/spec.md) governs the regional stock
+> CSV/hierarchy, listings/mappings, manifest, and file-only governance histories.
+> Original universe/representation defaults are superseded by the [authority map](../README.md);
+> applicable price, financial, peer, and technical calculation evidence remains unchanged.
+
 These are planned typed Python records/dataframes, not database tables or new persisted
 schemas. Use existing identifiers/helpers where their meaning matches. Immutable result
 records and copied cached frames prevent accidental mutation of shared source data.

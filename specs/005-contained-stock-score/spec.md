@@ -6,8 +6,19 @@
 
 **Status**: Draft
 
+**Updated**: 2026-10-31 (aligned with feature 010)
+
 **Input**: User description: "adjust the contained stocks table, replace Quality, Growth,
 CashFlow, Score Status by an overall Score; remove Observed and Chart Status"
+
+## Catalog Authority and Preserved Scope
+
+The [feature 010 specification](../010-manifest-csv-catalogs/spec.md) governs stock identity and
+membership: one stock CSV per region, exact reviewed industry/hierarchy references, and a
+manifest-backed file-only release. No catalog database, embedded stock list, or runtime fixture
+may supply comparison rows. This storage change does not alter component-score formulas,
+complete-cohort peer populations, explicit score loading, or missing-evidence states.
+Feature 006 supersedes this feature's column label/order with Total Score and its six-column table.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -34,6 +45,9 @@ when a score cannot be calculated.
    is not presented as a numeric score.
 3. **Given** score evidence has not been requested, **When** the table is shown, **Then** the
    overall Score indicates that it has not been loaded without triggering an implicit score load.
+4. **Given** a newly activated reviewed stock/hierarchy release, **When** the table is rebuilt,
+   **Then** only effective members appear, invalid selections and affected peer results are
+   reconciled, and unchanged valid score evidence is retained without an implicit reload.
 
 ### User Story 2 - Focus the Contained-Stocks Table (Priority: P2)
 
@@ -86,6 +100,10 @@ unavailable chart evidence remains visibly identified in the chart cells.
   for unavailable, insufficient, or placeholder evidence.
 - **FR-008**: The contained-stocks table MUST retain its existing price chart, volume chart,
   ticker, stock name, price, and placeholder identity presentation.
+- **FR-009**: Comparison rows and peer membership MUST resolve from the activated regional stock
+  CSV and hierarchy, with exact stable identities and effective dates. Catalog changes MUST
+  reconcile affected selections/peer results without changing score meaning; absent/invalid
+  sources MUST NOT produce guessed members or trigger a legacy database/listing fallback.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -110,6 +128,9 @@ unavailable chart evidence remains visibly identified in the chart cells.
   Status while retaining chart-cell evidence disclosures.
 - **SC-004**: Users can identify a stock's price and overall Score from a contained-stocks table
   in under 10 seconds in a representative comparison scenario.
+- **SC-005**: In controlled file-release changes with the catalog database unavailable, 100% of
+  comparison rows and peer cohorts match effective reviewed membership, zero invalid selections
+  remain, and unchanged cohorts retain identical aggregate scores and explicit load behavior.
 
 ## Assumptions
 

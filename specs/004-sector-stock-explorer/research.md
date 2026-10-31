@@ -1,5 +1,11 @@
 # Research: Sector-to-Stock Explorer
 
+> **2026-10-31 alignment:** The SQLite/initialization/seed decisions below are historical
+> rationale. [Feature 010](../010-manifest-csv-catalogs/spec.md) supersedes them with file-only
+> manifest authority and one stock CSV per region. Source coverage, listing verification,
+> conflict reporting, and no inferred membership remain applicable. Existing local inputs
+> remain candidates, not approved seeds; do not replay database setup as the new architecture.
+
 ## Decisions
 
 ### 1. Extend the existing two-tab Streamlit application

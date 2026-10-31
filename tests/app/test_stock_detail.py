@@ -12,36 +12,9 @@ from market_leadership.domain.peer_scores import (
     PeerScorecard,
 )
 from market_leadership.domain.stock_selection import MembershipEntry
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
-from market_leadership.infrastructure.region_database import RegionDatabase
-from market_leadership.infrastructure.universe_import import import_reviewed_file
+from tests.fixtures.catalogs.ui import DailyProvider, configure_ui, detail_release
 
 ROOT = Path(__file__).parents[2]
-
-
-def _create_database(tmp_path: Path) -> Path:
-    database_path = tmp_path / "market-universe.sqlite"
-    database = RegionDatabase(database_path)
-    database.initialize()
-    members = tmp_path / "members.csv"
-    members.write_text(
-        "InstrumentId,Ticker,Name,Exchange,Sector,Industry,EffectiveFrom\n"
-        "instrument-aaa,AAA,Alpha,NASDAQ,Technology,Cloud,2020-01-01\n"
-        "instrument-bbb,BBB,Beta,NASDAQ,Technology,Cloud,2020-01-01\n"
-        "instrument-ccc,CCC,Gamma,NYSE,Financials,Banks,2020-01-01\n",
-        encoding="utf-8",
-    )
-    import_reviewed_file(
-        database,
-        members,
-        region_id="US",
-        classification_id="TEST",
-        source_id="controlled-test",
-        exchange_id=None,
-        coverage="controlled sample",
-        approval_reference="test-only",
-    )
-    return database_path
 
 
 def _score_result(members: tuple[MembershipEntry, ...]) -> IndustryScoreResult:
@@ -64,16 +37,8 @@ def _score_result(members: tuple[MembershipEntry, ...]) -> IndustryScoreResult:
     )
 
 
-def _run_app(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> AppTest:
-    def build_fixture_provider(*args: object, **kwargs: object) -> FixtureProvider:
-        del args, kwargs
-        return FixtureProvider()
-
-    monkeypatch.setattr(
-        "market_leadership.bootstrap.build_request_provider", build_fixture_provider
-    )
-    monkeypatch.setenv("MARKET_UNIVERSE_DATABASE_PATH", str(_create_database(tmp_path)))
-    monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path))
+def _run_app(monkeypatch: pytest.MonkeyPatch, catalog_release: Path) -> AppTest:
+    configure_ui(monkeypatch, detail_release(catalog_release))
     return AppTest.from_file(ROOT / "src/market_leadership/ui/workflows/discovery_page.py").run(
         timeout=20
     )
@@ -90,8 +55,11 @@ def _select_cloud_industry(app: AppTest) -> AppTest:
     )
 
 
+@pytest.mark.parametrize(
+    "return_key", [None, "market_leadership.progressive_discovery.breadcrumb_industry"]
+)
 def test_stock_detail_uses_stable_identity_and_returns_to_industry(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, catalog_release: Path, return_key: str | None
 ) -> None:
     load_calls = 0
 
@@ -100,14 +68,15 @@ def test_stock_detail_uses_stable_identity_and_returns_to_industry(
         *,
         cutoff: date,
         refresh: bool = False,
+        cohort_fingerprint: str | None = None,
     ) -> IndustryScoreResult:
         nonlocal load_calls
-        del cutoff, refresh
+        del cutoff, refresh, cohort_fingerprint
         load_calls += 1
         return _score_result(members)
 
     monkeypatch.setattr("market_leadership.application.score_industry.score_industry", score)
-    app = _run_app(monkeypatch, tmp_path)
+    app = _run_app(monkeypatch, catalog_release)
     app = _select_cloud_industry(app)
 
     assert not app.exception
@@ -130,9 +99,12 @@ def test_stock_detail_uses_stable_identity_and_returns_to_industry(
     )
     assert any(item.value == "Peer scorecard" for item in app.subheader)
     assert [metric.value for metric in app.metric] == ["75.0", "75.0", "75.0"]
-    next(button for button in app.button if button.label == "Back to Discovery").click().run(
-        timeout=20
+    return_button = (
+        app.button(return_key)
+        if return_key
+        else next(button for button in app.button if button.label == "Back to Discovery")
     )
+    return_button.click().run(timeout=20)
 
     assert not app.exception
     assert any(item.value == "Contained stocks" for item in app.subheader)
@@ -144,9 +116,9 @@ def test_stock_detail_uses_stable_identity_and_returns_to_industry(
 
 
 def test_changing_sector_clears_the_stock_and_industry_tape(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, catalog_release: Path
 ) -> None:
-    app = _run_app(monkeypatch, tmp_path)
+    app = _run_app(monkeypatch, catalog_release)
     app = _select_cloud_industry(app)
     app.selectbox("market_leadership.progressive_discovery.stock_picker").select(
         "instrument-aaa"
@@ -162,9 +134,9 @@ def test_changing_sector_clears_the_stock_and_industry_tape(
 
 
 def test_selecting_stock_row_opens_its_stable_identity(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, catalog_release: Path
 ) -> None:
-    app = _run_app(monkeypatch, tmp_path)
+    app = _run_app(monkeypatch, catalog_release)
     app = _select_cloud_industry(app)
     next(button for button in app.button if button.label == "BBB · Beta").click().run(timeout=20)
 
@@ -173,9 +145,9 @@ def test_selecting_stock_row_opens_its_stable_identity(
 
 
 def test_stock_detail_discloses_scores_until_explicitly_loaded(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, catalog_release: Path
 ) -> None:
-    app = _run_app(monkeypatch, tmp_path)
+    app = _run_app(monkeypatch, catalog_release)
     app = _select_cloud_industry(app)
     app.selectbox("market_leadership.progressive_discovery.stock_picker").select(
         "instrument-aaa"
@@ -208,14 +180,27 @@ def test_detail_renders_available_series_when_other_series_is_missing(
         )
         history[missing] = float("nan")
         member = MembershipEntry(
-            "instrument", "company", "AAA", "Alpha", "NASDAQ", "USD",
-            "sector", "Sector", "industry", "Industry", date(2020, 1, 1), None,
+            "instrument",
+            "company",
+            "AAA",
+            "Alpha",
+            "NASDAQ",
+            "USD",
+            "sector",
+            "Sector",
+            "industry",
+            "Industry",
+            date(2020, 1, 1),
+            None,
         )
         render_stock_detail(
             member,
             build_stock_chart_evidence("instrument", history, as_of=date(2026, 10, 23)),
-            scorecard=None, score_state="not_loaded", score_reason=None,
-            dark_mode=False, on_return=lambda: None,
+            scorecard=None,
+            score_state="not_loaded",
+            score_reason=None,
+            dark_mode=False,
+            on_return=lambda: None,
         )
 
     app = AppTest.from_function(app_script, args=(missing,)).run()
@@ -227,9 +212,9 @@ def test_detail_renders_available_series_when_other_series_is_missing(
 
 @pytest.mark.parametrize("missing", ["close", "volume"])
 def test_independent_history_survives_member_tape_to_detail_pipeline(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, missing: str
+    monkeypatch: pytest.MonkeyPatch, catalog_release: Path, missing: str
 ) -> None:
-    class PartialProvider(FixtureProvider):
+    class PartialProvider(DailyProvider):
         def fetch_daily_history(
             self, symbols: tuple[str, ...], *, start: date, end: date, force: bool = False
         ) -> dict[str, pd.DataFrame]:
@@ -239,10 +224,10 @@ def test_independent_history_survives_member_tape_to_detail_pipeline(
                     history[symbol][missing] = float("nan")
             return history
 
-    app = _run_app(monkeypatch, tmp_path)
+    app = _run_app(monkeypatch, catalog_release)
     monkeypatch.setattr(
         "market_leadership.bootstrap.build_request_provider",
-        lambda *args, **kwargs: PartialProvider(),
+        lambda *args, **kwargs: PartialProvider([]),
     )
     app = _select_cloud_industry(app)
     assert not app.exception

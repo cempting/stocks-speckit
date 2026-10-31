@@ -18,12 +18,14 @@ from market_leadership.application.request_market_data import (
     RequestedMarketData,
     RequestMarketData,
 )
+from market_leadership.domain.catalog import Scope
 from market_leadership.domain.fundamentals import (
     FundamentalBundle,
     FundamentalRequest,
     FundamentalScorecard,
     build_scorecard,
 )
+from market_leadership.infrastructure.catalog_files import CatalogReader, CatalogSnapshot
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
 from market_leadership.infrastructure.snapshot_errors import IntegrityError, SchemaMismatch
 from market_leadership.infrastructure.yfinance_fundamentals import (
@@ -31,6 +33,16 @@ from market_leadership.infrastructure.yfinance_fundamentals import (
     read_fundamentals,
     ticker_factory,
 )
+
+
+@st.cache_resource(show_spinner=False)
+def _catalog_reader() -> CatalogReader:
+    return CatalogReader()
+
+
+def load_catalog_snapshot(entry_path: str | Path) -> CatalogSnapshot:
+    # The reader verifies active file signatures, including ctime, before every reuse.
+    return _catalog_reader().read(Path(entry_path))
 
 
 @st.cache_data(show_spinner=False)
@@ -61,6 +73,9 @@ def load_snapshot_tables(
 def load_published_discovery(
     repository: ParquetSnapshotRepository,
     snapshot_root: str | Path,
+    *,
+    snapshot: CatalogSnapshot,
+    scope: Scope,
 ) -> tuple[SnapshotReference, DiscoveryResult]:
     reference = repository.load_latest()
     if reference.ruleset_version != "daily-history-1" or reference.source_id is None:
@@ -74,6 +89,8 @@ def load_published_discovery(
         tables,
         source_id=reference.source_id,
         as_of=reference.as_of,
+        snapshot=snapshot,
+        scope=scope,
     )
 
 
@@ -194,7 +211,10 @@ def load_member_history(
             cached[item.symbol] = item
             if item.state == "available":
                 _cached_member_series(
-                    source_cache_path, item.symbol, as_of, retry_limit,
+                    source_cache_path,
+                    item.symbol,
+                    as_of,
+                    retry_limit,
                     _seed=(provider_id, item),
                 )
     return StockHistoryBatch(provider_id, as_of, tuple(cached[symbol] for symbol in symbols))

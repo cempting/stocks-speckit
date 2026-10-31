@@ -1,0 +1,2 @@
+RepresentationId,RegionId,ClassificationId,ClassificationVersion,NodeId,ListingId,EffectiveFrom,EffectiveTo,SourceId,ApprovalReference,SuitabilityReference,CandidateReviewId
+test-sector-etf,US,TEST_CLASSIFICATION,TEST_VERSION,test-sector,test-etf-listing,2020-01-01,,test-source,test-approval,test-sector-suitability,

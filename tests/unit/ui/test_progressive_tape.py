@@ -25,16 +25,106 @@ def _history(closes: tuple[float, ...]) -> pd.DataFrame:
     )
 
 
+@pytest.mark.parametrize("entity_column", ["Sector", "Industry"])
+def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_column: str) -> None:
+    def app_script(entity_column: str) -> None:
+        import pandas as pd
+        import streamlit as st
+
+        from market_leadership.ui.components.progressive_tape import render_chart_tape
+
+        def select(node_id: str) -> None:
+            st.session_state["selected_node"] = node_id
+
+        frame = pd.DataFrame(
+            {
+                "Price chart": ["Unavailable", "Unavailable"],
+                "Volume chart": ["Unavailable", "Unavailable"],
+                entity_column: ["Same name", "Same name"],
+                "Node ID": ["first", "second"],
+                "Status": ["Not covered", "Invalid evidence: expired mapping"],
+                "Representation": ["Not covered", "Reviewed basket"],
+            }
+        )
+        render_chart_tape(frame, key="entities", on_select=select)
+        st.write(f"Selected: {st.session_state.get('selected_node')}")
+
+    app = AppTest.from_function(app_script, args=(entity_column,)).run()
+    assert not app.exception
+    assert [item.label for item in app.button] == ["Same name", "Same name"]
+    assert not any(item.value == "Node ID" for item in app.caption)
+    if entity_column == "Industry":
+        assert not any(item.value in {"Status", "Representation"} for item in app.caption)
+    assert "Invalid evidence: expired mapping" in app.button("entities_select_second").help
+    app.button("entities_select_second").click().run()
+    assert not app.exception
+    assert any(item.value == "Selected: second" for item in app.markdown)
+
+
+def test_stock_list_shows_name_only_in_ticker_button_and_preserves_selection() -> None:
+    def app_script() -> None:
+        import pandas as pd
+        import streamlit as st
+
+        from market_leadership.ui.components.progressive_tape import (
+            StockTapeRow,
+            build_stock_tape_frame,
+            render_selectable_stock_tape,
+        )
+
+        rows = (
+            StockTapeRow(
+                instrument_id="stock-a",
+                ticker="AAA",
+                name="Alpha",
+                history=pd.DataFrame(),
+                price_state="unavailable",
+            ),
+            StockTapeRow(
+                instrument_id="placeholder",
+                ticker="",
+                name="Unresolved company",
+                history=pd.DataFrame(),
+                price_state="unavailable",
+                resolution_state="placeholder",
+            ),
+        )
+        selected = render_selectable_stock_tape(build_stock_tape_frame(rows), key="stock-list")
+        st.write(f"Selected rows: {selected}")
+
+    app = AppTest.from_function(app_script).run()
+    assert not app.exception
+    headings = {
+        "Price + 50 MA",
+        "Volume by price direction",
+        "Ticker",
+        "Name",
+        "CAP Type",
+        "Total Score",
+    }
+    assert [item.value for item in app.caption if item.value in headings] == [
+        "Price + 50 MA",
+        "Volume by price direction",
+        "Ticker",
+        "CAP Type",
+        "Total Score",
+    ]
+    assert [item.label for item in app.button] == [
+        "AAA · Alpha",
+        "Unresolved placeholder · Unresolved company",
+    ]
+    assert not any(item.value in {"Alpha", "Unresolved company"} for item in app.markdown)
+    app.button[0].click().run()
+    assert not app.exception
+    assert any(item.value == "Selected rows: (0,)" for item in app.markdown)
+
+
 @pytest.mark.parametrize("sma50", [None, 10.5])
 def test_chart_thumbnails_have_double_height_without_changing_width(
     sma50: float | None,
 ) -> None:
-    price = build_price_thumbnail(
-        [{"session": "2026-10-19", "close": 11.0, "sma50": sma50}]
-    )
-    volume = build_volume_thumbnail(
-        [{"session": "2026-10-19", "volume": 100.0, "direction": "up"}]
-    )
+    price = build_price_thumbnail([{"session": "2026-10-19", "close": 11.0, "sma50": sma50}])
+    volume = build_volume_thumbnail([{"session": "2026-10-19", "volume": 100.0, "direction": "up"}])
 
     for chart in (price, volume):
         assert chart is not None
@@ -104,9 +194,7 @@ def test_thumbnail_period_filters_both_series_without_losing_sma_warmup(
     offset: pd.DateOffset,
 ) -> None:
     sessions = pd.bdate_range(end="2026-10-30", periods=400)
-    history = pd.DataFrame(
-        {"close": range(1, 401), "volume": range(1000, 1400)}, index=sessions
-    )
+    history = pd.DataFrame({"close": range(1, 401), "volume": range(1000, 1400)}, index=sessions)
     start = (sessions[-1] - offset).date()
     expected = history.loc[sessions.date >= start]
     entity_frame = attach_chart_series(
@@ -134,9 +222,7 @@ def test_thumbnail_period_filters_both_series_without_losing_sma_warmup(
         expected_sessions = [session.date().isoformat() for session in expected.index]
         assert [point["session"] for point in price] == expected_sessions
         assert [point["session"] for point in volume] == expected_sessions
-        assert price[0]["sma50"] == (
-            history["close"].rolling(50).mean().loc[expected.index[0]]
-        )
+        assert price[0]["sma50"] == (history["close"].rolling(50).mean().loc[expected.index[0]])
         assert volume[0]["direction"] == "up"
     assert stock_frame.columns.tolist()[:6] == [
         "Price chart",

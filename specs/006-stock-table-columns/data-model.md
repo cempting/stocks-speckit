@@ -45,11 +45,11 @@ Flow average only when all three scores are valid; otherwise its explicit non-nu
 
 ### Stock Table Projection
 
-Visible fields, in order: Price chart + 50 MA, Volume chart, Ticker, Name, CAP Type, Total
+Visible fields, in order: Price chart + 50 MA, Volume chart, Ticker, CAP Type, Total
 Score.
 
-Internal fields: Instrument ID and Resolution remain available only for existing selection
-behavior.
+Internal fields: Name remains available for the combined ticker/company-name button and detail
+identity. Instrument ID and Resolution remain available for existing selection behavior.
 
 ## State Transitions
 

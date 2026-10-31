@@ -3,16 +3,22 @@
 **Design version**: `screener-data-v1`. Local functions around the existing yfinance
 boundary, not a new pluggable provider protocol. See [data model](../data-model.md).
 
+**2026-10-31 catalog amendment**: [Feature 010](../../010-manifest-csv-catalogs/spec.md)
+governs file-only catalog/review sources. Original index/exchange query controls remain historical
+where superseded by the [authority map](../../README.md). Price/fact calculations and remote-cache
+rules remain applicable; this amendment is a target contract, not an implemented file-only boundary.
+
 ## Source and Operations
 
-`source_id = yfinance` throughout the new runtime path. An environment API key never
+`source_id = yfinance` identifies runtime price/financial observations, not the distinct reviewed
+catalog sources registered by the manifest. An environment API key never
 selects Massive, and an error never switches provider. Controlled test doubles are
 not runtime fallback sources. No database or persistent snapshot cache is required.
 
 | Operation | Inputs | Successful output and limits |
 |---|---|---|
-| Discover universe | Normalized exchange/type/cap/sector query, cutoff, page cursor | Validated candidate page plus pagination/coverage metadata; no assumption that top lists are all members |
-| Resolve memberships | Universe, industry/index IDs, effective date/cutoff | Verified dated membership; explicit unsupported/partial status when not provided |
+| Discover regional members | Region, exact classification/version, activated release, effective date | Reviewed regional stock CSV rows plus manifest coverage; no inferred members from provider top lists |
+| Resolve memberships | Region, exact industry/sub-industry IDs, activated release, effective date | Reviewed stock-to-industry and hierarchy references; explicit unsupported/partial status |
 | Load daily history | Instrument, date range or full-available-history request, completed cutoff, adjustment/action options | Adjusted OHLC, volume basis, actions, actual history/session coverage and source metadata |
 | Load financial facts | Instrument, statement families, requested current/prior fiscal windows, information cutoff | Raw period facts and actual availability/vintage metadata where known; missing dates remain missing |
 | Resolve cap/representation | Instrument/node IDs, membership date, valuation date | Currency/date-qualified cap and qualified representation evidence, or explicit insufficiency |
@@ -33,13 +39,13 @@ No operation ranks industries or computes score percentiles.
    Do not backdate an observation to an earlier price cutoff. Display known coverage gaps.
 5. Apply union/intersection and cap-band boundaries from the model. Dollar thresholds
    require dated USD caps; no guessed FX conversion or cap observation date.
-6. Prefer an explicitly qualified one-industry ETF; competing qualified ETFs require a
-   recorded dated choice rather than random order. Otherwise use the greatest positive
-   dated market cap among verified industry members, breaking ties by stable instrument ID.
-   Missing membership/cap coverage cannot prove a largest-stock choice. Label single-company
-   proxies; show missing qualified representations without rank.
-7. Representations do not define membership. Exposure/rights qualification metadata may
-   be reviewed statically, but no second runtime financial feed is introduced.
+6. Use exact effective reviewed ETF mappings from registered files; competing candidates require
+   explicit dated selection/approval. Otherwise only a feature 008 explicitly approved basket
+   may supply labeled alternative momentum. Never infer an index, largest-stock, or parent proxy.
+   All active reviewed hierarchy nodes remain visible with representation/evidence gaps.
+7. Representations do not define membership. Reviewed scope/listing/approval metadata comes from
+   manifest-registered files, not embedded catalogs; registration is not approval and does not
+   introduce a second runtime financial feed.
 
 ## Prices, Sessions and Validation
 
@@ -82,13 +88,16 @@ payload full of `None`. Never invent history, ratios, dates or peer counts.
 
 ## Cache Keys, TTL and Refresh
 
-All source caches use `st.cache_data(persist=None, ttl=..., max_entries=...)`.
-Initial policy:
+The following historical initial TTL policy applies to remote market-data payloads.
+Catalog authority is an activated validated file release, not a 24-hour provider membership cache.
+Catalog reuse must identify the release and detect missing/changed registered sources; it must not
+mask invalid active files with cached success. Existing remote-response persistence is outside
+feature 010's catalog redesign.
 
 | Payload | TTL | Key components in addition to source/version |
 |---|---|---|
 | Daily OHLC/actions | 15 minutes | Stable instrument and provider symbol, start/end or full-history mode, interval, adjustment/action settings, cutoff |
-| Universe/membership/cap | 24 hours | Complete normalized query, dataset, cursor/offset, effective/valuation date and cutoff |
+| Market capitalization | 24 hours | Instrument identity, valuation date, currency/basis and cutoff |
 | Financial statements | 6 hours | Instrument, statement families/frequency, requested periods, currency/basis and cutoff |
 | Numerical transforms | Bounded cache, keyed to immutable payload fingerprints | Source fingerprints, cutoff, detector/scoring version and actual numerical parameters |
 
@@ -98,7 +107,8 @@ so sorting/filter changes or a smaller selected subset do not refetch the same d
 Compute payload fingerprints once when loading, not by rehashing full histories for
 every local widget event.
 
-Financial peer-cache identity includes the full industry/universe/cutoff/facts, and
+Financial peer-cache identity includes the exact reviewed region/classification/version,
+effective membership/release identity, full eligible cohort, cutoff/facts, and
 excludes technical filters, selected rows, sort and page. Detector identity includes
 volume parameters even if the spike checkbox is off.
 

@@ -2,59 +2,61 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
-from market_leadership.infrastructure.region_database import RegionDatabase
-from market_leadership.infrastructure.universe_import import import_reviewed_file
+from tests.fixtures.catalogs.ui import configure_ui, edit_csv, publish_entry
+
+APP = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
 
 
-def _populate_database(tmp_path: Path) -> Path:
-    database_path = tmp_path / "market-universe.sqlite"
-    database = RegionDatabase(database_path)
-    database.initialize()
-    source = tmp_path / "members.csv"
-    source.write_text(
-        "InstrumentId,Ticker,Name,Exchange,Sector,Industry\n"
-        "instrument-a,AAA,Alpha,NASDAQ,Technology,Cloud\n",
-        encoding="utf-8",
-    )
-    import_reviewed_file(
-        database,
-        source,
-        region_id="US",
-        classification_id="TEST",
-        source_id="controlled-test",
-        exchange_id=None,
-        coverage="controlled sample",
-        approval_reference="test-only",
-    )
-    return database_path
-
-
-def test_discovery_uses_one_yfinance_path_and_discloses_dates(monkeypatch, tmp_path) -> None:
-    calls: list[tuple[str, ...]] = []
-
-    class CountingProvider(FixtureProvider):
-        def fetch_daily_history(self, symbols, *, start, end, force=False):
-            calls.append(symbols)
-            return super().fetch_daily_history(symbols, start=start, end=end, force=force)
-
-    def build_test_provider(provider_id: str, *args, **kwargs) -> CountingProvider:
-        del args, kwargs
-        assert provider_id == "yfinance"
-        return CountingProvider()
-
-    monkeypatch.setattr(
-        "market_leadership.bootstrap.build_request_provider",
-        build_test_provider,
-    )
-    monkeypatch.setenv("MARKET_UNIVERSE_DATABASE_PATH", str(_populate_database(tmp_path)))
-    app_path = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
-    app = AppTest.from_file(app_path).run(timeout=20)
-
+def test_discovery_uses_one_yfinance_path_and_discloses_dates(monkeypatch, catalog_release):
+    calls = configure_ui(monkeypatch, catalog_release)
+    app = AppTest.from_file(APP).run(timeout=20)
     assert not app.exception
     text = " ".join(str(item.value) for item in (*app.caption, *app.markdown))
     assert "SOURCE YFINANCE" in text
     assert "REQUESTED" in text and "OBSERVED" in text
     assert not any(widget.label in {"Discovery mode", "Data provider"} for widget in app.selectbox)
-    assert not any("snapshot" in item.value.lower() for item in app.info)
-    assert len(calls) == 1
+    assert calls == [("TEST_ETF",)]
+
+
+def test_missing_purpose_benchmarks_are_explicit_and_never_defaulted(monkeypatch, catalog_release):
+    calls = configure_ui(monkeypatch, catalog_release)
+    edit_csv(catalog_release, "benchmarks", lambda rows: rows.clear())
+    publish_entry(catalog_release)
+    app = AppTest.from_file(APP).run(timeout=20)
+    assert not app.exception
+    messages = " ".join(item.value for item in (*app.error, *app.warning))
+    assert "sp500_comparison" in messages and "market_sentiment" in messages
+    assert all("SPY" not in symbols for symbols in calls)
+
+
+def test_comparison_and_sentiment_use_independent_file_listings(monkeypatch, catalog_release):
+    def listings(rows):
+        original = dict(rows[0])
+        for purpose in ("COMPARISON", "SENTIMENT"):
+            rows.append(
+                dict(
+                    original,
+                    ListingId=f"test-{purpose.lower()}",
+                    InstrumentId=f"test-{purpose.lower()}-instrument",
+                    Ticker=f"TEST_{purpose}",
+                    ProviderSymbol=f"TEST_{purpose}",
+                )
+            )
+
+    edit_csv(catalog_release, "etf_listings", listings)
+    edit_csv(
+        catalog_release,
+        "benchmarks",
+        lambda rows: [
+            row.update(
+                ListingId="test-comparison"
+                if row["Purpose"] == "sp500_comparison"
+                else "test-sentiment"
+            )
+            for row in rows
+        ],
+    )
+    calls = configure_ui(monkeypatch, catalog_release)
+    app = AppTest.from_file(APP).run(timeout=20)
+    assert not app.exception
+    assert set(calls[0]) == {"TEST_COMPARISON", "TEST_SENTIMENT", "TEST_ETF"}

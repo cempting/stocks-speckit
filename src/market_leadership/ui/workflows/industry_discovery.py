@@ -6,7 +6,6 @@ from typing import cast
 import streamlit as st
 
 from market_leadership.application.browse_scoreboard import read_weekly_board
-from market_leadership.application.discover_sectors import SECTOR_PROXIES
 from market_leadership.application.inspect_industry import inspect_industry
 from market_leadership.bootstrap import build_snapshot_repository
 from market_leadership.config import load_settings
@@ -54,29 +53,9 @@ def render_industry_discovery(*, configure_page: bool = True) -> None:
         key=_MODE_KEY,
     )
     if mode == "Live US":
-        sector_names = [name for name, _ in SECTOR_PROXIES]
-        supplied_names: object = handoff.get("sector_names", []) if handoff else []
-        handoff_names = (
-            [
-                name
-                for name in cast(list[object], supplied_names)
-                if isinstance(name, str) and name in sector_names
-            ]
-            if isinstance(supplied_names, list)
-            else []
-        )
-        st.multiselect(
-            "Sectors",
-            options=sector_names,
-            default=handoff_names,
-            key=_SECTORS_KEY,
-            help="Choose parent sectors for a future authorized live industry catalog.",
-        )
         st.info(
-            "Live industry results are not enabled. The source review found candidate ETF "
-            "exposures, but no verified dated industry catalog, point-in-time stock membership "
-            "and market-cap source, or deployment rights for live derived results. No live "
-            "provider request was made."
+            "This legacy live route is retired. Use the root Discovery or Industry Deep-Dive "
+            "tab with a validated manifest-managed catalog. No live provider request was made."
         )
         return
 

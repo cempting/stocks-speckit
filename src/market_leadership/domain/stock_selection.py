@@ -5,7 +5,7 @@ from datetime import date
 @dataclass(frozen=True)
 class MembershipEntry:
     instrument_id: str
-    company_id: str
+    company_id: str | None
     symbol: str
     name: str
     exchange: str

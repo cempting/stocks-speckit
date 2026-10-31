@@ -52,7 +52,7 @@ def test_trends_on_either_side_of_strict_thresholds(
 ) -> None:
     closes = [4000.0 + step * (session - 93.5) for session in range(169)]
 
-    result = calculate_market_sentiment(_frame(closes))
+    result = calculate_market_sentiment(_frame(closes), benchmark="LOCAL")
 
     assert result.sma150 == pytest.approx(4000.0)
     assert result.normalized_slope_pct == pytest.approx(expected_slope, rel=1e-10)
@@ -74,7 +74,7 @@ def test_exact_threshold_is_flat_even_when_close_crosses_average(
         "market_leadership.domain.regimes.np.polyfit",
         lambda x, y, degree: np.array([slope, 0.0]),
     )
-    result = calculate_market_sentiment(_frame(closes))
+    result = calculate_market_sentiment(_frame(closes), benchmark="LOCAL")
 
     assert result.sma150 == 4000.0
     assert result.normalized_slope_pct == (0.025 if slope > 0 else -0.025)
@@ -84,7 +84,7 @@ def test_exact_threshold_is_flat_even_when_close_crosses_average(
 
 @pytest.mark.parametrize("count", [150, 168])
 def test_undefined_slope_with_close_and_average_is_sideways(count: int) -> None:
-    result = calculate_market_sentiment(_frame([100.0] * count))
+    result = calculate_market_sentiment(_frame([100.0] * count), benchmark="LOCAL")
 
     assert result.close == 100.0
     assert result.sma150 == 100.0
@@ -97,7 +97,7 @@ def test_missing_interior_close_does_not_compress_sma_sessions() -> None:
     closes = [100.0] * 170
     closes[19] = float("nan")
 
-    result = calculate_market_sentiment(_frame(closes))
+    result = calculate_market_sentiment(_frame(closes), benchmark="LOCAL")
 
     assert result.close == 100.0
     assert result.sma150 == 100.0
@@ -124,7 +124,7 @@ def test_missing_interior_close_does_not_compress_sma_sessions() -> None:
     ],
 )
 def test_missing_close_or_average_is_insufficient(closes: list[float]) -> None:
-    result = calculate_market_sentiment(_frame(closes))
+    result = calculate_market_sentiment(_frame(closes), benchmark="LOCAL")
 
     assert result.close is None
     assert result.sma150 is None

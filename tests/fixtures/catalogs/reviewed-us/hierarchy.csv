@@ -1,0 +1,5 @@
+RegionId,ClassificationId,ClassificationVersion,NodeId,NodeType,Name,SectorId,ParentIndustryId,EffectiveFrom,EffectiveTo,SourceId,ApprovalReference,ApprovalOrigin
+US,TEST_CLASSIFICATION,TEST_VERSION,test-sector,sector,Test sector,test-sector,,2020-01-01,,test-source,test-approval,own
+US,TEST_CLASSIFICATION,TEST_VERSION,test-cloud,industry,Test cloud,test-sector,,2020-01-01,,test-source,test-approval,own
+US,TEST_CLASSIFICATION,TEST_VERSION,test-empty,industry,Test empty,test-sector,,2020-01-01,,test-source,test-approval,own
+US,TEST_CLASSIFICATION,TEST_VERSION,test-specialist,sub_industry,Test specialist,test-sector,test-cloud,2020-01-01,,test-source,test-approval,own

@@ -1,5 +1,18 @@
 # Implementation Plan: Sector-to-Stock Explorer
 
+> **2026-11-01 presentation amendment:** Reuse the chart-tape renderer with node-ID-backed
+> name-button callbacks for sector-to-industry and industry-to-stock navigation. Apply selections
+> before widget rendering, using existing descendant invalidation. Hide industry Status and
+> Representation columns, retaining their evidence in tooltips and keeping Representation type,
+> chart geometry, return colors, filters, and explicit score loading unchanged.
+
+> **2026-10-31 alignment:** SQL storage, database CLI/setup, fixed sector tickers, and benchmark
+> instrument assumptions below document the pre-cutover implementation.
+> [Feature 010](../010-manifest-csv-catalogs/spec.md) supersedes them with manifest-registered
+> files and one stock CSV per region referencing reviewed industries/hierarchy. Do not replay
+> this database plan as new work. Preserve chart/control behavior, exact listing/membership
+> governance, and later stock-column refinements; reconcile/export legacy evidence before cutover.
+
 **Branch**: `004-sector-stock-explorer` | **Date**: 2026-10-30 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/004-sector-stock-explorer/spec.md`

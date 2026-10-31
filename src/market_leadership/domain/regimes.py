@@ -15,7 +15,7 @@ class MarketSentiment:
     slope_state: str
 
 
-def calculate_market_sentiment(frame: pd.DataFrame, benchmark: str = "SPY") -> MarketSentiment:
+def calculate_market_sentiment(frame: pd.DataFrame, benchmark: str) -> MarketSentiment:
     closes = frame["close"].sort_index()
     sma150 = closes.rolling(window=150, min_periods=150).mean()
     if closes.empty or pd.isna(closes.iloc[-1]) or pd.isna(sma150.iloc[-1]):

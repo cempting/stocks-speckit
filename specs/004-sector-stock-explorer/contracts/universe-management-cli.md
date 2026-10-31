@@ -1,5 +1,12 @@
 # Regional Universe Management CLI Contract
 
+> **2026-10-31 — pre-cutover interface:** These implemented database commands, input columns,
+> and flags are historical/current-version operational references, not a file-only contract.
+> [Feature 010](../../010-manifest-csv-catalogs/spec.md) requires a manifest-backed regional
+> stock CSV/hierarchy release, durable file-based approvals/audit evidence, and safe export/
+> reconciliation. Replacement or retired commands must provide actionable migration guidance.
+> Do not infer new CLI flags or retain dual catalog authority; exact interfaces await 010 planning.
+
 ## Purpose and storage
 
 - The CLI initializes and manages the local SQLite database used by Discovery.

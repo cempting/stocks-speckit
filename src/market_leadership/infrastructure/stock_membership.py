@@ -1,160 +1,78 @@
-import json
 from dataclasses import dataclass
 from datetime import date
-from hashlib import sha256
-from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 from market_leadership.config import Settings
+from market_leadership.domain.catalog import CatalogError, Region, Scope, StockRow
 from market_leadership.domain.stock_selection import MembershipCatalog, MembershipEntry
-from market_leadership.infrastructure.region_database import (
-    RegionDatabase,
-    RegionRecord,
-    StockMembershipRecord,
-)
+from market_leadership.infrastructure.catalog_files import CatalogSnapshot
 
-MembershipLoadState = Literal[
-    "available", "missing_database", "invalid_database", "empty_membership"
-]
+MembershipLoadState = Literal["available", "empty_membership"]
 
 
 @dataclass(frozen=True, slots=True)
 class RegionMembershipResult:
     state: MembershipLoadState
-    region: RegionRecord | None
-    coverage_state: str | None
-    coverage_description: str | None
-    revision: str | None
-    members: tuple[StockMembershipRecord, ...]
+    region: Region
+    coverage_state: str
+    coverage_description: str
+    revision: str
+    members: tuple[StockRow, ...]
 
 
 def load_region_membership(
-    database: RegionDatabase,
+    snapshot: CatalogSnapshot,
     *,
-    region_id: str,
-    classification_id: str,
+    scope: Scope,
     industry_id: str,
     as_of: date,
 ) -> RegionMembershipResult:
-    if not database.path.exists():
-        return RegionMembershipResult("missing_database", None, None, None, None, ())
-    if not database.is_initialized():
-        return RegionMembershipResult("invalid_database", None, None, None, None, ())
-    region = database.get_region(region_id)
-    if (
-        region is None
-        or database.get_classification_id(region_id, as_of=as_of) != classification_id
-    ):
-        return RegionMembershipResult(
-            "empty_membership",
-            region,
-            region.coverage_state if region else None,
-            region.coverage_description if region else None,
-            database.get_revision(),
-            (),
-        )
-    members = database.get_industry_members(region_id, classification_id, industry_id, as_of=as_of)
+    members = snapshot.members(scope, industry_id, as_of)
+    region = next(item for item in snapshot.release.regions if item.region_id == scope.region_id)
     return RegionMembershipResult(
         "available" if members else "empty_membership",
         region,
         region.coverage_state,
         region.coverage_description,
-        database.get_revision(),
+        snapshot.cohort_fingerprint(scope, industry_id, as_of),
         members,
     )
 
 
-FIXTURE_CATALOG = (
-    Path(__file__).parents[3] / "tests/fixtures/acceptance/fundamental_membership.json"
-)
-
-
-def _record(value: object) -> dict[str, object]:
-    if not isinstance(value, dict):
-        raise ValueError("Membership catalog objects must be JSON objects")
-    return cast(dict[str, object], value)
-
-
-def _text(record: dict[str, object], key: str) -> str:
-    value = record.get(key)
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"Membership catalog requires nonempty {key}")
-    return value.strip()
-
-
-def load_membership_catalog(path: str | Path) -> MembershipCatalog:
-    source = Path(path)
-    if source.stat().st_size > 2_000_000:
-        raise ValueError("Membership catalog exceeds the two-megabyte input limit")
-    raw = source.read_bytes()
-    document = _record(json.loads(raw))
-    if document.get("schema_version") != 1 or document.get("market") != "US":
-        raise ValueError("Membership catalog requires schema version 1 and US market")
-    mode = _text(document, "evidence_mode")
-    if mode not in ("fixture", "live"):
-        raise ValueError("Membership evidence mode must be fixture or live")
-    observed_on = date.fromisoformat(_text(document, "observation_date"))
-    if observed_on > date.today():
-        raise ValueError("Membership observation date cannot be in the future")
-    entries_value = document.get("entries")
-    if not isinstance(entries_value, list):
-        raise ValueError("Membership entries must be an array")
-    entries: list[MembershipEntry] = []
-    identities: set[str] = set()
-    listings: set[str] = set()
-    industries: dict[str, tuple[str, str]] = {}
-    sectors: dict[str, str] = {}
-    for raw_entry in cast(list[object], entries_value):
-        row = _record(raw_entry)
-        if row.get("instrument_type") != "stock":
-            raise ValueError("Membership entries must identify stock instruments")
-        entry = MembershipEntry(
-            _text(row, "instrument_id"),
-            _text(row, "company_id"),
-            _text(row, "symbol"),
-            _text(row, "name"),
-            _text(row, "exchange"),
-            _text(row, "currency"),
-            _text(row, "sector_id"),
-            _text(row, "sector_name"),
-            _text(row, "industry_id"),
-            _text(row, "industry_name"),
-            date.fromisoformat(_text(row, "effective_from")),
-            date.fromisoformat(_text(row, "effective_to"))
-            if row.get("effective_to") is not None
-            else None,
-        )
-        if (
-            len(entry.currency) != 3
-            or not entry.currency.isalpha()
-            or entry.currency != entry.currency.upper()
-        ):
-            raise ValueError("Membership currency must use a three-letter code")
-        if entry.symbol != entry.symbol.upper():
-            raise ValueError("Membership symbols must use canonical uppercase provider symbols")
-        if entry.effective_to is not None and entry.effective_to < entry.effective_from:
-            raise ValueError("Membership effective dates are reversed")
-        if entry.instrument_id in identities or entry.symbol in listings:
-            raise ValueError("Membership contains duplicate instruments or listings")
-        parent = (entry.sector_id, entry.industry_name)
-        if entry.industry_id in industries and industries[entry.industry_id] != parent:
-            raise ValueError("Membership industry has conflicting parent relationships")
-        if entry.sector_id in sectors and sectors[entry.sector_id] != entry.sector_name:
-            raise ValueError("Membership sector identity has conflicting names")
-        identities.add(entry.instrument_id)
-        listings.add(entry.symbol)
-        industries[entry.industry_id] = parent
-        sectors[entry.sector_id] = entry.sector_name
-        entries.append(entry)
-    return MembershipCatalog(
-        observed_on,
-        _text(document, "source_id"),
-        _text(document, "classification"),
-        mode,
-        _text(document, "coverage"),
-        _text(document, "approval_reference"),
-        tuple(entries),
-        sha256(raw).hexdigest(),
+def membership_entry(
+    snapshot: CatalogSnapshot, row: StockRow, as_of: date
+) -> MembershipEntry | None:
+    symbol = row.provider_symbol_on(as_of)
+    if symbol is None:
+        return None
+    nodes = snapshot.active_nodes(row.scope, as_of)
+    industry = next((node for node in nodes if node.node_id == row.industry_id), None)
+    if industry is None:
+        raise CatalogError("inactive_node", "IndustryId")
+    sector = next((node for node in nodes if node.node_id == industry.sector_id), None)
+    listing = row.listing
+    if (
+        sector is None
+        or listing is None
+        or listing.period is None
+        or listing.exchange is None
+        or listing.currency is None
+    ):
+        raise CatalogError("incomplete_verified_listing", "ListingId")
+    end_dates = tuple(end for end in (row.period.end, listing.period.end) if end is not None)
+    return MembershipEntry(
+        row.instrument_id,
+        row.company_id,
+        symbol,
+        row.name,
+        listing.exchange,
+        listing.currency,
+        sector.node_id,
+        sector.name,
+        industry.node_id,
+        industry.name,
+        max(row.period.start, listing.period.start),
+        min(end_dates) if end_dates else None,
     )
 
 
@@ -163,9 +81,6 @@ def validate_live_access(catalog: MembershipCatalog, settings: Settings) -> None
         raise ValueError("Live grading requires a single yfinance source; review provider settings")
     if catalog.mode != "live":
         raise ValueError("A fixture catalog cannot authorize live requests")
-    if not settings.fundamental_display_approval or (
-        settings.fundamental_display_approval != catalog.approval_reference
-    ):
-        raise ValueError("Review live display rights and configure the matching approval reference")
-    if catalog.observed_on != date.today():
-        raise ValueError("Unsupported historical live membership context; use matching fixtures")
+    raise ValueError(
+        "Independent JSON membership catalogs are retired; use the manifest-backed root tabs"
+    )

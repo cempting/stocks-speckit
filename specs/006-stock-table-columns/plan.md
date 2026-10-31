@@ -1,5 +1,12 @@
 # Implementation Plan: Stock Table Columns
 
+> **2026-11-01 presentation amendment:** Use five visible columns with the company name in the
+> Ticker button, not a separate Name column. Preserve CAP Type/Total Score semantics and
+> explicit loading. [Feature 010](../010-manifest-csv-catalogs/spec.md) changes catalog inputs to
+> one reviewed regional stock CSV and exact hierarchy references in an activated file release.
+> Reconcile affected peer/selection evidence; do not add columns, new requests, or a catalog
+> database/embedded-list fallback. The aggregate itself still needs no separate persistence.
+
 **Branch**: `006-stock-table-columns` | **Date**: 2026-10-30 | **Spec**:
 [spec.md](./spec.md)
 
@@ -7,8 +14,9 @@
 
 ## Summary
 
-Constrain the contained-stocks table to Price chart + 50 MA, Volume chart, Ticker, Name, CAP
-Type, and Total Score. Rename the established Score display to Total Score without changing its
+Constrain the contained-stocks table to Price chart + 50 MA, Volume chart, Ticker, CAP Type,
+and Total Score. Retain Name privately for the Ticker button and stock details.
+Rename the established Score display to Total Score without changing its
 equal-weight, three-component rule. Preserve the current market capitalization value already
 obtained by the existing explicit fundamental-score action, then classify it as Large (>= $10B),
 Mid (>= $2B and < $10B), or Small (< $2B). No additional market-data action is introduced;
@@ -123,8 +131,9 @@ classification.
    validate a numeric finite positive profile value and retain no value on profile errors.
 2. `StockTapeRow` receives that optional value from `StockScoreEvidence`. A pure projection
    classifies it: Large >= $10B; Mid >= $2B and < $10B; Small < $2B; otherwise Unavailable.
-3. Emit the contained-stock table columns in this exact order: Price chart, Volume chart, Ticker,
-   Name, CAP Type, Total Score, followed only by internal selection fields.
+3. Render the contained-stock comparison columns in this exact order: Price chart, Volume chart,
+   Ticker, CAP Type, Total Score. Keep Name in the private projection for the combined ticker/name
+   button, alongside internal selection fields.
 4. Rename Score to Total Score while preserving the existing numeric and non-numeric state
    contract. Price and volume chart-cell disclosures remain unchanged.
 5. Test provider extraction and evidence handoff, all CAP thresholds/invalid values, final column

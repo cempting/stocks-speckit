@@ -6,8 +6,23 @@
 
 **Status**: Draft
 
+**Updated**: 2026-11-01 (remove redundant visible Name column)
+
 **Input**: User description: "the stocks table shall have price chart + 50MA, volume chart,
 ticker, name, CAP type, Total Score"
+
+**Presentation amendment, 2026-11-01**: The user requested removal of the separate Name column
+because the Ticker button already contains the company name. Preserve name metadata and stock
+details; show five comparison columns.
+
+## Catalog Authority and Preserved Scope
+
+The [feature 010 specification](../010-manifest-csv-catalogs/spec.md) supplies comparison rows
+through one reviewed stock CSV per region and exact industry/hierarchy references in the active
+manifest-backed release. No catalog database or embedded stock list is a runtime source.
+The five visible columns, current capitalization thresholds, explicit score-load behavior,
+and complete three-component aggregate remain unchanged; catalog provenance belongs in existing
+context/disclosures, not additional table columns.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -21,13 +36,14 @@ Total Score without unrelated fields.
 industry.
 
 **Independent Test**: Display stocks with complete, incomplete, and unavailable evidence and
-verify that every table presents exactly the required six columns in order, while unavailable
+verify that every table presents exactly the required five columns in order, while unavailable
 data remains explicitly identified.
 
 **Acceptance Scenarios**:
 
 1. **Given** a stocks table with complete evidence, **When** it is displayed, **Then** it shows
-   Price chart + 50 MA, Volume chart, Ticker, Name, CAP Type, and Total Score in that order.
+   Price chart + 50 MA, Volume chart, Ticker, CAP Type, and Total Score in that order, with
+   the company name included in the Ticker button.
 2. **Given** a stock with insufficient price history for the moving average, **When** the table
    is displayed, **Then** its price chart remains visible and identifies the insufficient moving
    average.
@@ -56,6 +72,9 @@ remain explicit.
    **Then** the affected chart cell remains explicitly unavailable or insufficient.
 2. **Given** an unresolved placeholder, **When** the table is displayed, **Then** its identity
    remains identifiable and its CAP Type and Total Score are not fabricated.
+3. **Given** a validated manifest release change, **When** the stocks table updates, **Then**
+   exact effective industry membership determines the rows, the five-column layout is unchanged,
+   and invalid selections/affected peer evidence are reconciled without hidden data loading.
 
 ### Edge Cases
 
@@ -71,7 +90,7 @@ remain explicit.
 ### Functional Requirements
 
 - **FR-001**: The stocks table MUST show exactly these visible columns in order: Price chart + 50
-  MA, Volume chart, Ticker, Name, CAP Type, Total Score.
+  MA, Volume chart, Ticker, CAP Type, Total Score.
 - **FR-002**: The Price chart + 50 MA column MUST retain the stock's own price chart and
   explicitly identify insufficient moving-average evidence without hiding available price
   evidence.
@@ -85,10 +104,14 @@ remain explicit.
 - **FR-006**: Total Score MUST use the existing overall-score meaning: the equally weighted
   average of Quality, Growth, and Cash Flow only when all three component scores are available;
   otherwise it MUST show the existing explicit non-numeric score state.
-- **FR-007**: The table MUST retain ticker, stock name, and unresolved-placeholder identity
-  presentation.
+- **FR-007**: The Ticker button MUST retain ticker, stock name, and unresolved-placeholder identity
+  presentation without a separate visible Name column. Catalog and detail name fields remain intact.
 - **FR-008**: Displaying the table MUST NOT initiate hidden price, capitalization, or score
   loading.
+- **FR-009**: Rows MUST come from the activated regional stock CSV and reviewed hierarchy using
+  stable instrument/listing identities, exact scope, and effective membership periods.
+  File-only cutover MUST preserve the five-column presentation and explicit load behavior;
+  invalid catalog evidence MUST be reported, not filled with embedded lists or stale rows.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -104,13 +127,16 @@ remain explicit.
 ### Measurable Outcomes
 
 - **SC-001**: In controlled complete, unavailable, insufficient, and placeholder cases, 100% of
-  stocks tables display only the six required columns in the required order.
+  stocks tables display only the five required columns in the required order.
 - **SC-002**: In controlled capitalization cases, 100% of valid values map to the confirmed CAP
   Type category, and 100% of missing or invalid values display as unavailable.
 - **SC-003**: In controlled chart and score evidence cases, 100% of unavailable or insufficient
   data remains explicitly identified without suppressing independent available evidence.
 - **SC-004**: Users can identify a stock's ticker, CAP Type, and Total Score in under 10 seconds
   in a representative comparison scenario.
+- **SC-005**: With the legacy catalog database unavailable, controlled release changes produce
+  100% correct effective member rows and zero stale selections while retaining exactly five
+  columns, unchanged CAP Type/Total Score rules, and zero hidden loading actions.
 
 ## Assumptions
 

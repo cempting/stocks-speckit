@@ -1,5 +1,12 @@
 # Data Model: Sector-to-Stock Explorer
 
+> **2026-10-31 alignment — migration reference:** The SQL records and `database_revision`
+> below document pre-cutover storage, not current target authority.
+> [Feature 010](../010-manifest-csv-catalogs/spec.md) requires one regional stock CSV with exact
+> industry references, reviewed sector/sub-industry hierarchy, manifest-registered ETF/listing
+> sources, and file-only audit records. Preserve identities, periods, verified listing/placeholder
+> states, source conflicts, and selection reconciliation when exporting/refactoring these records.
+
 The SQLite database is the persistent authority for regional classification and membership.
 Market observations and user selections remain outside the database: market evidence uses the
 existing provider caches, and selections remain namespaced in Streamlit session state.

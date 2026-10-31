@@ -17,6 +17,62 @@ distilled from 30 source documents (see the source index at the end). Their boil
 (disclosures, bios, promotions, exercises) was stripped first. The content is educational domain
 modelling, not financial advice.
 
+## Current Application Authority (2026-10-31)
+
+The numbered feature specifications define the implemented or accepted screener scope; the
+domain aspects describe broader educational concepts, not permission to add portfolio, coaching,
+trading, international-taxonomy, or automatic-proxy capabilities to this release.
+The [constitution](../.specify/memory/constitution.md) governs development.
+For overlapping application requirements, use the following explicit authority map rather than
+treating every historical plan as a simultaneous implementation instruction:
+
+| Feature | Requirements retained / current authority | Alignment with feature 010 |
+|---|---|---|
+| [001: Progressive screener](001-market-leadership-screener/spec.md) | Financial/technical evidence and peer calculations where consumed; later features supersede original root tabs, index controls, and stock display | Membership/peers use reviewed regional CSV/hierarchy; no largest-stock proxy |
+| [002: Fundamental layout](002-fundamental-grading-layout/spec.md) | Financial layout/evidence; the former third root tab and fixture-mode foundation are historical after 003 | Stable stock identities and selection handoff use the same activated file release |
+| [003: Live Discovery](003-industry-momentum-table/spec.md) | Two root tabs, yfinance-only price retrieval, explicit failures, test-only fixtures | Live market prices do not confer classification authority; catalog sources come from the manifest |
+| [004: Regional explorer](004-sector-stock-explorer/spec.md) | Progressive hierarchy, coverage, listing/placeholder gates, accepted chart/control baseline | File-only records replace SQLite; fixed sector/benchmark tickers are not presentation invariants |
+| [005: Stock aggregate](005-contained-stock-score/spec.md) | Complete three-component equal-weight aggregate and explicit loading; 006 supersedes column label/order | Exact effective file-backed peer membership; no guessed comparison rows |
+| [006: Stock columns](006-stock-table-columns/spec.md) | Six columns, CAP Type thresholds, Total Score and evidence states | No layout/formula/loading change caused by catalog cutover |
+| [007: Industry ETFs](007-industry-etf-momentum/spec.md) | Exact approved ETF-to-node evidence, no parent substitution; 008 adds labeled alternatives | Reviewed CSV mappings/listings use exact scoped identities, not static ETF lists |
+| [008: Representation tools](008-industry-representation-tools/spec.md) | All active-node statuses, explicit ETF/basket approval, exact weights and effective dates | Worklists, constituents, approval/audit evidence persist in manifest-registered files |
+| [009: Local research](009-local-etf-discovery/spec.md) | Safe literal collection, immutable occurrences/decisions, conflicts/currentness and provenance | Research inputs are registered optional sources; retained histories are file-only |
+| [010: Manifest CSV catalogs](010-manifest-csv-catalogs/spec.md) | Catalog/source authority, file-only review storage, release validation/publication and safe cutover | Governs all catalog-related conflicts in earlier artifacts; implementation is pending |
+
+### File-only catalog invariants
+
+- One stock CSV per region: effective rows reference exact reviewed industries, optionally
+  sub-industries; the hierarchy supplies industry-to-sector and sub-industry-to-industry links.
+- One manifest consolidates hierarchy, stocks/listings, sector/industry/sub-industry ETFs,
+  benchmark configuration, and retained governance/research source roles.
+- Instrument listings are distinct from approved classification mappings. Blank hierarchy
+  fields in the existing sector ETF CSV do not establish reviewed GICS relationships.
+- No production embedded ETF/stock/benchmark catalogs, automatic approval, parent replacement,
+  or automatic largest-stock/index/basket selection. Synthetic fixtures stay test-only.
+- Missing/invalid required sources prevent activation; altered active sources are explicitly
+  invalid/unavailable. Optional research failures remain partial/failed research, not proof of
+  removal or loss of unrelated approved coverage.
+- Preserve scoped identities, listing verification, dates, approvals, basket weights, and
+  provenance. File-only migration accounts for legacy records without silently approving or
+  deleting them. The provider, calculations, valid UI behavior, and market-data caches are not
+  replaced by this catalog redesign.
+
+### Historical artifacts and implementation status
+
+Plans, research, data models, contracts, quickstarts, and task records under features 001-009
+remain useful history and evidence of the pre-cutover implementation. Their SQL schemas,
+separate JSON catalog configuration, fixed ticker assumptions, and automatic proxy proposals
+are superseded wherever they conflict with 010. Explicit notices identify the affected storage
+artifacts; this directory-wide precedence also applies when opening an older task or checklist alone.
+Completed task markers and prior test results are retained, not reopened or claimed as validation
+of the new requirements. Unfinished historical tasks must be reconciled before further execution.
+
+Feature 010 has a specification and quality checklist, not an implemented migration, file format,
+CLI replacement, or new runtime source. Run `/speckit-plan 010` next; preserve the active feature
+pointer. Do not replay a database plan or invent file-only command flags from historical examples.
+Broader aspect rules and example tickers remain educational/test reference material, not seeds
+for production catalogs or automatic representation approval. See [D-F010](decisions.md).
+
 ## Layout
 
 ```

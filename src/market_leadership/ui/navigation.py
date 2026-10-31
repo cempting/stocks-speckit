@@ -8,6 +8,30 @@ import streamlit as st
 WORKFLOW_PAGES_STATE_KEY = "market_leadership.workflow_pages"
 
 
+def preserve_catalog_controls() -> None:
+    # Keep controls through Streamlit's cleanup when invalid input hides their widgets.
+    for prefix in ("market_leadership.progressive_discovery.", "market_leadership.screening."):
+        for suffix in ("thumbnail_period", "performance_basis", "as_of"):
+            key = prefix + suffix
+            if key in st.session_state:
+                st.session_state[key] = st.session_state[key]
+
+
+def clear_catalog_selections() -> None:
+    for prefix in ("market_leadership.progressive_discovery.", "market_leadership.screening."):
+        for suffix in (
+            "sector",
+            "industry",
+            "stock",
+            "stock_picker",
+            "stocks",
+            "scores",
+            "score_context",
+            "context",
+        ):
+            st.session_state.pop(prefix + suffix, None)
+
+
 @dataclass(frozen=True, slots=True)
 class WorkflowSpec:
     key: str

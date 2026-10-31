@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -18,6 +19,15 @@ class Settings:
     stock_membership_catalog: str = ""
     fundamental_display_approval: str = ""
     experimental_universe_catalog: str = ".data/experimental-us-industry-catalog.json"
+    catalog_manifest_path: str = ".data/catalog/CURRENT.json"
+
+
+def resolve_catalog_manifest(path: Path | None = None) -> Path:
+    load_dotenv(override=False)
+    if path is not None:
+        return path.absolute()
+    configured = os.getenv("MARKET_CATALOG_MANIFEST_PATH", "").strip()
+    return Path(configured or ".data/catalog/CURRENT.json").absolute()
 
 
 def load_settings() -> Settings:
@@ -44,4 +54,5 @@ def load_settings() -> Settings:
         experimental_universe_catalog=os.getenv(
             "EXPERIMENTAL_UNIVERSE_CATALOG", ".data/experimental-us-industry-catalog.json"
         ),
+        catalog_manifest_path=str(resolve_catalog_manifest()),
     )

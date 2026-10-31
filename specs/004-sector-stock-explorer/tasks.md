@@ -1,5 +1,11 @@
 # Tasks: Sector-to-Stock Explorer
 
+**2026-11-01 presentation amendment**: Current regression tests cover clickable sector and
+industry names, stable node identity despite duplicate names, hidden industry Status and
+Representation columns, and navigation to uncovered/empty cohorts with preserved controls.
+The historical tasks below retain their original completion evidence; the current spec and
+contract supersede the earlier entity-column presentation.
+
 **Input**: Design documents from `/specs/004-sector-stock-explorer/`
 
 **Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`

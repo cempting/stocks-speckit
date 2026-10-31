@@ -1,5 +1,11 @@
 # Data Model: Simplified Live Discovery
 
+> **2026-10-31 alignment:** `catalog_path` below records the earlier membership boundary.
+> Both tabs now target one manifest-backed regional stock CSV/hierarchy release under
+> [feature 010](../010-manifest-csv-catalogs/spec.md), with exact scoped identities and no catalog
+> database/embedded lists. Preserve live-price metadata, session-private selections, and
+> no-fallback evidence states. Exact replacement fields are deferred to 010 planning.
+
 ## Live Discovery Context
 
 | Field | Description | Validation |

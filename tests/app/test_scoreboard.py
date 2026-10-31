@@ -3,7 +3,10 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_leadership.domain.industry_momentum import industry_momentum_frame
+from market_leadership.domain.industry_momentum import (
+    IndustryRepresentation,
+    industry_momentum_frame,
+)
 
 
 def test_industry_rows_show_sector_style_trend_columns() -> None:
@@ -18,12 +21,18 @@ def test_industry_rows_show_sector_style_trend_columns() -> None:
         history,
         as_of=date(2026, 10, 26),
         sectors=("Information Technology",),
+        representations=(
+            IndustryRepresentation("semis", "Semiconductors", "Information Technology", "SOXX"),
+            IndustryRepresentation("software", "Software", "Information Technology", "IGV"),
+        ),
     )
 
     assert {
         "Industry",
         "Sector",
         "Representation",
+        "ETF",
+        "Evidence state",
         "1 week",
         "1 month",
         "3 months",

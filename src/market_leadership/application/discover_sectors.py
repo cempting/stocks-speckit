@@ -4,33 +4,22 @@ from typing import Literal
 
 import pandas as pd
 
+from market_leadership.application.industry_representations import snapshot_representation_worklist
 from market_leadership.application.ports import MarketDataProvider
+from market_leadership.domain.catalog import BenchmarkPurpose, CatalogError, Scope
+from market_leadership.domain.industry_representations import (
+    ReviewedRepresentation,
+    representation_performance,
+)
 from market_leadership.domain.regimes import MarketSentiment, calculate_market_sentiment
 from market_leadership.domain.sector_performance import (
     InsufficientHistoryError,
+    PerformancePeriod,
     PerformanceResult,
-    calculate_performance,
+    calculate_absolute_performance,
     with_sma50,
 )
-from market_leadership.infrastructure.region_database import (
-    EntityRepresentationRecord,
-    RegionDatabase,
-)
-
-BENCHMARK = "SPY"
-SECTOR_PROXIES: tuple[tuple[str, str], ...] = (
-    ("Communication Services", "XLC"),
-    ("Consumer Discretionary", "XLY"),
-    ("Consumer Staples", "XLP"),
-    ("Energy", "XLE"),
-    ("Financials", "XLF"),
-    ("Health Care", "XLV"),
-    ("Industrials", "XLI"),
-    ("Information Technology", "XLK"),
-    ("Materials", "XLB"),
-    ("Real Estate", "XLRE"),
-    ("Utilities", "XLU"),
-)
+from market_leadership.infrastructure.catalog_files import CatalogSnapshot
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +38,10 @@ class DiscoveryResult:
     sentiment: MarketSentiment
     sectors: tuple[SectorDiscovery, ...]
     benchmark_as_of: date | None
+    comparison_symbol: str | None = None
+    sentiment_symbol: str | None = None
+    comparison_reason: str | None = None
+    sentiment_reason: str | None = None
 
 
 def _empty_history() -> pd.DataFrame:
@@ -60,43 +53,96 @@ def _empty_history() -> pd.DataFrame:
     )
 
 
-def discover_sectors(
-    provider: MarketDataProvider,
-    *,
-    as_of: date,
-    force: bool = False,
-) -> DiscoveryResult:
-    symbols = (BENCHMARK, *(symbol for _, symbol in SECTOR_PROXIES))
-    history = provider.fetch_daily_history(
-        symbols,
-        start=as_of - timedelta(days=550),
-        end=as_of,
-        force=force,
-    )
-    return discover_sectors_from_history(provider.provider_id, history, as_of=as_of)
+def _purpose(
+    snapshot: CatalogSnapshot, scope: Scope, purpose: BenchmarkPurpose, as_of: date
+) -> tuple[str | None, str | None]:
+    try:
+        listing = snapshot.benchmark(scope.region_id, purpose, as_of)
+    except CatalogError as error:
+        if error.code not in ("missing_benchmark", "unavailable_benchmark"):
+            raise
+        return None, f"{purpose}: {error}"
+    return listing.provider_symbol, None
 
 
 def load_entity_representations(
-    database: RegionDatabase,
+    snapshot: CatalogSnapshot,
     *,
-    region_id: str,
-    classification_id: str,
-    entity_type: Literal["sector", "industry"],
+    scope: Scope,
+    entity_type: Literal["sector", "industry", "sub_industry"],
     entity_ids: tuple[str, ...],
     as_of: date,
-) -> tuple[EntityRepresentationRecord, ...]:
-    if not database.is_initialized():
-        raise ValueError(f"Regional database is missing or invalid: {database.path}")
+) -> tuple[ReviewedRepresentation, ...]:
     allowed_ids = set(entity_ids)
     return tuple(
-        representation
-        for representation in database.get_entity_representations(
-            region_id,
-            classification_id,
-            entity_type,
-            as_of=as_of,
+        item.representation
+        for item in snapshot_representation_worklist(snapshot, scope=scope, as_of=as_of)
+        if item.node_type == entity_type
+        and item.node_id in allowed_ids
+        and item.representation is not None
+    )
+
+
+def load_industry_representations(
+    snapshot: CatalogSnapshot, *, scope: Scope, entity_ids: tuple[str, ...], as_of: date
+) -> tuple[ReviewedRepresentation, ...]:
+    allowed_ids = set(entity_ids)
+    return tuple(
+        item.representation
+        for item in snapshot_representation_worklist(snapshot, scope=scope, as_of=as_of)
+        if item.node_type != "sector"
+        and item.node_id in allowed_ids
+        and item.representation is not None
+    )
+
+
+def discovery_symbols(
+    snapshot: CatalogSnapshot,
+    *,
+    scope: Scope,
+    as_of: date,
+    sector_ids: tuple[str, ...] | None = None,
+) -> tuple[str, ...]:
+    symbols = {
+        symbol
+        for purpose in ("sp500_comparison", "market_sentiment")
+        if (symbol := _purpose(snapshot, scope, purpose, as_of)[0]) is not None
+    }
+    for item in snapshot_representation_worklist(snapshot, scope=scope, as_of=as_of):
+        if (
+            item.node_type == "sector"
+            and (sector_ids is None or item.node_id in sector_ids)
+            and item.representation is not None
+            and not item.representation.invalid_reason
+        ):
+            symbols.update(item.representation.symbols)
+    return tuple(sorted(symbols))
+
+
+def discover_sectors(
+    provider: MarketDataProvider,
+    *,
+    snapshot: CatalogSnapshot,
+    scope: Scope,
+    as_of: date,
+    force: bool = False,
+    sector_ids: tuple[str, ...] | None = None,
+) -> DiscoveryResult:
+    symbols = discovery_symbols(snapshot, scope=scope, as_of=as_of, sector_ids=sector_ids)
+    history = (
+        provider.fetch_daily_history(
+            symbols, start=as_of - timedelta(days=550), end=as_of, force=force
         )
-        if representation.entity_id in allowed_ids
+        if symbols
+        else {}
+    )
+    return discover_sectors_from_history(
+        provider.provider_id,
+        history,
+        snapshot=snapshot,
+        scope=scope,
+        as_of=as_of,
+        sector_ids=sector_ids,
     )
 
 
@@ -104,9 +150,16 @@ def discover_sectors_from_history(
     provider_id: str,
     history: dict[str, pd.DataFrame],
     *,
+    snapshot: CatalogSnapshot,
+    scope: Scope,
     as_of: date,
+    sector_ids: tuple[str, ...] | None = None,
 ) -> DiscoveryResult:
-    benchmark_history = history.get(BENCHMARK, _empty_history())
+    comparison, comparison_reason = _purpose(snapshot, scope, "sp500_comparison", as_of)
+    sentiment_symbol, sentiment_reason = _purpose(snapshot, scope, "market_sentiment", as_of)
+    benchmark_history = (
+        history.get(comparison, _empty_history()) if comparison else _empty_history()
+    )
     benchmark_history = benchmark_history.loc[
         pd.DatetimeIndex(benchmark_history.index).date <= as_of
     ].sort_index()
@@ -115,45 +168,69 @@ def discover_sectors_from_history(
         if not benchmark_history.empty
         else None
     )
-    sentiment = calculate_market_sentiment(benchmark_history, BENCHMARK)
-    benchmark_closes = benchmark_history["close"]
+    sentiment_history = (
+        history.get(sentiment_symbol, _empty_history()) if sentiment_symbol else _empty_history()
+    )
+    sentiment_history = sentiment_history.loc[
+        pd.DatetimeIndex(sentiment_history.index).date <= as_of
+    ].sort_index()
+    sentiment = calculate_market_sentiment(
+        sentiment_history, sentiment_symbol if sentiment_symbol is not None else "Not configured"
+    )
+    if comparison is not None and benchmark_as_of is None:
+        comparison_reason = f"No comparison benchmark close is available for {comparison}"
+    if sentiment_symbol is not None and sentiment_history.empty:
+        sentiment_reason = f"No market sentiment history is available for {sentiment_symbol}"
     sectors: list[SectorDiscovery] = []
-
-    for name, symbol in SECTOR_PROXIES:
-        raw_history = history.get(symbol, _empty_history())
-        chart_history = with_sma50(raw_history)
+    for item in snapshot_representation_worklist(snapshot, scope=scope, as_of=as_of):
+        if item.node_type != "sector" or (
+            sector_ids is not None and item.node_id not in sector_ids
+        ):
+            continue
+        representation = item.representation
+        symbol = representation.symbol if representation and representation.symbol else ""
+        raw = history.get(symbol, _empty_history())
+        raw = raw.loc[pd.DatetimeIndex(raw.index).date <= as_of].sort_index()
+        chart = with_sma50(raw) if symbol else _empty_history()
         try:
+            if representation is None:
+                raise InsufficientHistoryError("Not covered: no reviewed representation")
+            if representation.invalid_reason:
+                raise InsufficientHistoryError(representation.invalid_reason)
             if benchmark_as_of is None:
-                raise InsufficientHistoryError("No benchmark close is available")
-            if benchmark_as_of not in pd.DatetimeIndex(chart_history.index).date:
+                raise InsufficientHistoryError(
+                    comparison_reason or "No benchmark close is available"
+                )
+            absolute = representation_performance(representation, history, as_of=benchmark_as_of)
+            baseline = calculate_absolute_performance(
+                benchmark_history["close"], as_of=benchmark_as_of
+            )
+            if (
+                representation.kind == "etf"
+                and benchmark_as_of not in pd.DatetimeIndex(chart.index).date
+            ):
                 raise InsufficientHistoryError(
                     f"No sector close is available on benchmark date {benchmark_as_of}"
                 )
-            performance = calculate_performance(
-                chart_history["close"],
-                benchmark_closes,
-                as_of=benchmark_as_of,
-            )
+            relative: dict[PerformancePeriod, float] = {
+                period: value - baseline[period] for period, value in absolute.items()
+            }
+            performance = PerformanceResult(absolute, relative)
             reason = None
-        except InsufficientHistoryError as error:
+        except (InsufficientHistoryError, ValueError) as error:
             performance = None
             reason = str(error)
-        sectors.append(
-            SectorDiscovery(
-                name=name,
-                symbol=symbol,
-                performance=performance,
-                history=chart_history,
-                insufficient_reason=reason,
-            )
-        )
-
+        sectors.append(SectorDiscovery(item.name, symbol, performance, chart, reason))
     return DiscoveryResult(
-        as_of=as_of,
-        provider_id=provider_id,
-        sentiment=sentiment,
-        sectors=tuple(sectors),
-        benchmark_as_of=benchmark_as_of,
+        as_of,
+        provider_id,
+        sentiment,
+        tuple(sectors),
+        benchmark_as_of,
+        comparison,
+        sentiment_symbol,
+        comparison_reason,
+        sentiment_reason,
     )
 
 
@@ -162,6 +239,8 @@ def discover_sectors_from_snapshot(
     *,
     source_id: str,
     as_of: date,
+    snapshot: CatalogSnapshot,
+    scope: Scope,
 ) -> DiscoveryResult:
     prices = tables["prices"]
     if list(prices.columns) != ["symbol", "date", "close", "volume"]:
@@ -170,17 +249,17 @@ def discover_sectors_from_snapshot(
         raise ValueError("snapshot prices contain missing keys")
     if prices.duplicated(subset=["symbol", "date"]).any():
         raise ValueError("snapshot prices contain duplicate symbol/date keys")
-    symbols = (BENCHMARK, *(symbol for _, symbol in SECTOR_PROXIES))
     histories: dict[str, pd.DataFrame] = {}
-    for symbol in symbols:
+    for symbol in discovery_symbols(snapshot, scope=scope, as_of=as_of):
         rows = prices.loc[prices["symbol"] == symbol, ["date", "close", "volume"]].copy()
         rows["date"] = pd.to_datetime(rows["date"], errors="raise")
         history = rows.set_index("date").sort_index()
         dates = pd.DatetimeIndex(history.index).date
-        mask = pd.Series(
-            (dates >= as_of - timedelta(days=550)) & (dates <= as_of), index=history.index
+        history = history.loc[(dates >= as_of - timedelta(days=550)) & (dates <= as_of)].astype(
+            {"close": "float64", "volume": "float64"}
         )
-        history = history.loc[mask].astype({"close": "float64", "volume": "float64"})
-        history.attrs.update({"source_id": source_id})
+        history.attrs["source_id"] = source_id
         histories[symbol] = history
-    return discover_sectors_from_history(source_id, histories, as_of=as_of)
+    return discover_sectors_from_history(
+        source_id, histories, snapshot=snapshot, scope=scope, as_of=as_of
+    )

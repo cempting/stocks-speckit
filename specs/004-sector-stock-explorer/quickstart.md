@@ -1,5 +1,11 @@
 # Quickstart: Sector-to-Stock Explorer
 
+> **2026-10-31 — pre-cutover guide:** Database setup/import examples and old test outcomes
+> below describe implemented legacy behavior. [Feature 010](../010-manifest-csv-catalogs/spec.md)
+> targets file-only catalog/review records and one manifest-backed regional stock CSV/hierarchy
+> release. Preserve these steps as operational/migration references; they do not activate the
+> future file release or prove cutover. Do not modify user-owned data as part of specification alignment.
+
 ## Prerequisites
 
 - Python 3.12 and the repository's `uv` environment.

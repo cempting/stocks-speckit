@@ -6,7 +6,19 @@
 
 **Status**: Draft
 
+**Updated**: 2026-10-31 (aligned with feature 010)
+
 **Input**: User description: "industries shall be display within the discovery page in form of perfomance table. the goal is to find industries that recently gain momentum. review the document references for mor edetail on gaining and declining industries. the same criteria as for sectors with respect to chart analysis hold for industires."
+
+## Catalog Authority
+
+The [feature 010 specification](../010-manifest-csv-catalogs/spec.md) governs all catalog
+sources. Discovery and Industry Deep-Dive share one activated manifest-backed release:
+reviewed hierarchy and sector/industry/sub-industry ETF files, benchmark configuration,
+and one stock CSV per region with exact industry references. Catalog/review workflows are
+file-only; neither SQLite nor embedded symbol lists are alternate authority. The live-only
+decision below concerns price retrieval, not remotely inferred classification membership.
+Exact ETF/basket governance follows features 007-008; UI refinements follow features 004-006.
 
 ## Simplification Decision
 
@@ -135,9 +147,11 @@ labels unavailable evidence explicitly, and does not imply a forecast.
 - **FR-007**: Ranking MUST be recalculated for the displayed eligible set. Equal returns share the
   same rank; ties are ordered by industry name and then stable industry identifier. Insufficient
   industries have no rank.
-- **FR-008**: An industry representation MUST be documented as appropriate for that industry.
-  When no qualified representation or adequate history exists, the product MUST show the industry
-  as insufficient and MUST NOT substitute a broad, mismatched, or guessed representation.
+- **FR-008**: An industry/sub-industry representation MUST be an exact effective reviewed ETF
+  from the activated file release or an explicitly approved basket under feature 008. All active
+  reviewed nodes MUST remain visible, including nodes with no stock members or representation.
+  Missing representation/history MUST be disclosed without a parent, automatic stock/index,
+  broad, mismatched, or guessed substitute.
 - **FR-009**: Users MUST be able to sort the visible industry rows by the displayed table fields
   without altering the underlying observations or calculated values.
 - **FR-010**: Selecting an industry MUST make its corresponding chart analysis available and retain
@@ -159,9 +173,14 @@ labels unavailable evidence explicitly, and does not imply a forecast.
 - **FR-016**: Discovery MUST request live yfinance data only. It MUST identify yfinance and the
   requested/observed dates, and MUST show a clear error without fallback when the live request
   fails or is incomplete.
-- **FR-017**: Industry Deep-Dive MUST accept only a reviewed live membership catalog. Missing,
+- **FR-017**: Industry Deep-Dive MUST resolve reviewed membership from the activated regional
+  stock CSV and exact industry-to-sector/sub-industry-to-industry hierarchy references. Missing,
   invalid, stale, or unapproved catalog evidence MUST block member display and clear only
   dependent stock selections.
+- **FR-018**: Sector, industry, sub-industry, and benchmark instrument identities MUST resolve
+  from manifest-registered reviewed files, never embedded runtime lists. Catalog/review workflows
+  MUST require no catalog database; valid release changes require no code edits, while source
+  failures and identity mismatches MUST be reported without silently using stale catalog data.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -193,6 +212,10 @@ labels unavailable evidence explicitly, and does not imply a forecast.
   selection, and chart-opening interactions present their updated result within two seconds.
 - **SC-006**: At least 90% of test users correctly describe a gaining or declining label as a
   historical performance result rather than a prediction after inspecting an industry chart.
+- **SC-007**: In controlled file-release scenarios with the legacy catalog database unavailable,
+  100% of active reviewed nodes and selected stock sets match the exact effective hierarchy.
+  Changing reviewed instrument mappings changes only affected requests/results without code
+  edits, and zero invalid or unapproved mappings are replaced by a runtime fallback.
 
 ## Assumptions
 

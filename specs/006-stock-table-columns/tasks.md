@@ -1,5 +1,10 @@
 # Tasks: Stock Table Columns
 
+**2026-11-01 presentation amendment**: The user approved five visible columns, with the company
+name retained in the Ticker button rather than a separate Name column. The completed six-column
+tasks below preserve historical implementation evidence; the current contract and regression
+tests supersede that presentation. Catalog name fields, details, and selection identity are unchanged.
+
 **Input**: Design documents from `/specs/006-stock-table-columns/`
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md),

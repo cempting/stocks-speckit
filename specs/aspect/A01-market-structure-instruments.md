@@ -10,6 +10,21 @@ depends_on: []
 ---
 # A01 — Market Structure & Instruments
 
+### Current screener applicability (2026-10-31)
+
+The [application authority map](../README.md) and [D-F010](../decisions.md) qualify this broader
+domain model. Current catalog/classification/listing/benchmark and reviewer evidence is
+manifest-managed and file-only under [feature 010](../010-manifest-csv-catalogs/spec.md):
+one regional stock CSV references exact industries and optional sub-industries in a reviewed
+hierarchy. Initial scope is US GICS, not automatic onboarding of all markets or a bundled taxonomy.
+
+The older `IndustryProxy` fields, selection-order parameters, R-A01-043..046/R-A01-050,
+PR-A01-01, and EX-A01-12 record the domain's historical complete-proxy goal; they do not authorize
+automatic ETF/index/largest-member/basket selection in the current app. Exact reviewed ETFs and
+explicit approved baskets follow features 007-008, and all active reviewed nodes remain visible
+with gaps. Benchmark defaults and example instruments below are reference concepts/test examples,
+not runtime symbol lists. No new liquidity/purity/market-scope gate is added by catalog alignment.
+
 ## 1. Purpose & scope
 Defines the neutral market-data foundation every other aspect builds on:
 - Markets, exchanges, trading calendars, currencies and FX conversion.

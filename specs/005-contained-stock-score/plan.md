@@ -1,5 +1,11 @@
 # Implementation Plan: Contained Stock Score Summary
 
+> **2026-10-31 alignment:** The score calculation/load rules remain applicable; feature 006
+> supersedes the old visible column label/order. Inputs now target the activated regional stock
+> CSV/hierarchy release under [feature 010](../010-manifest-csv-catalogs/spec.md), not a separate
+> catalog/database authority. Reconcile affected peers/selections on release changes without
+> persisting a new aggregate or introducing hidden loading. See the [authority map](../README.md).
+
 **Branch**: `005-contained-stock-score` | **Date**: 2026-10-30 | **Spec**:
 [spec.md](./spec.md)
 

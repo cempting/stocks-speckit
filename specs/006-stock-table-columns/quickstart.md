@@ -23,8 +23,8 @@ uv run pyright
 
 Expected outcomes:
 
-- The table shows exactly Price chart + 50 MA, Volume chart, Ticker, Name, CAP Type, and Total
-  Score, in that order.
+- The table shows exactly Price chart + 50 MA, Volume chart, Ticker, CAP Type, and Total
+  Score, in that order. The Ticker button includes the company name; no separate Name column appears.
 - Capitalization boundaries display Large at $10B, Mid at $2B through below $10B, and Small below
   $2B; all absent or invalid cases display Unavailable.
 - CAP Type remains Unavailable before the existing explicit score-load action and no table render
@@ -35,7 +35,7 @@ Expected outcomes:
 ## Manual End-to-End Validation
 
 1. Start the application with controlled stock and fundamental fixtures, then select an industry.
-2. Confirm the table shows the six required columns and CAP Type is Unavailable before scores load.
+2. Confirm the table shows the five required columns and CAP Type is Unavailable before scores load.
 3. Use the existing explicit score-load action. Confirm stocks at $10B, $2B, and below $2B show
    Large, Mid, and Small respectively.
 4. Confirm missing, invalid, failed, and placeholder capitalization evidence shows Unavailable.

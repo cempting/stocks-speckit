@@ -1,9 +1,15 @@
 # Contract Status
 
+**2026-10-31 authority**: Use the [cross-feature map](../../README.md) and
+[feature 010](../../010-manifest-csv-catalogs/spec.md) before consuming these historical
+interfaces. Three-tab/index-control and automatic-proxy instructions are superseded; applicable
+calculation/evidence contracts remain reusable. Catalog/review records now target manifest-managed
+files, not independent source configuration, SQL authority, or embedded listing catalogs.
+
 The [revised specification](../spec.md) and [plan](../plan.md) govern the progressive
 screener. These documents describe planned interfaces, not implemented capabilities.
 
-## Current Design
+## Historical Design and Retained Calculation Contracts
 
 | Contract | Responsibility |
 |---|---|

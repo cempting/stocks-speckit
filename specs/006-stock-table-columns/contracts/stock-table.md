@@ -12,12 +12,11 @@ The table renders exactly these visible columns, in order:
 1. Price chart + 50 MA
 2. Volume chart
 3. Ticker
-4. Name
-5. CAP Type
-6. Total Score
+4. CAP Type
+5. Total Score
 
-Internal Instrument ID and Resolution fields may remain for selection but must not render as
-visible columns.
+The Ticker button contains both ticker and company name. Name, Instrument ID and Resolution
+remain internal metadata, not separate visible columns; stock-detail names remain unchanged.
 
 ## CAP Type
 
@@ -43,5 +42,5 @@ unavailable/insufficient disclosure. Neither behavior changes when CAP Type is u
   boundaries, Total Score rename, and exact table column order.
 - Integration tests prove current capitalization travels only through the explicit score-load
   result and is unavailable for failed/missing evidence.
-- App tests prove no hidden load, preserved chart disclosures/placeholder identity, and six
+- App tests prove no hidden load, preserved chart disclosures/placeholder identity, and five
   visible columns.

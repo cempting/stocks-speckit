@@ -1,5 +1,11 @@
 # Implementation Plan: Fundamental Grading Layout
 
+> **2026-10-31 alignment:** The three-tab/fixture-mode foundation and separately configured JSON
+> membership catalog below are historical. [Feature 010](../010-manifest-csv-catalogs/spec.md)
+> requires one activated manifest-backed regional stock CSV/hierarchy release and file-only
+> catalog/review records. Preserve financial bundle/layout rules where consumed; do not restore
+> removed runtime modes or claim a file-only migration is implemented. See the [authority map](../README.md).
+
 **Branch**: `main` | **Date**: 2026-10-28 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `specs/002-fundamental-grading-layout/spec.md`,

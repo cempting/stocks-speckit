@@ -152,6 +152,7 @@ activemq-data/
 
 # Environments
 .env
+.env.*
 .envrc
 .streamlit/secrets.toml
 .venv
@@ -229,3 +230,5 @@ __marimo__/
 *.tmp
 *.swp
 Thumbs.db
+.idea/
+.vscode/

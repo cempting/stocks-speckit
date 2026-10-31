@@ -1,5 +1,11 @@
 # Quickstart: Validate Simplified Live Discovery
 
+> **2026-10-31 alignment:** Independent JSON/environment catalog setup below is historical.
+> Feature 004's current pre-cutover runtime uses reviewed database membership;
+> [feature 010](../010-manifest-csv-catalogs/spec.md) targets one validated manifest-backed
+> regional stock CSV/hierarchy release for both tabs. Preserve live/no-fallback checks, but do
+> not restore obsolete settings or treat these old steps as file-only migration validation.
+
 ## Prerequisites
 
 - Python 3.12 and development dependencies installed with `uv sync`.

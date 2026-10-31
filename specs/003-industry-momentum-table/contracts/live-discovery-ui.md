@@ -23,10 +23,14 @@ Discovery has one live yfinance data path.
 
 ## Industry Deep-Dive
 
-Industry Deep-Dive reads one reviewed live membership catalog. It shows dated source and coverage
+Industry Deep-Dive reads the same activated manifest-backed reviewed regional stock CSV/hierarchy
+release as Discovery under [feature 010](../../010-manifest-csv-catalogs/spec.md). It shows dated source and coverage
 evidence before allowing sector, industry, member, or stock selection.
 
 - A missing, invalid, stale, or unapproved catalog blocks member display and clears only dependent
   stock selections.
 - The UI does not offer a fixture/live evidence-mode selector.
 - Changing sector or industry retains only stock selections valid in the updated dated catalog.
+- Catalog/review workflows require no legacy catalog database or independent JSON catalog setting.
+  Exact industry-to-sector and optional sub-industry parent references determine membership.
+  Altered active source identity is invalid/unavailable, never an embedded or stale catalog fallback.

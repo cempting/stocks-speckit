@@ -9,6 +9,20 @@ status: draft
 
 # CTX-A — Market Data & Instruments
 
+### Current application boundary (2026-10-31)
+
+[Feature 010](../../010-manifest-csv-catalogs/spec.md) and [D-F010](../../decisions.md) govern
+catalog/review storage: one manifest, reviewed hierarchy/ETF/benchmark sources, and one stock CSV
+per region with exact industry references and optional sub-industry links. Runtime prices still
+come from yfinance; external APIs and local project declarations do not automatically own reviewed
+classification or membership.
+
+The global-taxonomy and exactly-one-proxy statements below describe the wider historical domain
+model, not current implementation completeness requirements. Initial application scope is reviewed
+US GICS; active nodes may lack a representation. Only explicit approved ETFs or feature 008 baskets
+supply momentum, never an automatic index/stock/basket or parent fallback. See the
+[application authority map](../../README.md); unrelated context entities remain out of release scope.
+
 ## 1. Purpose
 
 Provides the reference and price data that every other context works on: markets, exchanges and trading calendars, currencies, instruments (stocks, ETFs/UCITS funds, bonds, indices, bullion), orders and brokers. Owns the classification of companies into industries per market. The invariant is Market → ClassificationScheme → Industry hierarchy → Company; GICS is the scheme for all markets (D-C14, D-R42); local schemes are additional views only. It also defines the benchmarks: local per market, and global MSCI ACWI (D-C15b), and one `IndustryProxy` per classification node and level (ETF > official index > equal-weight basket of at least 5 members; D-R20, D-R21) so that every industry can be charted and filtered. Liquidity floors (stocks $5M, ETFs AUM $100M and $2M traded per day) and a 60 % purity minimum for industry ETFs apply (D-R43).

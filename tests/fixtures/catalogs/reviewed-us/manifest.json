@@ -1,0 +1,45 @@
+{
+  "format": "market-catalog-release-1",
+  "release_id": "test-reviewed-us",
+  "created_at": "2026-10-31T00:00:00Z",
+  "parent_release": null,
+  "catalog_revision": "0000000000000000000000000000000000000000000000000000000000000000",
+  "regions": [{
+    "region_id": "US",
+    "name": "Test-only region",
+    "status": "active",
+    "coverage_state": "partial",
+    "coverage_description": "Synthetic controlled evidence, not production approval",
+    "coverage_as_of": "2026-10-30",
+    "last_reviewed_at": "2026-10-30",
+    "classifications": [{
+      "classification_id": "TEST_CLASSIFICATION",
+      "scheme_name": "Test taxonomy",
+      "version": "TEST_VERSION",
+      "source_id": "test-source",
+      "approval_reference": "test-approval",
+      "effective_from": "2020-01-01",
+      "effective_to": null
+    }]
+  }],
+  "evidence_sources": [{
+    "source_id": "test-source",
+    "source_type": "local_file",
+    "description": "Synthetic test evidence",
+    "coverage": "Controlled fixture",
+    "authority": "Test-only review",
+    "approval_reference": "test-approval",
+    "reviewed_at": "2026-10-30"
+  }],
+  "artifacts": [
+    {"artifact_id":"hierarchy","role":"hierarchy","path":"hierarchy.csv","sha256":"80fc485cea227aa0d744c392c44781d058ea53b65124ad6ca3e977e0b5704c6d","required":true,"row_count":4,"region_id":"US","classification_id":null,"classification_version":null},
+    {"artifact_id":"stocks","role":"stocks","path":"stocks.csv","sha256":"60c5dac1d62e6b4c994935c90705842fac3f8707882e4d8ff4146934fec6c152","required":true,"row_count":2,"region_id":"US","classification_id":null,"classification_version":null},
+    {"artifact_id":"etf_listings","role":"etf_listings","path":"etf_listings.csv","sha256":"91e40863c7f2d651321ff05616a67e5fdb67ab0530d4c42acb8e7e5dfb89e430","required":true,"row_count":1,"region_id":"US","classification_id":null,"classification_version":null},
+    {"artifact_id":"sector_etfs","role":"sector_etfs","path":"sector_etfs.csv","sha256":"6a2219bb7ee428c0fe5bb1639cab55b727cfc4ce01d5b8d73cb2b0a88dfda7e8","required":true,"row_count":1,"region_id":"US","classification_id":null,"classification_version":null},
+    {"artifact_id":"industry_etfs","role":"industry_etfs","path":"industry_etfs.csv","sha256":"d2b2468202a4f0bbee1b33b241ee9acbe8fad09058328968166ffcb889d74faa","required":true,"row_count":1,"region_id":"US","classification_id":null,"classification_version":null},
+    {"artifact_id":"sub_industry_etfs","role":"sub_industry_etfs","path":"sub_industry_etfs.csv","sha256":"394939943705341a5ca1560590ec582b7eb5200e82d25f795c3c8b1d786b7a89","required":true,"row_count":0,"region_id":"US","classification_id":null,"classification_version":null},
+    {"artifact_id":"benchmarks","role":"benchmarks","path":"benchmarks.csv","sha256":"55160e003de1222ecf19cc697ae7a163715916c06ffa483a3b044ebd819bb561","required":true,"row_count":2,"region_id":"US","classification_id":null,"classification_version":null},
+    {"artifact_id":"audit","role":"audit","path":"governance.jsonl","sha256":"32d77d2ee5b7de74e3b30a96e0bc831fb21e1eb686d41192744c15cd37dab93c","required":true,"row_count":3,"region_id":null,"classification_id":null,"classification_version":null}
+  ],
+  "research_sources": []
+}

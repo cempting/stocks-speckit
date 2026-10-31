@@ -6,7 +6,7 @@
 
 **Created**: 2026-10-26
 
-**Updated**: 2026-10-28
+**Updated**: 2026-10-31 (aligned with feature 010)
 
 **Status**: Draft — revised scope; ready for implementation planning
 
@@ -19,8 +19,21 @@ metrics on sector, industry, and stock charts.
 
 ## Scope and Revision Authority
 
+The [manifest-managed catalog specification](../010-manifest-csv-catalogs/spec.md)
+supersedes earlier catalog authority, storage, and instrument-selection defaults in this feature.
+Catalog and review records are file-only: one stock CSV per region references reviewed industries,
+the hierarchy links industries to sectors and optional sub-industries to industries, and the
+manifest registers reviewed ETF, benchmark, and governance sources. No embedded listing,
+automatic largest-stock proxy, or catalog database is a runtime alternative.
+
+The three-stage/index-filter narrative below records the original scope, not a request to
+restore removed controls. Current navigation is governed by feature 003, progressive regional
+tapes by feature 004, stock columns/aggregate display by features 005-006, and exact ETF/basket
+representation by features 007-008. Financial calculations and evidence rules remain applicable
+where consumed by those features. See the [cross-feature authority map](../README.md).
+
 This specification replaces the previous active requirements for this feature, in alignment with
-constitution v2.0.0. The experience is one progressive screening journey, not separately routed
+constitution v3.0.0. The experience is one progressive screening journey, not separately routed
 sector and industry workflows. The initial market is US equities. Persistent weekly artifacts,
 three-/six-/twelve-month composite leadership scores, 50-session composite status, market-regime
 classification, multi-market comparison, constituent breadth, and observed fund flows are not MVP
@@ -54,9 +67,9 @@ or renumbering of completed tasks.
 - The US universe supports large-, mid-, and small-cap discovery, NYSE and Nasdaq listings, and
   S&P 500 and Russell 2000 membership filters where documented dated coverage is available.
   Additional named sources may be supported only with explicit provenance and coverage.
-- Industry representations prefer a documented adequate ETF; if none is qualified, use the
-  largest verified market-cap member stock at the observation date, labelled single-company proxy.
-  Neither representation determines the industry stock-membership list.
+- Industry representations use exact reviewed ETF mappings, or an explicitly approved weighted
+  stock-basket alternative under feature 008. Automatic largest-member stock selection is
+  superseded. Neither representation determines the industry stock-membership list.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -208,10 +221,10 @@ raw values, percentile ties, block scores, period labels, invalid denominators, 
 - **FR-007**: Every industry row MUST show parent sector, representation symbol/type, period,
   return/direction, rank, observation date, source and sufficiency. A representation's membership
   and exposure limitations MUST be accessible.
-- **FR-008**: Prefer a documented industry-specific ETF; otherwise use the largest verified
-  market-cap stock among dated industry members, breaking equal caps by stable identifier.
-  Stock proxies MUST be labelled single-company proxies; absent qualified evidence leaves the
-  industry insufficient. A broad or mismatched fund MUST NOT be presented as one industry's proxy.
+- **FR-008**: Use an exact effective reviewed industry/sub-industry ETF from the manifest-backed
+  files; otherwise only an explicitly approved basket under feature 008 may supply alternative
+  momentum. No automatic stock/index proxy or parent substitution is permitted. Absent qualified
+  evidence leaves the node visibly not covered or insufficient.
 - **FR-009**: The member-stock table MUST show all available matching members of the selected
   industry and universe, without a silent top-N cap. Pagination is permitted. It MUST show stock
   identity, industry, market cap, selected-period return, technical criterion states and coverage.
@@ -264,6 +277,10 @@ raw values, percentile ties, block scores, period labels, invalid denominators, 
 - **FR-024**: Results MUST be presented as descriptive historical screening evidence, not forecasts,
   personalized advice or trade instructions. Consolidation MUST NOT imply a guaranteed breakout.
   Permitted data/classification display and derived-use rights MUST be verified for the deployment.
+- **FR-025**: Membership and peer populations MUST resolve through the activated regional stock
+  CSV and exact reviewed hierarchy references, with source, effective period, and release identity.
+  Catalog/review workflows MUST operate without the legacy catalog database; invalid or changed
+  active sources MUST be reported, not replaced with embedded listings or unchecked cached data.
 
 ### Consolidation / Heartbeat Heuristic
 
@@ -341,6 +358,7 @@ every visually apparent sideways period.
 | FR-017 | US1 scenario 4; US2 scenario 6; parent/universe changes |
 | FR-018–FR-021 | US3 scenarios 1–7; invalid denominators and missing fiscal periods |
 | FR-022–FR-024 | US1 scenario 5; US2 scenario 7; US3 scenarios 5–7; freshness/error edge cases |
+| FR-025 | Feature 010 US1 scenarios 2–4 and US2 scenarios 1–5; SC-001–SC-006 |
 
 ### Key Entities
 
@@ -348,7 +366,7 @@ every visually apparent sideways period.
   date/source, included instrument identities, total known members and missing coverage.
 - **Sector / Industry**: Dated classification identity and parent relationship, member stock
   identities, source and membership coverage.
-- **Classification Representation**: Qualified industry ETF or verified largest-member stock,
+- **Classification Representation**: Exact reviewed industry ETF or explicitly approved stock basket,
   composition basis, effective/availability dates and limitations; distinct from member universe.
 - **Price / Volume Observation**: Instrument, completed session, adjusted price basis, volume,
   source, observation/availability dates and corporate-action consistency.
@@ -396,8 +414,9 @@ every visually apparent sideways period.
 - S&P 500/Russell 2000 are optional dated membership filters, not guaranteed free-provider
   capabilities. The selected source must substantiate them. Comprehensive member enumeration
   is a dependency; search results or an ETF's holdings alone do not prove complete coverage.
-- Classification membership is evaluated at the displayed date; proxy identity does not define
-  all industry members, and a stock proxy's return is not an equal-weight industry return.
+- Classification membership is evaluated at the displayed date and active file release; an ETF
+  identity does not define all industry members. A reviewed basket is labeled separately and
+  calculated from its approved weights, not an automatically selected stock's return.
 - The prior quiet interval may end immediately before the current signal session, allowing a
   consolidation-plus-spike conjunction. This is a documented default adopted to avoid contradictory
   filters, not a trade signal.

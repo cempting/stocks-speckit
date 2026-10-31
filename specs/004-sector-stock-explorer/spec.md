@@ -6,6 +6,8 @@
 
 **Status**: Implemented; Sector performance preservation baseline recorded 2026-10-30
 
+**Updated**: 2026-10-31 (file-only target requirements; cutover not yet implemented)
+
 **Input**: User description: "Show progressive sector, industry, and stock tapes with chart
 thumbnails and a detailed stock view; add a 50-simple moveing average to price thumbnails and an
 adjacent, separate volume-chart column with directional green and red bars."
@@ -18,6 +20,20 @@ Original feature description: "1. when no sector is selected, the app show the s
 6. the contained stocks view shows a thumbnail chart, ticker, name, price, score
 7. the user may click on a stock and the will jump into a detailed stock view page
 8. the detailed stock view page contains chart (price, volume, 50MA, 150MA) scoreboard , further things to come"
+
+## Catalog Revision Authority
+
+The [feature 010 specification](../010-manifest-csv-catalogs/spec.md) replaces the database
+decision below: one manifest registers file-only catalog/review sources, one stock CSV per
+region references exact industries, and the reviewed hierarchy supplies sector and optional
+sub-industry relationships. Sector, industry, sub-industry, and benchmark listings are reviewed
+file records, not fixed instrument lists. Earlier SQL schemas/commands describe pre-cutover
+implementation and migration inputs, not the future runtime authority.
+
+Preserve the accepted chart/control baseline. The user-authorized breaking change replaces
+storage and fixed catalog identities only; features 005-006 govern the later stock-column
+presentation and feature 008 governs explicitly reviewed baskets. No complete GICS hierarchy,
+new international taxonomy, or suitable ETF is inferred from legacy source lists.
 
 ## Clarifications
 
@@ -70,7 +86,8 @@ child selections.
 6. **Given** more than one region is available, **When** the user selects a region, **Then** all
    sector, industry, and stock results are limited to that region.
 7. **Given** reviewed local files contain multiple exchange listings for one security, **When**
-   those files are imported, **Then** the database stores one stock identity with its distinct
+   those files are validated and activated, **Then** the regional stock CSV retains one
+   instrument identity with its distinct
    listings and industry filtering returns that stock only once.
 8. **Given** an imported member has no verified tradable listing, **When** the user selects its
    industry, **Then** the stock remains identifiable as an unresolved placeholder and no live
@@ -78,15 +95,22 @@ child selections.
 9. **Given** a live refresh disagrees with locally reviewed classification or membership,
    **When** the refresh completes, **Then** it reports the difference without overwriting the
    local values.
-10. **Given** the database is missing or has no reviewed US data, **When** the user opens
-    Discovery, **Then** the app explains how to initialize and populate it rather than reporting
-    a valid empty industry or asking for `STOCK_MEMBERSHIP_CATALOG`.
+10. **Given** the manifest or required US catalog sources are missing, invalid, or unreviewed,
+    **When** the user opens Discovery, **Then** the app explains source validation, activation,
+    or migration setup rather than reporting a valid empty industry, initializing SQLite,
+    or asking for a separate `STOCK_MEMBERSHIP_CATALOG`.
 11. **Given** two local source files disagree about the same stock's classification or
     membership, **When** the import is validated, **Then** the discrepancy is reported and the
     importer does not silently select one source's value.
 12. **Given** the selected region's reviewed source data is partial or unverified, **When**
     Discovery is displayed, **Then** its coverage status is visible and the app does not claim the
     results include all stocks in that region.
+13. **Given** a reviewed regional stock row references an industry and optional sub-industry,
+    **When** sector/industry filtering runs, **Then** exact reviewed parent references and effective
+    dates determine inclusion without name-based joins or repeated sector authority on stock rows.
+14. **Given** a release change spans membership, hierarchy, and representations, **When**
+    activation fails, **Then** no partial release is visible and the prior activated release is
+    unchanged; edits invalidating active source identity are explicitly reported.
 
 ### User Story 2 - Compare Sector, Industry, and Stock Evidence (Priority: P1)
 
@@ -193,7 +217,7 @@ simple moving averages, and scorecard information.
   silently overwrite the local region, sector, industry, or membership.
 - Local source files that disagree about one stock's classification or membership are reported
   for review rather than silently resolved by source priority.
-- A missing database or an unpopulated US region shows an actionable setup explanation and is not
+- A missing/invalid manifest or an unpopulated reviewed US file release shows an actionable setup explanation and is not
   presented as a valid empty market.
 - A region whose sources are partial or unverified shows its coverage scope and status instead of
   implying that its industry results contain every stock in that region.
@@ -215,7 +239,13 @@ simple moving averages, and scorecard information.
   tape with a contained-stocks tape containing all available stocks in that industry.
 - **FR-004**: A user MUST be able to select a supported region, sector, and industry from their
   respective controls or tapes. Changing a parent selection MUST clear any dependent selection
-  that is no longer valid.
+  that is no longer valid. Sector names in the sector performance tape MUST be clickable to
+  open their industry momentum tape; industry/sub-industry names MUST be clickable to open
+  their contained-stock tape, including uncovered or empty cohorts. Use stable catalog node IDs,
+  not names or ETF symbols. Preserve date, thumbnail period, and performance basis.
+  The industry momentum tape MUST omit separate Status and Representation columns, retaining
+  ETF and Representation type. Status and representation evidence remain available in name-button
+  tooltips; unavailable chart and return evidence remains explicit.
 - **FR-005**: The first column of every sector performance row MUST contain a price-chart
   thumbnail for that sector, including its 50-session simple moving average when sufficient price
   history exists.
@@ -240,12 +270,14 @@ simple moving averages, and scorecard information.
   stale rows or fabricated chart and score values.
 - **FR-014**: Region, classification, sector, industry, stock, stock-listing,
   stock-to-industry membership, and sector/industry chart-representation records MUST be
-  maintained in a database and MUST be creatable and populatable through data-management tooling
-  rather than hard-coded application configuration.
+  maintained in manifest-registered files and MUST be validated/published through data-management
+  tooling, without a runtime catalog database or hard-coded ETF/stock/benchmark listings.
+  Stock membership MUST use one CSV per region with exact industry references, linked through
+  the reviewed hierarchy to sectors and optional sub-industries.
 - **FR-015**: The initial populated region MUST be the US, combining stock records across its
   exchange listings rather than treating each exchange or index list as a separate region. The
-  data model MUST support additional regions and classification systems without requiring those
-  systems to use GICS.
+  initial classification scope is reviewed US GICS. Regional boundaries MUST remain explicit;
+  this alignment does not implement new international taxonomies or expand market coverage.
 - **FR-016**: Industry filtering MUST use the selected region and industry identity to return
   every associated stock in that region exactly once, without including stocks from another
   industry or region.
@@ -265,13 +297,14 @@ simple moving averages, and scorecard information.
   rights have been reviewed. Live-source differences MUST be reported and MUST NOT silently
   overwrite locally reviewed classifications or membership. Existing local sector-rotation
   resources MUST be assessed as a candidate source for the initial import.
-- **FR-021**: The database MUST support unresolved stock placeholders with region and industry
+- **FR-021**: File-based catalog records MUST support explicit unresolved stock placeholders with region and industry
   membership but no verified listing. A placeholder MUST be identified as unresolved, remain
   distinguishable from a live-data failure, and MUST NOT trigger market-data requests until a
   verified listing is associated with it.
-- **FR-022**: When the database is missing, invalid, or has no reviewed US data, the app MUST show
-  an actionable initialization/import message and MUST NOT present the state as a valid empty
-  market or require `STOCK_MEMBERSHIP_CATALOG`.
+- **FR-022**: When the manifest or required catalog files are missing, invalid, changed from their
+  registered identity, or lack reviewed US data, the app MUST show actionable validation,
+  activation, or migration guidance. It MUST NOT present a valid empty market, silently use stale
+  catalog data, initialize a catalog database, or require separate membership JSON configuration.
 - **FR-023**: Data-management tooling MUST report conflicts between local source files and MUST
   NOT resolve conflicting region, sector, industry, or membership values by implicit source
   priority.
@@ -303,10 +336,10 @@ simple moving averages, and scorecard information.
   gain/loss palettes: green gains, red losses, neutral zero, independently scaled by period
   and sign. Valid returns MUST be right-aligned two-decimal percentages. Missing returns
   MUST say "Unavailable" without gain/loss coloring. Chart rendering MUST retain cell colors.
-- **FR-032**: The accepted US sector chart basis MUST use explicit reviewed ETF mappings:
-  Communication Services/XLC, Consumer Discretionary/XLY, Consumer Staples/XLP, Energy/XLE,
-  Financials/XLF, Health Care/XLV, Industrials/XLI, Information Technology/XLK, Materials/XLB,
-  Real Estate/XLRE, Utilities/XLU. Mapping availability MUST respect effective dates.
+- **FR-032**: The accepted US sector chart basis MUST use exact effective reviewed ETF mappings
+  from the activated manifest-backed sector CSV sources. No fixed ticker roster is required by
+  application code or this presentation baseline; approved catalog changes require no code edit.
+  ETF listing rows with blank classification references MUST NOT be treated as approved mappings.
   Mappings MUST NOT create ETF industry memberships, be silently inferred from names, or
   replace an unavailable industry chart with its parent sector chart.
 
@@ -326,8 +359,9 @@ simple moving averages, and scorecard information.
   one stock may have listings on more than one exchange.
 - **Entity Representation**: A reviewed market instrument associated with a sector or industry
   for its price and volume chart evidence.
-- **Stock Membership**: A database relationship associating a stock with an industry within a
-  region and classification system, used to determine industry-filter results.
+- **Stock Membership**: An effective reviewed row in the regional stock CSV associating an
+  instrument/listing with an exact industry and optional sub-industry within one region and
+  classification version; the hierarchy supplies the industry-to-sector relationship.
 - **Selection Context**: The currently selected sector, industry, and stock that determine which
   region, tape, or detail view is displayed.
 - **Scorecard**: An existing stock assessment consisting of Quality, Growth, and Cash Flow
@@ -361,7 +395,7 @@ simple moving averages, and scorecard information.
 - **SC-009**: In controlled placeholder cases, all unresolved stock records are identified as
   placeholders and none triggers a live market-data request.
 - **SC-010**: In controlled missing-data-source and unpopulated-region cases, 100% of states show
-  the database setup action and none is presented as a valid empty market.
+  manifest/source validation or migration guidance and none is presented as a valid empty market.
 - **SC-011**: In controlled partial or unverified coverage cases, 100% of region views identify
   the coverage state and none claims complete regional stock coverage.
 
@@ -373,9 +407,13 @@ simple moving averages, and scorecard information.
 - **SC-014**: On a wide viewport, all three header elements retain left-to-right order, the
   sector tape retains all ten labeled columns, and both plots remain 84 pixels high for
   every period choice.
-- **SC-015**: All 11 reviewed US sector mappings resolve to the accepted tickers without
+- **SC-015**: All 11 sector mappings in a controlled complete reviewed US release resolve to
+  that release's approved listings, not a fixed runtime ticker roster, without
   changing memberships; both control choices survive valid hierarchy transitions in
   controlled navigation cases.
+- **SC-016**: With the legacy catalog database unavailable, controlled region/industry/sub-industry
+  filters return 100% of effective reviewed members exactly once. Invalid references prevent
+  activation, and an interrupted cross-file publication exposes zero mixed-release results.
 
 ## Assumptions
 
@@ -398,8 +436,9 @@ simple moving averages, and scorecard information.
   scope until separately specified.
 - The existing market/industry classification, stock membership, scorecard, and chart-analysis
   requirements remain the authority for their respective data and calculations. Sector,
-  industry, and stock membership data is maintained in the database through data-management
-  tooling; the application does not rely on hard-coded membership configuration. Existing local
+  industry, and stock membership data is maintained in manifest-registered files through
+  data-management tooling; the application does not rely on a catalog database or hard-coded
+  membership configuration. Existing local
   sector-rotation resources are a candidate initial import source and must be assessed for
   coverage and suitability. US exchange listings are combined into one region, with distinct
   exchange listings retained for each stock. Live membership refresh is enabled only through the
