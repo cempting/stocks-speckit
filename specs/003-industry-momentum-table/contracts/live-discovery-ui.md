@@ -14,6 +14,9 @@ weekly-leadership, acceptance, or provider-selection control.
 
 Discovery has one live yfinance data path.
 
+The Discovery heading, **As of** date input, and **Refresh data** button share one
+bottom-aligned row, in that order, with three equal-width columns.
+
 | Input | Required behavior |
 |---|---|
 | Requested date | Uses the current US market date by default and cannot be future dated. |
