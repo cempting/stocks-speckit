@@ -258,8 +258,10 @@ def _render_visual_tape(
         return ()
     st.caption(str(frame.attrs.get("volume_legend", "")))
     hidden_columns = ("Instrument ID", "Resolution", "Node ID")
+    if "Sector" in frame.columns or "Industry" in frame.columns:
+        hidden_columns += ("Status",)
     if "Industry" in frame.columns:
-        hidden_columns += ("Status", "Representation")
+        hidden_columns += ("Representation", "Representation type")
     content_columns = [
         column
         for column in frame.columns
@@ -308,6 +310,7 @@ def _render_visual_tape(
                     help_text = str(row["Status"])
                     if column == "Industry":
                         help_text += f"\nRepresentation: {row['Representation']}"
+                        help_text += f"\nRepresentation type: {row['Representation type']}"
                     st.button(
                         str(value),
                         key=f"{key}_select_{row['Node ID']}",

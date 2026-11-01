@@ -43,15 +43,16 @@ and feature 008 governs labeled baskets. See the [authority map](../../README.md
   use defaults. Relative performance subtracts the matching-period return of the manifest's
   reviewed S&P 500 benchmark listing; missing benchmark evidence is not silently substituted.
 - Column order: `Price + 50-session SMA`, `Volume by price direction`, `Sector`, `Ticker`,
-  `1 week`, `1 month`, `3 months`, `6 months`, `12 months`, `Status`.
+  `1 week`, `1 month`, `3 months`, `6 months`, `12 months`.
   Under the user-approved 2026-11-01 amendment, industry columns are `Price + 50-session SMA`,
-  `Volume by price direction`, `Industry`, `ETF`, the same five return periods, and
-  `Representation type`. Status and Representation remain internal evidence, exposed in
+  `Volume by price direction`, `Industry`, `ETF`, and the same five return periods.
+  Status, Representation, and Representation type remain internal evidence, exposed in
   industry-name button tooltips rather than separate columns.
   Sector names are clickable to open that sector's industry momentum list; industry/sub-industry
   names are clickable to open their stock list, even without ETF coverage or members.
   Buttons use stable catalog node IDs, not display names or ETF symbols, and preserve date,
-  thumbnail period, and performance basis. Sector Status remains visible.
+  thumbnail period, and performance basis. Sector Status is also hidden as a separate column
+  under the 2026-11-01 follow-up; its evidence remains in sector-name button tooltips.
 - Both plots stay 84 pixels high. Their nominal width is 135, stretched to the containing
   cell. Price/SMA and volume remain separate adjacent charts.
 - Both previews use the inclusive calendar window anchored at the selected as-of date,

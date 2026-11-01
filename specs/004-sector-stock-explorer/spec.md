@@ -243,8 +243,8 @@ simple moving averages, and scorecard information.
   open their industry momentum tape; industry/sub-industry names MUST be clickable to open
   their contained-stock tape, including uncovered or empty cohorts. Use stable catalog node IDs,
   not names or ETF symbols. Preserve date, thumbnail period, and performance basis.
-  The industry momentum tape MUST omit separate Status and Representation columns, retaining
-  ETF and Representation type. Status and representation evidence remain available in name-button
+  The industry momentum tape MUST omit separate Status, Representation, and Representation type
+  columns, retaining ETF. Status, representation, and ETF/basket type evidence remain in name-button
   tooltips; unavailable chart and return evidence remains explicit.
 - **FR-005**: The first column of every sector performance row MUST contain a price-chart
   thumbnail for that sector, including its 50-session simple moving average when sufficient price

@@ -3,7 +3,7 @@
 > **2026-11-01 presentation amendment:** Reuse the chart-tape renderer with node-ID-backed
 > name-button callbacks for sector-to-industry and industry-to-stock navigation. Apply selections
 > before widget rendering, using existing descendant invalidation. Hide industry Status and
-> Representation columns, retaining their evidence in tooltips and keeping Representation type,
+> Representation and Representation type columns, retaining their evidence in tooltips and keeping
 > chart geometry, return colors, filters, and explicit score loading unchanged.
 
 > **2026-10-31 alignment:** SQL storage, database CLI/setup, fixed sector tickers, and benchmark

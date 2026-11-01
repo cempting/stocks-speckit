@@ -46,6 +46,8 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
                 "Representation": ["Not covered", "Reviewed basket"],
             }
         )
+        if entity_column == "Industry":
+            frame["Representation type"] = ["Not covered", "Stock basket alternative"]
         render_chart_tape(frame, key="entities", on_select=select)
         st.write(f"Selected: {st.session_state.get('selected_node')}")
 
@@ -53,8 +55,16 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
     assert not app.exception
     assert [item.label for item in app.button] == ["Same name", "Same name"]
     assert not any(item.value == "Node ID" for item in app.caption)
+    assert not any(item.value == "Status" for item in app.caption)
     if entity_column == "Industry":
-        assert not any(item.value in {"Status", "Representation"} for item in app.caption)
+        assert not any(
+            item.value in {"Status", "Representation", "Representation type"}
+            for item in app.caption
+        )
+        assert (
+            "Representation type: Stock basket alternative"
+            in app.button("entities_select_second").help
+        )
     assert "Invalid evidence: expired mapping" in app.button("entities_select_second").help
     app.button("entities_select_second").click().run()
     assert not app.exception

@@ -110,8 +110,9 @@ Use Discovery's `Region sectors > Sector > Industry > Stock` breadcrumbs to retu
 earlier tape. Ancestor links clear only descendant selections and preserve the region, date,
 thumbnail period, and performance basis. Returning to the stock list also retains loaded peer scores.
 Click a sector name to open its industry momentum list, then an industry name to open its stock
-list. Industry Status and Representation are in name-button tooltips instead of separate columns;
-ETF and Representation type remain visible.
+list. Industry Status, Representation, and Representation type are in name-button tooltips instead
+of separate columns; ETF remains visible. Sector Status is likewise available in the
+sector-name tooltip instead of a separate column.
 
 Each industry/sub-industry uses an effective reviewed ETF or, where no ETF is approved,
 an explicitly reviewed stock-basket alternative. Missing, invalid, or insufficient

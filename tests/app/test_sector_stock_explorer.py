@@ -38,7 +38,7 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
     assert app.selectbox(PREFIX + "sector").value == "test-sector"
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value in {"Status", "Representation"} for item in app.caption)
-    assert any(item.value == "Representation type" for item in app.caption)
+    assert not any(item.value == "Representation type" for item in app.caption)
     button = app.button(PREFIX + "industry_tape_select_" + industry)
     assert button.help
     button.click().run()
@@ -122,6 +122,8 @@ def test_discovery_shows_only_sector_tape_until_sector_is_selected(monkeypatch, 
     assert any("Price + 50 MA" in item.value for item in app.caption)
     assert any("Volume by price direction" in item.value for item in app.caption)
     assert any(item.value == "Ticker" for item in app.caption)
+    assert not any(item.value == "Status" for item in app.caption)
+    assert app.button(PREFIX + "sector_tape_select_test-sector").help
     assert not any(item.value == "Representation" for item in app.caption)
     assert any("not verified buyer or seller activity" in item.value for item in app.caption)
 
@@ -348,9 +350,12 @@ def test_discovery_distinguishes_etf_basket_and_not_covered_and_batches_active_s
     app = AppTest.from_file(PAGE).run()
     app.selectbox(PREFIX + "sector").select("test-sector").run()
     assert not app.exception
-    assert any(item.value == "Representation type" for item in app.caption)
-    assert any(item.value == "Stock basket alternative" for item in app.markdown)
-    assert any(item.value == "ETF" for item in app.markdown)
+    assert not any(item.value == "Representation type" for item in app.caption)
+    representation_help = [button.help for button in app.button if button.help]
+    assert any(
+        "Representation type: Stock basket alternative" in text for text in representation_help
+    )
+    assert any("Representation type: ETF" in text for text in representation_help)
     assert any(item.value == "Not covered" for item in app.markdown)
     assert set(calls[-1]) == {"TEST_ETF", "TEST_INVENTORY"}
     edit_csv(catalog_release, "industry_etfs", lambda rows: rows.clear())
