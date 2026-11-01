@@ -1,10 +1,35 @@
 from pathlib import Path
 
+import pytest
+from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.testing.v1 import AppTest
 
 from tests.fixtures.catalogs.ui import DailyProvider, configure_ui
 
 APP_PATH = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
+
+
+@pytest.mark.parametrize("app_path", [APP_PATH, APP_PATH.parents[4] / "streamlit_app.py"])
+def test_discovery_header_evenly_distributes_heading_date_and_refresh(
+    monkeypatch, catalog_release, app_path
+) -> None:
+    configure_ui(monkeypatch, catalog_release)
+    app = AppTest.from_file(app_path).run(timeout=20)
+    assert not app.exception
+    heading = next(item for item in app.title if item.value == "Discovery")
+    requested_date = next(widget for widget in app.date_input if widget.label == "As of")
+    refresh = next(widget for widget in app.button if widget.label == "Refresh data")
+    row = next(
+        block for block in app.get("flex_container") if any(item is heading for item in block.title)
+    )
+    columns = list(row.children.values())
+    assert len(columns) == 3
+    assert all(column.type == "column" for column in columns)
+    assert columns[0].title[0] is heading
+    assert columns[1].date_input[0] is requested_date
+    assert columns[2].button[0] is refresh
+    assert [column.proto.weight for column in columns] == pytest.approx([1 / 3] * 3)
+    assert all(column.proto.vertical_alignment == BlockProto.Column.BOTTOM for column in columns)
 
 
 def test_discovery_uses_yfinance_contract_and_discloses_requested_observed_dates(

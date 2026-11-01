@@ -593,7 +593,9 @@ def render_discovery(
         preserve_catalog_controls()
     if configure_page:
         st.set_page_config(page_title="Discovery", page_icon="📊", layout="wide")
-    st.title("Discovery")
+    heading_column, date_column, refresh_column = st.columns(3, vertical_alignment="bottom")
+    with heading_column:
+        st.title("Discovery")
     st.caption("Live US market evidence from yfinance. Historical outcomes are not forecasts.")
 
     settings = settings or load_settings()
@@ -633,7 +635,6 @@ def render_discovery(
         f"As of {region.coverage_as_of.isoformat()}"
     )
     market_today = datetime.now(ZoneInfo("America/New_York")).date()
-    date_column, refresh_column = st.columns((3, 1))
     with date_column:
         date_key = _PREFIX + "as_of"
         if date_key not in st.session_state:
@@ -642,7 +643,6 @@ def render_discovery(
             st.date_input("As of", value=None, max_value=market_today, key=date_key) or market_today
         )
     with refresh_column:
-        st.write("")
         force_refresh = st.button("Refresh data", use_container_width=True)
     try:
         scope = snapshot.scope_on(selected_region_id, requested_as_of)
