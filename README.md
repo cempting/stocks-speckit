@@ -98,6 +98,9 @@ Discovery uses one fail-closed yfinance request path; it does not offer fixture,
 snapshot, acceptance, weekly-leadership, or provider-selection controls.
 
 1. Select an as-of date and refresh live Discovery data when needed.
+   The clickable icon to the right of **Refresh data** shows a moon in bright mode
+   and a sun in dark mode, indicating the mode it will activate. It changes both tabs,
+   including charts and return colors, and retains the chosen mode across session reruns.
 2. Compare sector outcomes, then compare the industry's one-week, one-month,
    three-month, six-month, and 12-month trends across one or more parent sectors.
    Return cells use a gain/loss color scale.

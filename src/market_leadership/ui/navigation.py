@@ -10,6 +10,8 @@ WORKFLOW_PAGES_STATE_KEY = "market_leadership.workflow_pages"
 
 def preserve_catalog_controls() -> None:
     # Keep controls through Streamlit's cleanup when invalid input hides their widgets.
+    if "dark_mode" in st.session_state:
+        st.session_state["dark_mode"] = st.session_state["dark_mode"]
     for prefix in ("market_leadership.progressive_discovery.", "market_leadership.screening."):
         for suffix in ("thumbnail_period", "performance_basis", "as_of"):
             key = prefix + suffix

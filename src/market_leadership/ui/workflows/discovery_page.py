@@ -51,6 +51,7 @@ from market_leadership.ui.components.progressive_tape import (
 )
 from market_leadership.ui.components.stock_detail import render_stock_detail
 from market_leadership.ui.navigation import clear_catalog_selections, preserve_catalog_controls
+from market_leadership.ui.theme import apply_theme, toggle_dark_mode
 
 DISCOVERY_CACHE_SCHEMA_VERSION = 6
 _PREFIX = "market_leadership.progressive_discovery."
@@ -593,9 +594,22 @@ def render_discovery(
         preserve_catalog_controls()
     if configure_page:
         st.set_page_config(page_title="Discovery", page_icon="📊", layout="wide")
-    heading_column, date_column, refresh_column = st.columns(3, vertical_alignment="bottom")
+    heading_column, date_column, refresh_column, theme_column = st.columns(
+        (4, 3, 3, 2), vertical_alignment="bottom"
+    )
     with heading_column:
         st.title("Discovery")
+    with theme_column:
+        dark_mode = bool(st.session_state.setdefault("dark_mode", False))
+        with st.container(key="theme_action"):
+            st.button(
+                "Switch to light mode" if dark_mode else "Switch to dark mode",
+                icon=":material/light_mode:" if dark_mode else ":material/dark_mode:",
+                key="dark_mode_button",
+                type="tertiary",
+                on_click=toggle_dark_mode,
+            )
+    apply_theme()
     st.caption("Live US market evidence from yfinance. Historical outcomes are not forecasts.")
 
     settings = settings or load_settings()

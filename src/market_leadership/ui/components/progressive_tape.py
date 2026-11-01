@@ -174,7 +174,9 @@ def _preview_payloads(
     return price or "Unavailable", volume or "Unavailable"
 
 
-def build_price_thumbnail(series: object) -> alt.Chart | alt.LayerChart | None:
+def build_price_thumbnail(
+    series: object, *, dark_mode: bool = False
+) -> alt.Chart | alt.LayerChart | None:
     records = _chart_records(series)
     if not records:
         return None
@@ -183,7 +185,9 @@ def build_price_thumbnail(series: object) -> alt.Chart | alt.LayerChart | None:
         return None
     price = (
         alt.Chart(frame)
-        .mark_line(color="#17324d", strokeWidth=1.5)  # pyright: ignore[reportUnknownMemberType]
+        .mark_line(  # pyright: ignore[reportUnknownMemberType]
+            color="#7dd3fc" if dark_mode else "#17324d", strokeWidth=1.5
+        )
         .encode(
             x=alt.X("session:T", axis=None),
             y=alt.Y("close:Q", axis=None, scale=alt.Scale(zero=False)),
@@ -191,16 +195,22 @@ def build_price_thumbnail(series: object) -> alt.Chart | alt.LayerChart | None:
     )
     sma_frame = frame.dropna(subset=["sma50"])
     if sma_frame.empty:
-        return price.properties(width=135, height=84)
+        return price.properties(
+            width=135, height=84, background="#111820" if dark_mode else "#f7f8f6"
+        ).configure_view(strokeWidth=0)  # pyright: ignore[reportUnknownMemberType]
     average = (
         alt.Chart(sma_frame)
         .mark_line(color="#e09f3e", strokeWidth=1)  # pyright: ignore[reportUnknownMemberType]
         .encode(x=alt.X("session:T", axis=None), y=alt.Y("sma50:Q", axis=None))
     )
-    return alt.layer(price, average).properties(width=135, height=84)
+    return (
+        alt.layer(price, average)
+        .properties(width=135, height=84, background="#111820" if dark_mode else "#f7f8f6")
+        .configure_view(strokeWidth=0)  # pyright: ignore[reportUnknownMemberType]
+    )
 
 
-def build_volume_thumbnail(series: object) -> alt.Chart | None:
+def build_volume_thumbnail(series: object, *, dark_mode: bool = False) -> alt.Chart | None:
     records = _chart_records(series)
     if not records:
         return None
@@ -227,7 +237,8 @@ def build_volume_thumbnail(series: object) -> alt.Chart | None:
                 alt.Tooltip("direction:N", title="Price direction"),
             ],
         )
-        .properties(width=135, height=84)
+        .properties(width=135, height=84, background="#111820" if dark_mode else "#f7f8f6")
+        .configure_view(strokeWidth=0)
     )
 
 
@@ -286,7 +297,9 @@ def _render_visual_tape(
     for row_index, (_, row) in enumerate(frame.iterrows()):
         cells = st.columns(weights)
         with cells[0]:
-            chart = build_price_thumbnail(row[price_column])
+            chart = build_price_thumbnail(
+                row[price_column], dark_mode=bool(st.session_state.get("dark_mode", False))
+            )
             if chart is None:
                 st.caption("Price unavailable")
             else:
@@ -298,7 +311,9 @@ def _render_visual_tape(
                 ):
                     st.caption("50 MA: Insufficient")
         with cells[1]:
-            chart = build_volume_thumbnail(row[volume_column])
+            chart = build_volume_thumbnail(
+                row[volume_column], dark_mode=bool(st.session_state.get("dark_mode", False))
+            )
             if chart is None:
                 st.caption("Volume unavailable")
             else:
