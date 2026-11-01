@@ -100,7 +100,8 @@ snapshot, acceptance, weekly-leadership, or provider-selection controls.
 1. Select an as-of date and refresh live Discovery data when needed.
    The clickable icon to the right of **Refresh data** shows a moon in bright mode
    and a sun in dark mode, indicating the mode it will activate. It changes both tabs,
-   including charts and return colors, and retains the chosen mode across session reruns.
+   including charts, return colors, and the **As of** date field and calendar popup,
+   and retains the chosen mode across session reruns.
 2. Compare sector outcomes, then compare the industry's one-week, one-month,
    three-month, six-month, and 12-month trends across one or more parent sectors.
    Return cells use a gain/loss color scale.
@@ -113,7 +114,8 @@ Use Discovery's `Region sectors > Sector > Industry > Stock` breadcrumbs to retu
 earlier tape. Ancestor links clear only descendant selections and preserve the region, date,
 thumbnail period, and performance basis. Returning to the stock list also retains loaded peer scores.
 Click a sector name to open its industry momentum list, then an industry name to open its stock
-list. Industry Status, Representation, and Representation type are in name-button tooltips instead
+list. Discovery uses the table and breadcrumbs for sector selection, without a sector dropdown.
+Industry Status, Representation, and Representation type are in name-button tooltips instead
 of separate columns; ETF remains visible. Sector Status is likewise available in the
 sector-name tooltip instead of a separate column.
 

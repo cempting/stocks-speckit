@@ -45,9 +45,9 @@ def _run_app(monkeypatch: pytest.MonkeyPatch, catalog_release: Path) -> AppTest:
 
 
 def _select_cloud_industry(app: AppTest) -> AppTest:
-    app.selectbox("market_leadership.progressive_discovery.sector").select("test-technology").run(
-        timeout=20
-    )
+    app.button(
+        "market_leadership.progressive_discovery.sector_tape_select_test-technology"
+    ).click().run(timeout=20)
     return (
         app.selectbox("market_leadership.progressive_discovery.industry")
         .select("test-cloud")
@@ -109,7 +109,7 @@ def test_stock_detail_uses_stable_identity_and_returns_to_industry(
     assert not app.exception
     assert any(item.value == "Contained stocks" for item in app.subheader)
     assert (
-        app.selectbox("market_leadership.progressive_discovery.sector").value == "test-technology"
+        app.session_state["market_leadership.progressive_discovery.sector"] == "test-technology"
     )
     assert app.selectbox("market_leadership.progressive_discovery.industry").value == "test-cloud"
     assert load_calls == 1
@@ -123,14 +123,20 @@ def test_changing_sector_clears_the_stock_and_industry_tape(
     app.selectbox("market_leadership.progressive_discovery.stock_picker").select(
         "instrument-aaa"
     ).run(timeout=20)
-    app.selectbox("market_leadership.progressive_discovery.sector").select("test-financials").run(
+    app.button("market_leadership.progressive_discovery.breadcrumb_sectors").click().run(
         timeout=20
     )
+    app.button(
+        "market_leadership.progressive_discovery.sector_tape_select_test-financials"
+    ).click().run(timeout=20)
 
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value == "Contained stocks" for item in app.subheader)
     assert app.selectbox("market_leadership.progressive_discovery.industry").value is None
+    assert app.selectbox("market_leadership.progressive_discovery.industry").options == [
+        "test-hardware"
+    ]
 
 
 def test_selecting_stock_row_opens_its_stable_identity(

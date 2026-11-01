@@ -143,6 +143,23 @@ def test_chart_thumbnails_have_double_height_without_changing_width(
         assert specification["width"] == 135
 
 
+@pytest.mark.parametrize("dark_mode", [False, True])
+@pytest.mark.parametrize("sma50", [None, 10.5])
+def test_thumbnail_colors_follow_dark_mode(dark_mode: bool, sma50: float | None) -> None:
+    price = build_price_thumbnail(
+        [{"session": "2026-10-19", "close": 11.0, "sma50": sma50}], dark_mode=dark_mode
+    )
+    volume = build_volume_thumbnail(
+        [{"session": "2026-10-19", "volume": 100.0, "direction": "up"}], dark_mode=dark_mode
+    )
+    assert price is not None and volume is not None
+    price_spec = price.to_dict()
+    assert price_spec["background"] == ("#111820" if dark_mode else "#f7f8f6")
+    assert volume.to_dict()["background"] == price_spec["background"]
+    mark = price_spec["mark"] if sma50 is None else price_spec["layer"][0]["mark"]
+    assert mark["color"] == ("#7dd3fc" if dark_mode else "#17324d")
+
+
 def _scorecard(instrument_id: str) -> PeerScorecard:
     metric = MetricPeerScore("metric", 1.0, 62.5, 5, "available")
     quality = BlockPeerScore("Quality", 62.5, "available", (metric, metric))

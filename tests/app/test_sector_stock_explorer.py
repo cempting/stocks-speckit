@@ -20,7 +20,7 @@ def _run(monkeypatch, catalog_release):
 
 
 def _stocks(app):
-    app.selectbox(PREFIX + "sector").select("test-sector").run(timeout=20)
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run(timeout=20)
     app.selectbox(PREFIX + "industry").select("test-cloud").run(timeout=20)
     return app
 
@@ -35,7 +35,8 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
     as_of = app.date_input[0].value
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert not app.exception
-    assert app.selectbox(PREFIX + "sector").value == "test-sector"
+    assert app.session_state[PREFIX + "sector"] == "test-sector"
+    assert not any(widget.key == PREFIX + "sector" for widget in app.selectbox)
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value in {"Status", "Representation"} for item in app.caption)
     assert not any(item.value == "Representation type" for item in app.caption)
@@ -83,10 +84,11 @@ def test_breadcrumbs_return_to_ancestors_and_preserve_controls(
     app.button(PREFIX + "breadcrumb_" + target).click().run()
     assert not app.exception
     assert any(item.value == heading for item in app.subheader)
-    assert app.selectbox(PREFIX + "sector").value == sector
     if sector is not None:
+        assert app.session_state[PREFIX + "sector"] == sector
         assert app.selectbox(PREFIX + "industry").value == industry
     else:
+        assert PREFIX + "sector" not in app.session_state
         assert PREFIX + "industry" not in app.session_state
     assert PREFIX + "stock" not in app.session_state
     assert app.segmented_control(PREFIX + "thumbnail_period").value == "1w"
@@ -97,17 +99,17 @@ def test_breadcrumbs_return_to_ancestors_and_preserve_controls(
 def test_breadcrumbs_allow_return_from_industry_and_empty_stock_lists(monkeypatch, catalog_release):
     app = _run(monkeypatch, catalog_release)
     assert any(item.value == "US sectors" for item in app.caption)
-    app.selectbox(PREFIX + "sector").select("test-sector").run()
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     app.button(PREFIX + "breadcrumb_sectors").click().run()
     assert not app.exception
-    assert app.selectbox(PREFIX + "sector").value is None
-    app.selectbox(PREFIX + "sector").select("test-sector").run()
+    assert PREFIX + "sector" not in app.session_state
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     app.selectbox(PREFIX + "industry").select("test-empty").run()
     assert any("no active stock memberships" in item.value for item in app.info)
     app.button(PREFIX + "breadcrumb_sector").click().run()
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
-    assert app.selectbox(PREFIX + "sector").value == "test-sector"
+    assert app.session_state[PREFIX + "sector"] == "test-sector"
     assert app.selectbox(PREFIX + "industry").value is None
 
 
@@ -118,7 +120,7 @@ def test_discovery_shows_only_sector_tape_until_sector_is_selected(monkeypatch, 
     assert not any(
         item.value in {"Industry momentum", "Contained stocks"} for item in app.subheader
     )
-    assert any("Coverage: PARTIAL" in item.value for item in app.caption)
+    assert not any(widget.key == PREFIX + "sector" for widget in app.selectbox)
     assert any("Price + 50 MA" in item.value for item in app.caption)
     assert any("Volume by price direction" in item.value for item in app.caption)
     assert any(item.value == "Ticker" for item in app.caption)
@@ -132,7 +134,7 @@ def test_sector_and_industry_selection_replaces_tape_and_shows_all_members(
     monkeypatch, catalog_release
 ):
     app = _run(monkeypatch, catalog_release)
-    app.selectbox(PREFIX + "sector").select("test-sector").run(timeout=20)
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run(timeout=20)
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value == "Sector performance" for item in app.subheader)
@@ -240,7 +242,7 @@ def test_thumbnail_period_does_not_change_performance_returns():
 def test_stock_views_do_not_request_hidden_industry_proxy(monkeypatch, catalog_release):
     calls = configure_ui(monkeypatch, catalog_release)
     app = AppTest.from_file(PAGE).run(timeout=20)
-    app.selectbox(PREFIX + "sector").select("test-sector").run()
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert set(calls[-1]) == {"TEST_ETF", "TEST_INVENTORY"}
     calls.clear()
     app.selectbox(PREFIX + "industry").select("test-cloud").run()
@@ -272,7 +274,11 @@ def test_discovery_and_deep_dive_ignore_future_classification(monkeypatch, catal
     app = _run(monkeypatch, catalog_release)
     app.date_input[0].set_value(date(2026, 10, 30)).run()
     assert not app.exception
-    assert app.selectbox(PREFIX + "sector").options == ["test-sector"]
+    assert [
+        button.key
+        for button in app.button
+        if button.key and button.key.startswith(PREFIX + "sector_tape_select_")
+    ] == [PREFIX + "sector_tape_select_test-sector"]
     app.date_input[0].set_value(date(2019, 1, 1)).run()
     assert not app.exception
     assert any("classification" in item.value for item in (*app.info, *app.error))
@@ -315,7 +321,7 @@ def test_inactive_region_clears_dependents_without_provider_calls(monkeypatch, c
 
 def test_changing_sector_clears_selected_industry_and_members(monkeypatch, catalog_release):
     app = _stocks(_run(monkeypatch, catalog_release))
-    app.selectbox(PREFIX + "sector").set_value(None).run()
+    app.button(PREFIX + "breadcrumb_sectors").click().run()
     assert not app.exception
     assert PREFIX + "industry" not in app.session_state
     assert not any(item.label == "TEST_STOCK_1 · Test stock 1" for item in app.button)
@@ -348,7 +354,7 @@ def test_discovery_distinguishes_etf_basket_and_not_covered_and_batches_active_s
 ):
     calls = configure_ui(monkeypatch, catalog_release)
     app = AppTest.from_file(PAGE).run()
-    app.selectbox(PREFIX + "sector").select("test-sector").run()
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert not app.exception
     assert not any(item.value == "Representation type" for item in app.caption)
     representation_help = [button.help for button in app.button if button.help]
@@ -385,7 +391,7 @@ def test_reviewed_zero_member_industry_is_visible_without_fabricated_stocks(
 ):
     calls = configure_ui(monkeypatch, catalog_release)
     app = AppTest.from_file(PAGE).run()
-    app.selectbox(PREFIX + "sector").select("test-sector").run()
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert "test-empty" in app.selectbox(PREFIX + "industry").options
     calls.clear()
     app.selectbox(PREFIX + "industry").select("test-empty").run()
@@ -479,22 +485,22 @@ def test_multiple_regions_default_to_us_and_clear_descendants_on_switch(
     assert app.selectbox(PREFIX + "region").value == "US"
     app.selectbox(PREFIX + "region").select("CA").run()
     assert not app.exception
-    assert app.selectbox(PREFIX + "sector").value is None
+    assert PREFIX + "sector" not in app.session_state
     assert PREFIX + "industry" not in app.session_state
     assert PREFIX + "scores" not in app.session_state
-    app.selectbox(PREFIX + "sector").select("ca-sector").run()
+    app.button(PREFIX + "sector_tape_select_ca-sector").click().run()
     assert not app.exception
     assert any("no active industries" in item.value for item in app.info)
     assert app.button(PREFIX + "breadcrumb_sectors").label == "CA sectors"
     app.button(PREFIX + "breadcrumb_sectors").click().run()
     assert not app.exception
     assert app.selectbox(PREFIX + "region").value == "CA"
-    assert app.selectbox(PREFIX + "sector").value is None
+    assert PREFIX + "sector" not in app.session_state
 
 
 def test_reviewed_subindustry_remains_a_gap_row_with_exact_members(monkeypatch, catalog_release):
     app = _run(monkeypatch, catalog_release)
-    app.selectbox(PREFIX + "sector").select("test-sector").run()
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert "test-specialist" in app.selectbox(PREFIX + "industry").options
     assert app.button(PREFIX + "industry_tape_select_test-specialist").label == "test-specialist"
     assert "Not covered" in app.button(PREFIX + "industry_tape_select_test-specialist").help

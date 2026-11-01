@@ -25,12 +25,14 @@ def apply_theme() -> None:
             clip-path: inset(50%);
             white-space: nowrap;
         }}
-        .stApp {{
+        :root {{
             --app-background: {background};
             --app-surface: {surface};
             --app-foreground: {foreground};
             --app-muted: {muted};
             --app-border: {border};
+        }}
+        .stApp {{
             background: var(--app-background);
             color: var(--app-foreground);
             color-scheme: {"dark" if dark else "light"};
@@ -53,6 +55,7 @@ def apply_theme() -> None:
             color: var(--app-muted);
         }}
         .stApp [data-testid="stDateInput"] > div,
+        .stApp [data-testid="stDateInputField"],
         .stApp [data-testid="stSelectbox"] [role="group"],
         .stApp [data-testid="stMultiSelect"] [role="group"],
         .stApp input[role="combobox"],
@@ -62,8 +65,12 @@ def apply_theme() -> None:
             color: var(--app-foreground);
             border-color: var(--app-border);
         }}
+        .stApp [data-testid="stDateInput"] [data-type]:not([data-focused="true"]) {{
+            color: var(--app-foreground);
+        }}
         .stApp input::placeholder,
-        .stApp [data-testid="stDateInput"] [data-type],
+        .stApp [data-testid="stDateInput"] [data-placeholder="true"],
+        .stApp [data-testid="stDateInput"] [data-disabled="true"],
         .stApp [data-testid="stDateInput"] button,
         .stApp [data-testid="stSelectbox"] button,
         .stApp [data-testid="stMultiSelect"] button {{
@@ -110,6 +117,29 @@ def apply_theme() -> None:
             color: var(--app-foreground);
         }}
         .stApp [data-baseweb="popover"] [role="option"]:hover {{
+            background: var(--app-background);
+        }}
+        [data-testid="stDateInputCalendar"][role="dialog"] {{
+            background: var(--app-surface);
+            color: var(--app-foreground);
+            border-color: var(--app-border);
+            color-scheme: {"dark" if dark else "light"};
+        }}
+        [data-testid="stDateInputCalendar"] th,
+        [data-testid="stDateInputCalendar"] button:not(:disabled),
+        [data-testid="stDateInputCalendar"] [role="button"]:not(
+            [data-selected="true"], [data-disabled="true"], [data-focused="true"]
+        ) {{
+            color: var(--app-foreground);
+        }}
+        [data-testid="stDateInputCalendar"] button:disabled,
+        [data-testid="stDateInputCalendar"] [role="button"][data-disabled="true"] {{
+            color: var(--app-muted);
+        }}
+        [data-testid="stDateInputCalendar"] button:not(:disabled):hover,
+        [data-testid="stDateInputCalendar"] [role="button"]:not(
+            [data-selected="true"], [data-disabled="true"]
+        ):hover {{
             background: var(--app-background);
         }}
         </style>

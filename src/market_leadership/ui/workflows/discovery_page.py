@@ -408,16 +408,16 @@ def _render_member_tape(
     ) or st.session_state.get(_STOCK_PICKER_KEY) not in (*stock_by_id, None):
         _clear_stock_selection()
         selected_stock_id = None
-    if not isinstance(selected_stock_id, str) or selected_stock_id not in stock_by_id:
-        selected_stock_id = st.selectbox(
-            "Open stock detail",
-            options=tuple(stock_by_id),
-            index=None,
-            key=_STOCK_PICKER_KEY,
-            format_func=lambda key: _stock_label(stock_by_id[key], requested_as_of),
-        )
-        if selected_stock_id is not None:
-            st.session_state[_STOCK_KEY] = selected_stock_id
+#    if not isinstance(selected_stock_id, str) or selected_stock_id not in stock_by_id:
+#        selected_stock_id = st.selectbox(
+#            "Open stock detail",
+#            options=tuple(stock_by_id),
+#            index=None,
+#            key=_STOCK_PICKER_KEY,
+#            format_func=lambda key: _stock_label(stock_by_id[key], requested_as_of),
+#        )
+#        if selected_stock_id is not None:
+#            st.session_state[_STOCK_KEY] = selected_stock_id
     if selected_stock_id is not None:
         member = stock_by_id[selected_stock_id]
         if member.provider_symbol_on(requested_as_of) is None:
@@ -610,7 +610,6 @@ def render_discovery(
                 on_click=toggle_dark_mode,
             )
     apply_theme()
-    st.caption("Live US market evidence from yfinance. Historical outcomes are not forecasts.")
 
     settings = settings or load_settings()
     if snapshot is None:
@@ -643,11 +642,7 @@ def render_discovery(
         )
     else:
         selected_region_id = next(iter(region_ids))
-    region = next(record for record in regions if record.region_id == selected_region_id)
-    st.caption(
-        f"Coverage: {region.coverage_state.upper()} · {region.coverage_description} · "
-        f"As of {region.coverage_as_of.isoformat()}"
-    )
+
     market_today = datetime.now(ZoneInfo("America/New_York")).date()
     with date_column:
         date_key = _PREFIX + "as_of"
@@ -676,14 +671,7 @@ def render_discovery(
         st.session_state.pop(_SECTOR_KEY, None)
         st.warning("The saved sector selection is no longer available and was cleared.")
     sector_names = {sector.sector_id: sector.name for sector in sectors}
-    selected_sector_id = st.selectbox(
-        "Sector",
-        options=valid_sector_ids,
-        index=None,
-        key=_SECTOR_KEY,
-        on_change=_clear_industry_descendants,
-        format_func=lambda key: sector_names[key],
-    )
+    selected_sector_id = st.session_state.get(_SECTOR_KEY)
 
     industries = tuple(
         node
@@ -705,14 +693,15 @@ def render_discovery(
             st.subheader("Industry momentum")
             st.info("The selected sector has no active industries.")
             return
-        selected_industry_id = st.selectbox(
-            "Industry",
-            options=industry_ids,
-            index=None,
-            key=_INDUSTRY_KEY,
-            on_change=_clear_member_context,
-            format_func=lambda key: industry_names[key],
-        )
+        selected_industry_id = st.session_state.get(_INDUSTRY_KEY)
+        #st.selectbox(
+        #    "Industry",
+        #    options=industry_ids,
+        #    index=None,
+        #    key=_INDUSTRY_KEY,
+        #    on_change=_clear_member_context,
+        #    format_func=lambda key: industry_names[key],
+        #)
 
     stock_label = None
     if selected_industry_id is not None:

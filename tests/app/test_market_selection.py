@@ -77,6 +77,27 @@ def test_dark_mode_switch_updates_appearance_and_preserves_discovery_controls(
     )
 
 
+@pytest.mark.parametrize("dark_mode", [False, True])
+def test_date_field_and_calendar_styles_follow_the_session_theme(
+    monkeypatch, catalog_release, dark_mode
+) -> None:
+    configure_ui(monkeypatch, catalog_release)
+    app = AppTest.from_file(APP_PATH)
+    app.session_state["dark_mode"] = dark_mode
+    app.run(timeout=20)
+    assert not app.exception
+    theme = next(
+        item.proto.body for item in app.get("html") if "--app-background:" in item.proto.body
+    )
+    assert ":root {" in theme
+    assert '.stApp [data-testid="stDateInputField"]' in theme
+    assert '[data-testid="stDateInputCalendar"][role="dialog"]' in theme
+    assert '[data-type]:not([data-focused="true"])' in theme
+    assert '[role="button"]:not(' in theme
+    assert '[data-selected="true"], [data-disabled="true"], [data-focused="true"]' in theme
+    assert f"--app-surface: {'#18232d' if dark_mode else '#e9eeea'};" in theme
+
+
 def test_discovery_uses_yfinance_contract_and_discloses_requested_observed_dates(
     monkeypatch, catalog_release
 ) -> None:

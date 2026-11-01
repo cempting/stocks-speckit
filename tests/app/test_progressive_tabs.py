@@ -120,9 +120,10 @@ def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_
     app = AppTest.from_file(ROOT / "streamlit_app.py").run(timeout=20)
     discovery = "market_leadership.progressive_discovery."
     screening = "market_leadership.screening."
-    for prefix in (discovery, screening):
-        app.selectbox(prefix + "sector").select("test-sector").run()
-        app.selectbox(prefix + "industry").select("test-cloud").run()
+    app.button(discovery + "sector_tape_select_test-sector").click().run()
+    app.selectbox(discovery + "industry").select("test-cloud").run()
+    app.selectbox(screening + "sector").select("test-sector").run()
+    app.selectbox(screening + "industry").select("test-cloud").run()
     app.multiselect(screening + "stocks").select("test-stock-1").run()
     next(button for button in app.button if button.label == "Load peer scores").click().run()
     app.segmented_control(discovery + "thumbnail_period").set_value("1w").run()
