@@ -5,7 +5,7 @@ from typing import Protocol, cast
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-from market_leadership.domain.fundamentals import (
+from market_data.domain.fundamentals import (
     METRIC_GROUPS,
     FundamentalMetric,
     FundamentalScorecard,

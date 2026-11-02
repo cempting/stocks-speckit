@@ -3,8 +3,8 @@ from datetime import date
 
 import pytest
 
-import market_leadership.domain
-from market_leadership.domain.models import (
+import market_data.domain
+from market_data.domain.models import (
     AssetCategory,
     Benchmark,
     ClassificationLevel,
@@ -20,7 +20,7 @@ from market_leadership.domain.models import (
 
 
 def test_domain_package_is_importable() -> None:
-    assert market_leadership.domain is not None
+    assert market_data.domain is not None
 
 
 def test_domain_enums_cover_equity_classification_and_regime_contracts() -> None:

@@ -4,22 +4,22 @@ from typing import Literal
 
 import pandas as pd
 
-from market_leadership.application.industry_representations import snapshot_representation_worklist
-from market_leadership.application.ports import MarketDataProvider
-from market_leadership.domain.catalog import BenchmarkPurpose, CatalogError, Scope
-from market_leadership.domain.industry_representations import (
+from market_data.catalog import CatalogSnapshot
+from market_data.domain.catalog import BenchmarkPurpose, CatalogError, Scope
+from market_data.domain.industry_representations import (
     ReviewedRepresentation,
     representation_performance,
 )
-from market_leadership.domain.regimes import MarketSentiment, calculate_market_sentiment
-from market_leadership.domain.sector_performance import (
+from market_data.domain.regimes import MarketSentiment, calculate_market_sentiment
+from market_data.domain.sector_performance import (
     InsufficientHistoryError,
     PerformancePeriod,
     PerformanceResult,
     calculate_absolute_performance,
     with_sma50,
 )
-from market_leadership.infrastructure.catalog_files import CatalogSnapshot
+from market_leadership.application.industry_representations import snapshot_representation_worklist
+from market_leadership.application.ports import MarketDataProvider
 
 
 @dataclass(frozen=True, slots=True)

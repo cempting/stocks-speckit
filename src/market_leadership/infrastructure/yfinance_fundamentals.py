@@ -1,18 +1,20 @@
+import re
 from collections.abc import Callable, Mapping
 from datetime import UTC, date, datetime
 from importlib import import_module
 from numbers import Real
-from typing import Protocol, cast
+from typing import Literal, Protocol, cast
+from urllib.parse import urlsplit
 
 import pandas as pd
 
-from market_leadership.domain.fundamentals import (
+from market_data.domain.fundamentals import (
     FinancialQuarter,
     FundamentalBundle,
     FundamentalRequest,
     peer_facts_from_bundle,
 )
-from market_leadership.domain.peer_scores import PeerFacts
+from market_data.domain.peer_scores import PeerFacts
 from market_leadership.infrastructure.provider_errors import (
     ProviderRequestError,
     is_retryable_provider_failure,
@@ -55,6 +57,33 @@ class TickerReader(Protocol):
 
 
 TickerFactory = Callable[[str], TickerReader]
+
+
+def _profile_cik(value: object) -> str | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, Real):
+        number = float(value)
+        if not number.is_integer() or number < 0 or number >= 10**10:
+            return None
+        text = str(int(number))
+    elif isinstance(value, str):
+        text = value.strip()
+    else:
+        return None
+    if not text.isascii() or not text.isdigit() or len(text) > 10:
+        return None
+    return text.zfill(10)
+
+
+def _profile_domain(value: object) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    parsed = urlsplit(text if "://" in text else f"https://{text}")
+    if parsed.scheme not in ("http", "https") or parsed.username or not parsed.hostname:
+        return None
+    return parsed.hostname.rstrip(".").casefold()
 
 
 class _TickerAPI(Protocol):
@@ -148,6 +177,8 @@ def read_fundamentals(
                 (),
                 (),
                 ("Ticker initialization failed",),
+                profile_state="failed",
+                profile_failure="Ticker initialization failed",
             )
             raise FundamentalAcquisitionError(("Ticker initialization failed",), partial) from None
     assert ticker is not None
@@ -165,11 +196,28 @@ def read_fundamentals(
                 break
     profile = components.get("info")
     currency = ""
+    trading_currency: str | None = None
     market_cap: float | None = None
+    issuer_discriminator: str | None = None
+    profile_cik: str | None = None
+    profile_domain: str | None = None
+    profile_state: Literal["available", "missing", "inconclusive", "failed"] = "missing"
+    profile_failure: str | None = None
     if isinstance(profile, Mapping) and profile:
         profile = cast(Mapping[str, object], profile)
         currency_value = profile.get("financialCurrency")
         currency = currency_value if isinstance(currency_value, str) else ""
+        raw_trading_currency = profile.get("currency")
+        if (
+            isinstance(raw_trading_currency, str)
+            and re.fullmatch(r"[A-Za-z]{3}", raw_trading_currency.strip())
+        ):
+            trading_currency = raw_trading_currency.strip().upper()
+        raw_discriminator = profile.get("uuid") or profile.get("companyId")
+        if isinstance(raw_discriminator, str) and raw_discriminator.strip():
+            issuer_discriminator = raw_discriminator.strip()
+        profile_cik = _profile_cik(profile.get("cik"))
+        profile_domain = _profile_domain(profile.get("website"))
         raw_market_cap = profile.get("marketCap")
         if isinstance(raw_market_cap, Real):
             candidate = float(raw_market_cap)
@@ -178,10 +226,31 @@ def read_fundamentals(
         if profile.get("symbol") != request.symbol:
             errors.append("info: symbol identity mismatch")
             components.clear()
+            profile_state = "inconclusive"
+            profile_failure = "Profile symbol identity mismatch"
         if not currency:
             errors.append("info: financial currency unavailable")
+        if profile_state != "inconclusive":
+            if not currency:
+                profile_state = "inconclusive"
+                profile_failure = "Reporting currency unavailable"
+            elif (
+                issuer_discriminator is None
+                and profile_cik is None
+                and profile_domain is None
+            ):
+                profile_state = "inconclusive"
+                profile_failure = "Issuer discriminator unavailable"
+            else:
+                profile_state = "available"
     else:
-        errors.append("info: unverified_empty")
+        if any(error.startswith("info: acquisition failed") for error in errors):
+            profile_state = "failed"
+            profile_failure = "Profile acquisition failed"
+        else:
+            profile_state = "missing"
+            profile_failure = "Profile unavailable"
+            errors.append("info: unverified_empty")
     tables: list[tuple[FinancialQuarter, ...]] = []
     for name in ("quarterly_financials", "quarterly_cashflow", "quarterly_balance_sheet"):
         frame = components.get(name)
@@ -205,6 +274,12 @@ def read_fundamentals(
         tuple(errors),
         market_cap,
         fetched_at.date() if market_cap is not None else None,
+        issuer_discriminator,
+        profile_state,
+        profile_failure,
+        trading_currency,
+        profile_cik,
+        profile_domain,
     )
     if errors:
         raise FundamentalAcquisitionError(tuple(errors), bundle)

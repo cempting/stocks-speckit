@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from market_leadership.domain.industry_proxies import (
+from market_data.domain.industry_proxies import (
     IndustryProxyCandidate,
     IndustryProxyKind,
     select_industry_proxy,

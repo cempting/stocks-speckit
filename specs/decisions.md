@@ -6,6 +6,23 @@ status: living
 
 # Decision log
 
+## Application specification consolidation (2026-11-02)
+
+**D-FCONSOL-01 — Merge overlaps, retain distinct capabilities.** The approved application-only
+consolidation merges [003 into 004](004-sector-stock-explorer/spec.md),
+[005 into 006](006-stock-table-columns/spec.md), and
+[007 into 008](008-industry-representation-tools/spec.md). Features 001, 002, 009, 010, 011,
+and 012 remain distinct. The [authority map](README.md) defines ownership and supersession;
+the replaced spec paths retain redirects and requirement mappings, with original baselines
+preserved alongside them. Supporting artifacts and completed tasks remain historical evidence
+to reconcile before execution, not independent instructions to reimplement superseded behavior.
+No domain-aspect merge, runtime change, catalog activation, migration completion, or active
+feature-pointer change is authorized by this documentation consolidation.
+
+The current presentation has two root tabs and a five-column stock table. 010 owns file-release
+authority; 012 separately revises identity/membership/hierarchy and requires reviewed migration.
+These decisions do not transfer ETF approvals to a custom scheme or let enrichment reclassify stocks.
+
 ## Application catalog decision (2026-10-31)
 
 **D-F010 — File-only manifest authority.** The user selected file-only catalog/review storage

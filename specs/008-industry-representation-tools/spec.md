@@ -1,9 +1,15 @@
-# Feature Specification: Industry Representation Tools
+# Feature Specification: Industry Representations and Momentum
 
 **Feature Branch**: `008-industry-representation-tools`  
 **Created**: 2026-10-31  
 **Status**: Draft  
-**Updated**: 2026-10-31 (aligned with feature 010)  
+**Updated**: 2026-11-02 (absorbs feature 007)
+
+**Consolidates**: [007: Industry ETF momentum](../007-industry-etf-momentum/spec.md).
+This document owns both reviewed ETF/basket representation and its momentum evidence.
+Original requirement IDs and acceptance criteria are mapped in the redirect. Existing plans,
+tasks, research, data models, checklists, and contracts must be reconciled before further execution;
+their completion markers and historical test evidence remain unchanged.
 **Input**: User description: "Realize the tooling to investigate, find and implement the mapping of industries or sub industries to the relevent and apropriate ETF. In some cases there will not be an ETF representation, in these cases we need to put in an alternative."
 
 ## Catalog and Review Authority
@@ -14,6 +20,14 @@ manifest-registered reviewed hierarchy; ETF mappings/listings, basket constituen
 sources, decisions, and audit history persist in files. One stock CSV per region references exact
 industries and optional sub-industries, linked through the hierarchy to sectors.
 No catalog database, embedded constituent list, automatic basket, or parent substitution is allowed.
+
+[Feature 004](../004-sector-stock-explorer/spec.md) owns the consuming table/chart controls and
+tooltips, not representation approval. [009](../009-local-etf-discovery/spec.md) collects candidate
+evidence but does not approve it; [010](../010-manifest-csv-catalogs/spec.md) owns file publication.
+[Feature 012](../012-stock-industry-memberships/spec.md) separately owns the custom hierarchy
+migration: existing ETF/basket approvals retain exact node, scope, dates, and provenance and
+require reviewed applicability before reuse in the new scheme. Overlapping memberships never
+create a representation or authorize approval automatically.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -57,6 +71,27 @@ identified as a stock-basket alternative, not ETF momentum.
    the representation is labeled as a stock-basket alternative and the displayed momentum comes
    only from its approved constituents.
 
+### User Story 3 - Trust Each Node's Momentum Evidence (Priority: P1)
+
+An investor can identify the exact ETF or approved basket behind each industry's momentum and
+distinguish absent approval from insufficient market history.
+
+**Independent Test**: Display independently mapped parent/child nodes, an uncovered node, an
+invalid mapping, and an approved ETF without adequate history; verify identities and every
+distinct evidence state at the selected as-of date.
+
+**Acceptance Scenarios**:
+
+1. **Given** independently approved parent/child ETF mappings with sufficient history, **When**
+   momentum is displayed, **Then** each row identifies and uses only its own approved ETF.
+2. **Given** the same ETF is suitable for two nodes, **When** both rows use it, **Then** each
+   mapping has its own explicit reviewed applicability; sharing a parent supplies no approval.
+3. **Given** no approved representation, invalid mapping, or approved ETF with missing history,
+   **When** rows render, **Then** these conditions remain distinguishable, the known ETF stays
+   identified, and no parent, sector, broad-market, or arbitrary instrument is substituted.
+4. **Given** an out-of-period mapping or wrong classification scope, **When** the as-of date is
+   applied, **Then** the mapping cannot supply momentum and the affected reason is visible.
+
 ### Edge Cases
 
 - A classification has neither an approved ETF nor an approved basket: it remains explicitly not
@@ -94,6 +129,25 @@ identified as a stock-basket alternative, not ETF momentum.
   constituent weight, approval reference, and provenance identity or explicitly quarantine it
   with an actionable reason. Retirement of database commands MUST provide migration guidance;
   migrated source lists MUST NOT fabricate new approvals.
+- **FR-011**: Every covered industry or nested industry node MUST have an exact approved
+  representation for its region, classification/version, node, listing, and effective dates.
+  Displayed ETF momentum MUST derive solely from that node's approved ETF; an approved basket
+  MAY supply labeled alternative momentum only when no effective appropriate ETF is approved.
+  Parent and descendant mappings MUST be validated independently, even if they share an ETF.
+- **FR-012**: Each covered ETF row MUST visibly identify its ETF beside momentum. A basket
+  MUST be labeled as a stock-basket alternative, never ETF evidence. Status/type explanations
+  MAY use the name-button tooltips specified by 004; this requirement adds no removed columns.
+- **FR-013**: A missing, invalid, or inapplicable representation MUST NOT be replaced with a
+  parent, sector, broad-market, index, automatically selected stock/basket, or arbitrary ETF.
+- **FR-014**: Rows MUST distinguish available, insufficient evidence, unavailable evidence,
+  not covered, and invalid mapping. No approved mapping MUST remain distinct from an approved
+  ETF whose price history is missing, inactive, or too short; retain its known ETF identity.
+- **FR-015**: The selected as-of date MUST apply consistently to representation applicability,
+  verified listings, and momentum observations. Out-of-period evidence MUST be visibly invalid
+  or unavailable rather than used as current evidence.
+- **FR-016**: Every active reviewed node in the selected scope MUST remain discoverable,
+  including nodes without stock members or approved representations. Required-source identity
+  failures MUST be explicit and MUST NOT silently preserve an unchecked mapping.
 
 ### Key Entities
 
@@ -115,6 +169,17 @@ identified as a stock-basket alternative, not ETF momentum.
 - **SC-005**: With the catalog database unavailable, controlled worklist and ETF/basket approval
   scenarios preserve 100% of exact scope/listing/date/weight/provenance checks. Failed publication
   leaves zero partial approvals, and migration accounts for every legacy governed record.
+- **SC-006**: In controlled covered rows, 100% identify the correct approved ETF and calculate
+  momentum from that ETF's own observations.
+- **SC-007**: In controlled uncovered/invalid cases, zero rows substitute momentum; every valid
+  basket row identifies its alternative source and zero baskets are labeled ETF evidence.
+- **SC-008**: Every parent and nested-node mapping in a controlled hierarchy is independently
+  verifiable against its exact approval, including shared-ETF cases.
+- **SC-009**: For every controlled non-numeric momentum row, no mapping, invalid mapping, and
+  unavailable/insufficient approved-ETF history are distinguishable with the correct explanation.
+- **SC-010**: With the database unavailable, 100% of controlled mappings resolve from the
+  active files to the exact listing/date. Reviewed changes affect only relevant requests/results
+  without code edits; altered/invalid sources cause zero fallback instruments or automatic approvals.
 
 ## Assumptions
 

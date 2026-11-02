@@ -7,14 +7,14 @@ from threading import Barrier
 
 import pytest
 
-from market_leadership.domain.catalog import CatalogError
-from market_leadership.infrastructure.catalog_files import (
+from market_data.catalog import (
     CatalogReader,
     PublicationError,
     activate_release,
     initialize_store,
     recover_release,
 )
+from market_data.domain.catalog import CatalogError
 
 
 def test_bootstrap_copies_and_preserves_authoring_inputs(

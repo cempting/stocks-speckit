@@ -1,5 +1,9 @@
 # Tasks: Industry Representation Tools
 
+> Consolidation notice (2026-11-02): [008](spec.md) owns former 007's ETF momentum/evidence.
+> Reconcile unfinished work with the active scope and 010/012 publication/migration boundaries.
+> Preserve task IDs/completion markers and prior tests; this merge is not a new implementation.
+
 ## Phase 1: Setup
 
 No dependency or configuration changes are required.

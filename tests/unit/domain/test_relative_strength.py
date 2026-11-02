@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_leadership.domain.relative_strength import (
+from market_data.domain.relative_strength import (
     MissingStrengthReason,
     calculate_relative_strength,
 )

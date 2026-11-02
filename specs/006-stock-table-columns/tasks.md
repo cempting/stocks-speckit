@@ -1,5 +1,9 @@
 # Tasks: Stock Table Columns
 
+> Consolidation notice (2026-11-02): [006](spec.md) owns former 005's aggregate/evidence semantics.
+> Reconcile unfinished work with its five-column contract and 010/012 context boundaries.
+> Preserve task IDs/completion markers and prior tests; this merge is not a new implementation.
+
 **2026-11-01 presentation amendment**: The user approved five visible columns, with the company
 name retained in the Ticker button rather than a separate Name column. The completed six-column
 tasks below preserve historical implementation evidence; the current contract and regression

@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from market_leadership.domain.catalog import CatalogError
-from market_leadership.infrastructure.catalog_files import CatalogReader, load_release
+from market_data.catalog import CatalogReader, load_release
+from market_data.domain.catalog import CatalogError
 from market_leadership.infrastructure.region_database import RegionDatabase
 from market_leadership.infrastructure.stock_membership import load_region_membership
 from market_leadership.infrastructure.universe_import import import_reviewed_file

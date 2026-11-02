@@ -6,19 +6,20 @@ from typing import cast
 import pandas as pd
 import streamlit as st
 
-from market_leadership.config import Settings, load_settings
-from market_leadership.domain.catalog import CatalogError
-from market_leadership.domain.stock_selection import (
+from market_data.catalog import CatalogSnapshot
+from market_data.domain.catalog import CatalogError
+from market_data.domain.stock_selection import (
     MembershipEntry,
     SelectionContext,
-    reconcile_selection,
+    reconcile_selection_with_reason,
 )
-from market_leadership.infrastructure.catalog_files import CatalogSnapshot
+from market_leadership.config import Settings, load_settings
 from market_leadership.infrastructure.stock_membership import (
     load_region_membership,
     membership_entry,
 )
 from market_leadership.ui.cache import load_catalog_snapshot
+from market_leadership.ui.catalog_labels import industry_path_label
 from market_leadership.ui.dataframe import render_dataframe
 from market_leadership.ui.navigation import clear_catalog_selections, preserve_catalog_controls
 
@@ -125,7 +126,9 @@ def render_industry_deep_dive(
         for node in nodes
         if node.node_type in ("industry", "sub_industry") and node.sector_id == sector_id
     )
-    industry_names = {item.node_id: item.name for item in industries}
+    industry_names = {
+        item.node_id: industry_path_label(item, nodes) for item in industries
+    }
     if not industry_names:
         _clear_industry()
         st.info("The selected sector has no active industries.")
@@ -156,23 +159,33 @@ def render_industry_deep_dive(
         return ()
     members = membership.members
     st.subheader("Available industry members")
+    member_rows: list[dict[str, str]] = []
+    for member in members:
+        paths = snapshot.memberships_for_instrument(scope, member.instrument_id, as_of)
+        symbol = member.provider_symbol_on(as_of)
+        member_rows.append(
+            {
+                "Instrument ID": member.instrument_id,
+                "Symbol": symbol if symbol else "Unresolved placeholder",
+                "Name": member.name,
+                "Exchange": (member.listing.exchange or "Unavailable")
+                if symbol and member.listing
+                else "Unavailable",
+                "Resolution": member.resolution_state,
+                "Membership": (
+                    "Direct"
+                    if any(item.membership.industry_id == industry_id for item in paths)
+                    else "Inherited"
+                ),
+                "Direct membership paths": "; ".join(
+                    f"{' / '.join(node.name for node in item.hierarchy)} "
+                    f"[{item.membership.industry_id}]"
+                    for item in paths
+                ),
+            }
+        )
     render_dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "Instrument ID": member.instrument_id,
-                    "Symbol": member.provider_symbol_on(as_of)
-                    if member.provider_symbol_on(as_of)
-                    else "Unresolved placeholder",
-                    "Name": member.name,
-                    "Exchange": member.listing.exchange
-                    if member.provider_symbol_on(as_of) and member.listing
-                    else "Unavailable",
-                    "Resolution": member.resolution_state,
-                }
-                for member in members
-            ]
-        ),
+        pd.DataFrame(member_rows),
         hide_index=True,
     )
     current = SelectionContext(
@@ -193,13 +206,23 @@ def render_industry_deep_dive(
     entries = tuple(
         entry
         for member in members
-        if (entry := membership_entry(snapshot, member, as_of)) is not None
+        if (
+            entry := membership_entry(
+                snapshot,
+                member,
+                as_of,
+                selected_node_id=industry_id,
+            )
+        )
+        is not None
     )
     valid_ids = tuple(entry.instrument_id for entry in entries)
-    selected_ids = reconcile_selection(previous, current, old, valid_ids)
+    reconciliation = reconcile_selection_with_reason(previous, current, old, valid_ids)
+    selected_ids = reconciliation.selected_ids
     if old != selected_ids:
         st.session_state[_STOCKS_KEY] = list(selected_ids)
-        st.warning("Dependent stock selections cleared after an industry or catalog change.")
+        if reconciliation.reason:
+            st.warning(reconciliation.reason)
     st.session_state[_CONTEXT_KEY] = current
     entry_by_id = {entry.instrument_id: entry for entry in entries}
     chosen = st.multiselect(

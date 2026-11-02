@@ -1,5 +1,9 @@
 # Implementation Plan: Industry Representation Tools
 
+> Consolidation notice (2026-11-02): [008](spec.md) now owns former 007's exact-ETF momentum
+> and evidence states as well as reviewed basket/ETF tooling. Reconcile this plan and retained 007
+> evidence before execution; preserve task completion/test history and 010/012 version boundaries.
+
 > **2026-10-31 alignment:** The database boundary below describes implemented pre-cutover work.
 > [Feature 010](../010-manifest-csv-catalogs/spec.md) replaces it with manifest-managed file
 > sources and durable review/audit records. Exact ETF/basket approval, verified constituents,

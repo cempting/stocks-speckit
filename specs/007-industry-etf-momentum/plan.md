@@ -1,5 +1,9 @@
 # Implementation Plan: Industry ETF Momentum
 
+> Consolidated into [008](../008-industry-representation-tools/spec.md) on 2026-11-02.
+> This plan is historical evidence, not independent scope. Reconcile before execution;
+> the [redirect](spec.md) maps original requirements and preserves the baseline.
+
 > **2026-10-31 alignment:** SQLite/static catalog storage below is pre-cutover history.
 > [Feature 010](../010-manifest-csv-catalogs/spec.md) requires manifest-registered hierarchy,
 > ETF listing/mapping CSVs, and file-based approvals/provenance, with no embedded runtime roster.

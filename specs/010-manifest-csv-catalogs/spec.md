@@ -13,6 +13,28 @@
 - please make suggestions if of have a more effective approach
 - do not use hardcoded etf or stock listing, update the code to remove and refactor the code"
 
+## Ownership and Versioned Membership Revision
+
+This remains the distinct catalog-source, release-lifecycle, file-only governance-storage and
+legacy-cutover feature after the 2026-11-02 consolidation.
+[008](../008-industry-representation-tools/spec.md), incorporating 007, owns ETF/basket business
+approval; [009](../009-local-etf-discovery/spec.md) owns candidate collection; and
+[004](../004-sector-stock-explorer/spec.md), incorporating 003, owns runtime navigation/display.
+The [authority map](../README.md) defines the remaining feature boundaries.
+
+[012](../012-stock-industry-memberships/spec.md) is a separate, bounded versioned revision of this
+feature's single-assignment and fixed industry/sub-industry assumptions. On reviewed adoption,
+one named custom scheme supports concurrent dated memberships, deeper single-parent nesting,
+deduplicated descendant rollups, and contextual peers. Earlier US GICS release semantics remain
+historically reproducible; custom scope is not official GICS and old representation approvals
+require explicit reviewed applicability before reuse. References below to one industry/optional
+sub-industry describe the original version, not a restriction on the reviewed 012 version.
+Manifest integrity, file-only storage, coherent publication and reconciliation remain binding.
+
+Existing plans/tasks and partial file-release/runtime work are not proof that governed review,
+legacy reconciliation/retirement, or either migration is complete. Consolidation changes no
+schema, selected release, active feature pointer, completed task marker, or acceptance result.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Maintain One Authoritative File-Based Catalog Release (Priority: P1)

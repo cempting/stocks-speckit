@@ -1,8 +1,10 @@
 import os
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
+
+from market_data.config import resolve_catalog_manifest as resolve_catalog_manifest
+from market_data.config import resolve_company_evidence_root
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,14 +22,8 @@ class Settings:
     fundamental_display_approval: str = ""
     experimental_universe_catalog: str = ".data/experimental-us-industry-catalog.json"
     catalog_manifest_path: str = ".data/catalog/CURRENT.json"
-
-
-def resolve_catalog_manifest(path: Path | None = None) -> Path:
-    load_dotenv(override=False)
-    if path is not None:
-        return path.absolute()
-    configured = os.getenv("MARKET_CATALOG_MANIFEST_PATH", "").strip()
-    return Path(configured or ".data/catalog/CURRENT.json").absolute()
+    company_evidence_root: str = ".data/company-evidence"
+    sec_edgar_user_agent: str = field(default="", repr=False)
 
 
 def load_settings() -> Settings:
@@ -55,4 +51,6 @@ def load_settings() -> Settings:
             "EXPERIMENTAL_UNIVERSE_CATALOG", ".data/experimental-us-industry-catalog.json"
         ),
         catalog_manifest_path=str(resolve_catalog_manifest()),
+        company_evidence_root=str(resolve_company_evidence_root()),
+        sec_edgar_user_agent=os.getenv("SEC_EDGAR_USER_AGENT", "").strip(),
     )

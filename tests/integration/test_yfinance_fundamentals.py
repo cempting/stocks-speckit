@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_leadership.domain.fundamentals import FundamentalRequest, build_scorecard
+from market_data.domain.fundamentals import FundamentalRequest, build_scorecard
 from market_leadership.infrastructure.yfinance_fundamentals import (
     FundamentalAcquisitionError,
     read_fundamentals,
@@ -41,6 +41,55 @@ def test_reader_constructs_one_ticker_and_normalizes_all_components():
     )
     assert calls == ["TEST"]
     assert build_scorecard(evidence).metrics[0].value == 0.4
+
+
+def test_reader_retains_profile_discriminator_and_separate_currencies_once() -> None:
+    class Profile(FakeTicker):
+        profile_reads = 0
+
+        @property
+        def info(self):
+            self.profile_reads += 1
+            return {
+                "symbol": "TEST",
+                "financialCurrency": "EUR",
+                "currency": "USD",
+                "uuid": "synthetic-provider-discriminator",
+                "cik": "1234567",
+                "website": "https://Issuer.Example/company",
+            }
+
+    ticker = Profile()
+    evidence = read_fundamentals(FundamentalRequest("TEST"), lambda _: ticker)
+
+    assert ticker.profile_reads == 1
+    assert evidence.currency == "EUR"
+    assert evidence.trading_currency == "USD"
+    assert evidence.issuer_discriminator == "synthetic-provider-discriminator"
+    assert evidence.profile_cik == "0001234567"
+    assert evidence.profile_domain == "issuer.example"
+    assert evidence.profile_state == "available"
+    assert evidence.profile_failure is None
+
+
+def test_reader_distinguishes_missing_profile_from_failed_profile() -> None:
+    class MissingProfile(FakeTicker):
+        info = {}
+
+    class FailedProfile(FakeTicker):
+        @property
+        def info(self):
+            raise ValueError("provider payload must not be exposed")
+
+    with pytest.raises(FundamentalAcquisitionError) as missing:
+        read_fundamentals(FundamentalRequest("TEST"), lambda _: MissingProfile())
+    with pytest.raises(FundamentalAcquisitionError) as failed:
+        read_fundamentals(FundamentalRequest("TEST"), lambda _: FailedProfile())
+
+    assert missing.value.partial.profile_state == "missing"
+    assert failed.value.partial.profile_state == "failed"
+    assert failed.value.partial.profile_failure == "Profile acquisition failed"
+    assert "provider payload" not in str(failed.value)
 
 
 @pytest.mark.parametrize(

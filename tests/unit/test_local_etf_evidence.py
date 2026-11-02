@@ -1,6 +1,6 @@
 from dataclasses import replace
 
-from market_leadership.domain.local_etf_evidence import Evidence, group_candidates
+from market_data.domain.local_etf_evidence import Evidence, group_candidates
 
 
 def evidence(**changes):
@@ -55,7 +55,7 @@ def test_location_moves_do_not_change_meaning_and_context_is_not_candidate():
 
 
 def test_qualification_and_explicit_selection_projection():
-    from market_leadership.domain.local_etf_evidence import (
+    from market_data.domain.local_etf_evidence import (
         ReviewDecision,
         qualification_issues,
         selected_review,
@@ -94,7 +94,7 @@ def test_qualification_and_explicit_selection_projection():
 def test_acceptance_rejects_empty_review_and_non_etf_even_with_confirmations():
     import pytest
 
-    from market_leadership.domain.local_etf_evidence import ReviewDecision, validate_review
+    from market_data.domain.local_etf_evidence import ReviewDecision, validate_review
 
     item = evidence(ticker="^INDEX")
     review = ReviewDecision(

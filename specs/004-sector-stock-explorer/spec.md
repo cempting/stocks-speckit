@@ -1,12 +1,17 @@
-# Feature Specification: Sector-to-Stock Explorer
+# Feature Specification: Live Discovery and Sector-to-Stock Explorer
 
 **Feature Branch**: `004-sector-stock-explorer`
 
 **Created**: 2026-10-30
 
-**Status**: Implemented; Sector performance preservation baseline recorded 2026-10-30
+**Status**: Consolidated requirements; implemented presentation baseline recorded 2026-10-30,
+not a claim that catalog cutover or feature 012 migration is complete
 
-**Updated**: 2026-10-31 (file-only target requirements; cutover not yet implemented)
+**Updated**: 2026-11-02 (absorbs feature 003; reconciles later presentation and catalog authority)
+
+**Consolidates**: [003: Industry momentum and live interface](../003-industry-momentum-table/spec.md).
+Its original requirement IDs and success criteria are mapped there; this document is the sole
+active specification for that merged scope.
 
 **Input**: User description: "Show progressive sector, industry, and stock tapes with chart
 thumbnails and a detailed stock view; add a 50-simple moveing average to price thumbnails and an
@@ -30,14 +35,35 @@ sub-industry relationships. Sector, industry, sub-industry, and benchmark listin
 file records, not fixed instrument lists. Earlier SQL schemas/commands describe pre-cutover
 implementation and migration inputs, not the future runtime authority.
 
-Preserve the accepted chart/control baseline. The user-authorized breaking change replaces
-storage and fixed catalog identities only; features 005-006 govern the later stock-column
-presentation and feature 008 governs explicitly reviewed baskets. No complete GICS hierarchy,
-new international taxonomy, or suitable ETF is inferred from legacy source lists.
+Preserve the accepted chart/control baseline. [Feature 006](../006-stock-table-columns/spec.md)
+owns the five-column stock comparison and Total Score; [feature 008](../008-industry-representation-tools/spec.md)
+owns exact ETF/basket evidence. [Feature 001](../001-market-leadership-screener/spec.md) owns
+technical criteria and financial score formulas, [002](../002-fundamental-grading-layout/spec.md)
+owns the financial matrix, and [011](../011-company-risk-evidence/spec.md) owns company-risk
+enrichment. Those features do not add root tabs, table columns, or runtime data modes.
+
+[Feature 012](../012-stock-industry-memberships/spec.md) separately defines the versioned custom
+multi-industry revision, nested descendant rollups, contextual peers, listing/issuer continuity,
+and lookup of retained unassigned stocks within Discovery. It supersedes earlier single-assignment
+and fixed-depth assumptions only through its reviewed migration; it does not make old GICS approvals
+applicable to a custom scheme automatically. This consolidation does not activate that migration.
+
+The current path selects one sector and one industry, with five visible return periods. Earlier
+003 multi-sector and one-day/direction-selector narratives do not authorize restoring removed
+controls. One-day return semantics remain defined for consumers that use them. Sector and industry
+evidence remain accessible at their respective progressive stages, not as simultaneous tapes.
+Missing coverage stays explicit; no complete hierarchy or suitable ETF is inferred.
+
+Existing plans, tasks, research, checklists, data models, and contracts retain their original
+implementation evidence. Before further execution, reconcile them with this specification and
+the [authority map](../README.md); consolidation does not reopen tasks or verify implementation.
 
 ## Clarifications
 
 ### Session 2026-10-30
+
+The database and alternate-taxonomy decisions below are historical inputs superseded by 010
+and, for the explicitly versioned membership revision, 012.
 
 - Q: What should the spec define as the fix when an industry is selected but no stock membership catalog is configured? → A: Maintain a database and tooling to create and populate region, sector, industry, and stock records; start with the US region while allowing future regions with classifications that do not use GICS, and make membership filterable by sector and industry.
 - Q: How should the data-management tooling populate and refresh the initial US region? → A: Support both reviewed local-file imports and refreshes from one approved live source, and assess the existing local sector-rotation resources as a candidate for initial data.
@@ -136,7 +162,7 @@ the 50-session average when enough history exists, and use the required directio
    industry's volume-chart thumbnail.
 3. **Given** an industry with available member stocks, **When** the contained-stocks tape is
    displayed, **Then** each row shows a price-chart thumbnail, an adjacent volume-chart
-   thumbnail, ticker, name, price, and its Quality, Growth, and Cash Flow scores where available.
+   thumbnail, Ticker including company name, CAP Type, and Total Score under feature 006.
    The price thumbnail includes its 50-session average when sufficient history exists.
 4. **Given** a row with volume and price-direction observations, **When** its volume thumbnail is
    displayed, **Then** volume bars for up sessions are green and bars for down sessions are red.
@@ -253,15 +279,17 @@ simple moving averages, and scorecard information.
   thumbnail for that industry, including its 50-session simple moving average when sufficient
   price history exists.
 - **FR-007**: Each contained-stock row MUST show a price-chart thumbnail including its 50-session
-  simple moving average when sufficient price history exists, ticker, name, price, and the
-  existing Quality, Growth, and Cash Flow scores where available. It MUST NOT show a newly
-  calculated aggregate score.
+  simple moving average when sufficient price history exists and MUST follow the five-column
+  contract in feature 006: price chart, volume chart, Ticker (including company name), CAP Type,
+  Total Score. Separate name, price, component-score, Observed, and Chart Status columns
+  are superseded; chart-cell disclosures and unresolved identities remain.
 - **FR-008**: Activating a stock row MUST open a detailed view for that same stock.
 - **FR-009**: The detailed stock view MUST provide a chart containing price, volume, 50-session
   simple moving average, and 150-session simple moving average, when each measure has sufficient
   observations.
 - **FR-010**: The detailed stock view MUST present the stock's existing Quality, Growth, and Cash
-  Flow scorecards where available. It MUST NOT invent an overall score.
+  Flow scorecards where available under features 001-002, with company-risk evidence under 011.
+  The table aggregate is owned by 006; this feature MUST NOT invent a different overall score.
 - **FR-011**: The detail view MUST distinguish unavailable or insufficient data from valid
   observations and MUST NOT substitute evidence from another security.
 - **FR-012**: Returning to discovery from a stock detail view MUST preserve the prior valid
@@ -279,8 +307,9 @@ simple moving averages, and scorecard information.
   initial classification scope is reviewed US GICS. Regional boundaries MUST remain explicit;
   this alignment does not implement new international taxonomies or expand market coverage.
 - **FR-016**: Industry filtering MUST use the selected region and industry identity to return
-  every associated stock in that region exactly once, without including stocks from another
-  industry or region.
+  every eligible associated instrument in that region exactly once, without unrelated stocks.
+  Under the adopted feature 012 version, inclusion MUST include all effective descendants and
+  deduplicate instruments, not share classes or issuers, across overlapping memberships/listings.
 - **FR-017**: Every discovery table MUST include a separate volume-chart thumbnail column
   immediately next to the price-chart thumbnail column. Each volume thumbnail MUST represent the
   same entity as its row; unavailable volume evidence MUST be identified.
@@ -327,8 +356,10 @@ simple moving averages, and scorecard information.
   navigation; cleared selections MUST use their default behavior.
 - **FR-029**: Sector tape columns MUST remain ordered: "Price + 50-session SMA", "Volume by
   price direction", "Sector", "Ticker", "1 week", "1 month", "3 months", "6 months",
-  "12 months", "Status". Industry rows replace "Sector" with "Industry".
-  "Ticker" MUST NOT revert to "Representation".
+  "12 months". Sector status belongs in the sector-name tooltip, not a separate column.
+  Industry rows replace "Sector" with "Industry" and identify their mapped fund in "ETF";
+  industry status, representation, and representation type belong in name-button tooltips
+  under FR-004. The sector "Ticker" MUST NOT revert to "Representation".
 - **FR-030**: Both thumbnail plot heights MUST remain 84 pixels across all tapes and period
   choices. Price and supported SMA overlay MUST remain in the first chart; directional volume
   MUST remain in the separate adjacent chart with its existing explanatory legend.
@@ -342,6 +373,58 @@ simple moving averages, and scorecard information.
   ETF listing rows with blank classification references MUST NOT be treated as approved mappings.
   Mappings MUST NOT create ETF industry memberships, be silently inferred from names, or
   replace an unavailable industry chart with its parent sector chart.
+
+- **FR-033**: The root interface MUST expose exactly Discovery and Industry Deep-Dive.
+  Fundamental Grading, provider selection, synthetic-fixture, published-snapshot, acceptance,
+  and weekly-leadership modes MUST NOT be selectable at runtime. Synthetic evidence MAY remain
+  isolated in automated tests.
+- **FR-034**: Discovery MUST request live prices from yfinance only, identify that source and
+  requested/observed dates, and report actionable failures or incomplete evidence. No alternate
+  provider, snapshot, fixture, or silent stale-success fallback is permitted. The root live-data
+  controls follow the retained [live UI contract](../003-industry-momentum-table/contracts/live-discovery-ui.md).
+- **FR-035**: Industry momentum MUST use consistently adjusted completed-session closes:
+  `100 * (ending close / starting close - 1)`. Recent ranking defaults to the five-session
+  one-week interval; the one-day calculation uses one completed-session interval. Positive
+  returns mean gaining, negative declining, and zero neutral. Invalid or missing endpoints
+  MUST NOT produce fabricated returns or directions. The five visible periods remain FR-029.
+- **FR-036**: Ranks, where presented, MUST use the displayed eligible sector/industry scope,
+  default to descending return, give equal returns equal ranks, and order ties by industry name
+  then stable identifier. Insufficient rows MUST have no rank. Sorting and any applicable
+  direction filtering MUST NOT mutate observations. Earlier multi-sector and period/direction
+  selectors are superseded by the single-path controls; this requirement adds no new selector.
+- **FR-037**: Every active reviewed node in the selected hierarchy scope MUST remain discoverable,
+  including empty and uncovered industries. Momentum MUST use only that node's exact effective
+  approved ETF or explicitly approved labeled basket under 008. Missing representation or
+  history MUST NOT inherit a parent, sector, broad-market, index, or automatically chosen stock.
+- **FR-038**: Table/chart context, existing cells, and tooltips MUST expose industry identity,
+  parent sector, representation/type, period, observation/source, requested date, freshness,
+  and sufficiency without adding removed metadata columns. The display MUST distinguish
+  historical evidence from forecasts and stale dates from current observations.
+- **FR-039**: Industry analysis MUST apply the same price, 50-/150-session SMA, trend, and
+  official-session volume criteria and interpretations as sector analysis. Each entity MUST use
+  its own completed observations; unsupported criteria remain explicitly insufficient.
+  Basket chart limitations follow 008; analytic parity MUST NOT fabricate traded-fund charts.
+- **FR-040**: Discovery and Industry Deep-Dive MUST consume one integrity-checked active catalog
+  release with reviewed scoped identities and effective dates. Missing, invalid, stale, altered,
+  or unapproved required membership evidence MUST block affected member display and clear only
+  invalid dependent selections, without database, separate JSON, or embedded-list fallback.
+  Unchanged valid raw market/company evidence MUST remain reusable; affected peer context must
+  be reconciled under 006 and 012 without hidden loading.
+
+### Consolidated acceptance scenarios
+
+1. **Given** a normal root rerun, **When** either tab is opened, **Then** exactly the two permitted
+   tabs and live controls appear, both tabs use the same validated release, and no provider or
+   fixture mode is exposed.
+2. **Given** known positive, negative, zero, tied, and insufficient industry histories, **When**
+   momentum is calculated, **Then** adjusted returns, directions, scoped ranks, deterministic
+   tie order, and explicit missing evidence match FR-035-FR-038.
+3. **Given** a live failure, altered catalog source, or stale/unapproved membership, **When**
+   the active view loads, **Then** the affected failure is actionable, no fallback evidence is
+   substituted, and only invalid dependent selections are cleared.
+4. **Given** sector and industry histories with different prices/volumes, **When** their analysis
+   is inspected, **Then** each uses its own evidence with identical analytic criteria and no
+   unsupported prediction or fabricated basket chart.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -374,8 +457,8 @@ simple moving averages, and scorecard information.
 - **SC-001**: In all controlled hierarchy cases, 100% of states show only the tape appropriate to
   the current sector and industry selections, with no rows from an invalidated parent context.
 - **SC-002**: In controlled data, 100% of sector, industry, and stock rows show their own price
-  thumbnail followed immediately by a separate volume-chart thumbnail; stock rows also show the
-  required ticker, name, price, and existing Quality, Growth, and Cash Flow scores where available.
+  thumbnail followed immediately by a separate volume-chart thumbnail; stock rows follow
+  feature 006's exact five-column identity, capitalization, and Total Score contract.
 - **SC-003**: At least 90% of first-time test users can move from the sector tape to a selected
   stock's detail view and identify its industry within 60 seconds.
 - **SC-004**: For every stock with sufficient history, the detail view identifies price, volume,
@@ -405,7 +488,7 @@ simple moving averages, and scorecard information.
 - **SC-013**: In both light and dark controlled cases, all five return columns preserve the
   gain/loss/zero/missing conventions and two-decimal percentage formatting.
 - **SC-014**: On a wide viewport, all three header elements retain left-to-right order, the
-  sector tape retains all ten labeled columns, and both plots remain 84 pixels high for
+  sector tape retains all nine labeled columns plus tooltip status, and both plots remain 84 pixels high for
   every period choice.
 - **SC-015**: All 11 sector mappings in a controlled complete reviewed US release resolve to
   that release's approved listings, not a fixed runtime ticker roster, without
@@ -414,6 +497,24 @@ simple moving averages, and scorecard information.
 - **SC-016**: With the legacy catalog database unavailable, controlled region/industry/sub-industry
   filters return 100% of effective reviewed members exactly once. Invalid references prevent
   activation, and an interrupted cross-file publication exposes zero mixed-release results.
+
+- **SC-017**: At least 90% of first-time test users identify the strongest gaining and weakest
+  declining eligible industry within 60 seconds in a selected scope.
+- **SC-018**: Controlled cases match 100% of one-day/one-week adjusted returns, direction labels,
+  scoped ranks, ties, parent-sector filtering, and insufficiency outcomes.
+- **SC-019**: At least 90% of test users can change the supported scope/controls and explain the
+  resulting comparison scope within two minutes; obsolete multi-sector selectors are not required.
+- **SC-020**: Every applicable industry chart criterion matches sector analytic semantics in
+  controlled data; 100% of unsupported criteria remain explicitly insufficient.
+- **SC-021**: With cached evidence for 100 industries, 95% of table sorting, filtering, selection,
+  and chart-opening interactions present their updated result within two seconds.
+- **SC-022**: At least 90% of test users correctly describe gaining/declining as historical
+  performance, not a prediction, after inspecting an industry chart.
+- **SC-023**: Controlled release changes with the database unavailable match 100% of effective
+  hierarchy/member sets, affect only relevant requests/results without code edits, and use zero
+  invalid/unapproved fallback representations.
+- **SC-024**: Controlled root and live-failure cases expose exactly two tabs, zero runtime
+  fixture/provider modes, and zero alternate-provider, fixture, snapshot, or stale-success fallbacks.
 
 ## Assumptions
 
@@ -427,8 +528,8 @@ simple moving averages, and scorecard information.
 - Green and red volume bars use consecutive closing-price direction as a visual proxy for buying
   and selling pressure; they do not represent verified trade-side or order-flow data.
 - "Scoreboard" refers to the project's existing Quality, Growth, and Cash Flow stock scorecards.
-  The stock tape shows all three scores where available, not a new aggregate score or a single
-  selected scorecard dimension.
+  Their detail presentation follows 002/011; the stock tape uses only 006's defined Total Score,
+  not three visible component-score columns or an independently invented aggregate.
 - The stock detail chart uses completed price and volume observations and the project's existing
   data freshness and insufficiency disclosures.
 - This feature adds progressive views and stock detail to the existing market discovery

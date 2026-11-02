@@ -6,10 +6,10 @@ import exchange_calendars as xcals
 import pandas as pd
 import pytest
 
+from market_data.domain.models import Market
 from market_leadership import bootstrap
 from market_leadership.application.ports import DataPointRequest
 from market_leadership.config import Settings
-from market_leadership.domain.models import Market
 from market_leadership.infrastructure.massive_provider import MassiveProvider
 from market_leadership.infrastructure.provider_validation import canonicalize_fx_rates
 

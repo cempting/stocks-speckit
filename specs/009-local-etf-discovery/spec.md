@@ -16,6 +16,12 @@
 
 ## Catalog and Research Authority
 
+This remains a distinct candidate-research feature after the 2026-11-02 consolidation.
+[008](../008-industry-representation-tools/spec.md), now incorporating 007, owns representation
+approval and momentum; collection here grants neither. [004](../004-sector-stock-explorer/spec.md)
+owns the consuming live UI. [012](../012-stock-industry-memberships/spec.md) separately governs
+custom classification migration; a research label cannot establish membership or new-scheme approval.
+
 The [feature 010 specification](../010-manifest-csv-catalogs/spec.md) makes the manifest the
 consolidated source register for catalog files and optional local research inputs. The four
 user-supplied roots below are an initial documented research roster, not embedded approved

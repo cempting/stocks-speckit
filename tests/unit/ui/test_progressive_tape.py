@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from market_leadership.domain.peer_scores import (
+from market_data.domain.peer_scores import (
     BlockPeerScore,
     MetricPeerScore,
     PeerScorecard,

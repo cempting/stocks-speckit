@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import date
 
-from market_leadership.domain.models import ProxyType
+from market_data.domain.models import ProxyType
 
 
 @dataclass(frozen=True, slots=True)

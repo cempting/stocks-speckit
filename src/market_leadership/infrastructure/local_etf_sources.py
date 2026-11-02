@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from market_leadership.domain.local_etf_evidence import (
+from market_data.domain.local_etf_evidence import (
     CatalogObservation,
     CollectionRun,
     Evidence,

@@ -1,5 +1,9 @@
 # Tasks: Contained Stock Score Summary
 
+> Consolidated into [006](../006-stock-table-columns/spec.md) on 2026-11-02.
+> Retain task IDs/completion markers as historical evidence, not an independent backlog.
+> Reconcile unfinished work before execution; old column labels/order are superseded.
+
 **Input**: Design documents from `/specs/005-contained-stock-score/`
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md),

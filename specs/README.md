@@ -1,9 +1,9 @@
 ---
 id: SPEC-README
 title: Domain specification — Financial markets, trading & investing
-version: 0.1.0
+version: 0.2.0
 status: draft
-date: 2026-10-26
+date: 2026-11-02
 ---
 
 # Domain specification: Financial markets, trading & investing
@@ -17,7 +17,7 @@ distilled from 30 source documents (see the source index at the end). Their boil
 (disclosures, bios, promotions, exercises) was stripped first. The content is educational domain
 modelling, not financial advice.
 
-## Current Application Authority (2026-10-31)
+## Current Application Authority (2026-11-02)
 
 The numbered feature specifications define the implemented or accepted screener scope; the
 domain aspects describe broader educational concepts, not permission to add portfolio, coaching,
@@ -26,23 +26,69 @@ The [constitution](../.specify/memory/constitution.md) governs development.
 For overlapping application requirements, use the following explicit authority map rather than
 treating every historical plan as a simultaneous implementation instruction:
 
-| Feature | Requirements retained / current authority | Alignment with feature 010 |
+There are **nine active application specifications**. Overlapping features 003, 005, and 007
+have been merged into 004, 006, and 008 respectively; their original paths now redirect to the
+owning specification and map every original functional requirement. Distinct features remain
+separate. Educational aspects and their decisions have not been merged into application scope.
+
+| Active feature | Sole ownership | Dependencies and boundaries |
 |---|---|---|
-| [001: Progressive screener](001-market-leadership-screener/spec.md) | Financial/technical evidence and peer calculations where consumed; later features supersede original root tabs, index controls, and stock display | Membership/peers use reviewed regional CSV/hierarchy; no largest-stock proxy |
-| [002: Fundamental layout](002-fundamental-grading-layout/spec.md) | Financial layout/evidence; the former third root tab and fixture-mode foundation are historical after 003 | Stable stock identities and selection handoff use the same activated file release |
-| [003: Live Discovery](003-industry-momentum-table/spec.md) | Two root tabs, yfinance-only price retrieval, explicit failures, test-only fixtures | Live market prices do not confer classification authority; catalog sources come from the manifest |
-| [004: Regional explorer](004-sector-stock-explorer/spec.md) | Progressive hierarchy, coverage, listing/placeholder gates, accepted chart/control baseline | File-only records replace SQLite; fixed sector/benchmark tickers are not presentation invariants |
-| [005: Stock aggregate](005-contained-stock-score/spec.md) | Complete three-component equal-weight aggregate and explicit loading; 006 supersedes column label/order | Exact effective file-backed peer membership; no guessed comparison rows |
-| [006: Stock columns](006-stock-table-columns/spec.md) | Six columns, CAP Type thresholds, Total Score and evidence states | No layout/formula/loading change caused by catalog cutover |
-| [007: Industry ETFs](007-industry-etf-momentum/spec.md) | Exact approved ETF-to-node evidence, no parent substitution; 008 adds labeled alternatives | Reviewed CSV mappings/listings use exact scoped identities, not static ETF lists |
-| [008: Representation tools](008-industry-representation-tools/spec.md) | All active-node statuses, explicit ETF/basket approval, exact weights and effective dates | Worklists, constituents, approval/audit evidence persist in manifest-registered files |
-| [009: Local research](009-local-etf-discovery/spec.md) | Safe literal collection, immutable occurrences/decisions, conflicts/currentness and provenance | Research inputs are registered optional sources; retained histories are file-only |
-| [010: Manifest CSV catalogs](010-manifest-csv-catalogs/spec.md) | Catalog/source authority, file-only review storage, release validation/publication and safe cutover | Governs all catalog-related conflicts in earlier artifacts; implementation is pending |
+| [001: Technical analysis and component scores](001-market-leadership-screener/spec.md) | Technical criteria, adaptive consolidation heuristic, financial metric definitions and peer percentiles | No root navigation, index controls, table layout, or aggregate-score authority; cohort context follows 012 on adoption |
+| [002: Fundamental matrix](002-fundamental-grading-layout/spec.md) | Three-column/eight-metric layout, commentary, EPS consistency and quarterly history | Rendered on current stock surfaces, not a third root tab; does not redefine 001 scores or 011 risk warnings |
+| [004: Live Discovery and explorer](004-sector-stock-explorer/spec.md) | Two root tabs, yfinance-only live path, progressive tapes, industry momentum, chart/control baseline and stable navigation; absorbs 003 | Consumes 006 table, 008 representations and 010 releases; 012 adds versioned nested membership and within-Discovery stock lookup |
+| [006: Stock comparison table](006-stock-table-columns/spec.md) | Exactly five columns, CAP Type thresholds, complete equal-weight Total Score, explicit loading and evidence states; absorbs 005 | Component formulas remain 001; peer membership/context follows 012, without hidden loads or changed aggregate weights |
+| [008: Industry representations and momentum](008-industry-representation-tools/spec.md) | Exact approved ETF/basket momentum, all active-node statuses, review worklists, weights, dates and approval provenance; absorbs 007 | 004 owns display controls, 009 collects candidates, 010 publishes files; new custom scopes need reviewed applicability |
+| [009: Local ETF research](009-local-etf-discovery/spec.md) | Safe literal collection, immutable occurrences/decisions, conflicts/currentness and provenance | Candidate research is not representation approval; optional failures do not remove unrelated approved coverage |
+| [010: Manifest CSV catalogs](010-manifest-csv-catalogs/spec.md) | File/source authority, file-only review storage, release validation/publication and safe legacy cutover | Lifecycle/file foundation and runtime snapshot consumption exist; governed review, reconciliation and retirement are not claimed complete |
+| [011: Company-risk evidence](011-company-risk-evidence/spec.md) | Cash-flow risk warnings, structured issuer evidence, business/moat/orders, source permissions and safe acquisition | Preserves 001/002/006 calculations and layout; enrichment never approves or changes classification |
+| [012: Stock identity and memberships](012-stock-industry-memberships/spec.md) | Custom overlapping stock memberships, deeper single-parent hierarchy, identity ownership, deduplicated rollups, contextual peers and migration | Bounded versioned revision of 010 cardinality/hierarchy; reviewed migration remains required, not implied by documentation or partial code |
+
+### Consolidation and precedence
+
+| Replaced feature | Active owner | Preserved baseline |
+|---|---|---|
+| [003: Industry momentum](003-industry-momentum-table/spec.md) | [004](004-sector-stock-explorer/spec.md) | [Original stories, FR/SC IDs and assumptions](003-industry-momentum-table/historical-spec.md) |
+| [005: Contained stock score](005-contained-stock-score/spec.md) | [006](006-stock-table-columns/spec.md) | [Original stories, FR/SC IDs and assumptions](005-contained-stock-score/historical-spec.md) |
+| [007: Industry ETF momentum](007-industry-etf-momentum/spec.md) | [008](008-industry-representation-tools/spec.md) | [Original stories, FR/SC IDs and assumptions](007-industry-etf-momentum/historical-spec.md) |
+
+1. The constitution governs development; this map assigns requirement ownership, not new scope.
+2. Read the active owner for overlapping behavior. Replaced feature IDs remain historical
+   references, not additional backlogs. Qualify repeated IDs by feature (for example `006 FR-006`).
+3. 004 owns current navigation: exactly Discovery and Industry Deep-Dive, one progressive tape
+   at a time, no provider/fixture modes, no restored index or obsolete multi-sector controls.
+   The one-day calculation remains defined without requiring a removed one-day selector.
+4. 006 owns the latest stock-table amendment: **Price chart + 50 MA, Volume chart, Ticker
+   (including company name), CAP Type, Total Score**. No separate Name/price/component-score/
+   status/date columns. Sector/industry metadata uses 004's existing tooltips and context.
+5. 010 overrides earlier database, embedded-catalog, and automatic-proxy proposals. 012 overrides
+   only its explicitly revised identity, cardinality, hierarchy, rollup, peer-context and lookup
+   behavior through a reviewed version boundary. Neither ordinary enrichment nor this merge
+   migrates releases or transfers approvals to a new classification.
+6. Plans, research, data models, contracts, quickstarts, checklists and tasks retain original
+   evidence and IDs. Conflicting historical instructions are not current implementation authority;
+   reconcile them against their active owner and 010/012 before execution. Preserve completed
+   markers and test records; documentation consolidation is not implementation verification.
+
+Feature 012 is the active specification for the mapping revision. It requires a reviewed,
+versioned migration rather than silently changing existing releases. The unchanged issuer-evidence
+safeguards in [feature 011](011-company-risk-evidence/spec.md) remain a separate dependency;
+company enrichment does not authorize classification changes. Feature 012 has an
+[implementation plan](012-stock-industry-memberships/plan.md), [research](012-stock-industry-memberships/research.md),
+[data model](012-stock-industry-memberships/data-model.md),
+[migration/interface contracts](012-stock-industry-memberships/contracts/), and
+[test-first implementation tasks](012-stock-industry-memberships/tasks.md).
+The approved 2026-11-02 refinements define per-request evidence reuse, separately
+permitted stored business/moat sharing, and listing/issuer-bounded history observations.
+The [active feature pointer](../.specify/feature.json) remains 012. Run `/speckit-analyze` for that
+feature next; consolidation does not change the pointer or claim either migration is implemented.
 
 ### File-only catalog invariants
 
 - One stock CSV per region: effective rows reference exact reviewed industries, optionally
-  sub-industries; the hierarchy supplies industry-to-sector and sub-industry-to-industry links.
+  sub-industries in the legacy 010 model. On reviewed adoption of 012, explicit dated membership
+  associations support concurrent industries and deeper single-parent nesting in one named custom
+  scheme; root industries own a sector and descendants inherit it. Do not claim official GICS
+  authority for that custom scheme. Retained old releases keep their original interpretation.
 - One manifest consolidates hierarchy, stocks/listings, sector/industry/sub-industry ETFs,
   benchmark configuration, and retained governance/research source roles.
 - Instrument listings are distinct from approved classification mappings. Blank hierarchy
@@ -59,17 +105,21 @@ treating every historical plan as a simultaneous implementation instruction:
 
 ### Historical artifacts and implementation status
 
-Plans, research, data models, contracts, quickstarts, and task records under features 001-009
-remain useful history and evidence of the pre-cutover implementation. Their SQL schemas,
+Plans, research, data models, contracts, quickstarts, and task records retain design and
+implementation evidence. In particular, supporting artifacts under replaced features 003/005/007
+are historical unless explicitly retained by the active owner as a compatible supporting contract.
+Their SQL schemas,
 separate JSON catalog configuration, fixed ticker assumptions, and automatic proxy proposals
 are superseded wherever they conflict with 010. Explicit notices identify the affected storage
 artifacts; this directory-wide precedence also applies when opening an older task or checklist alone.
 Completed task markers and prior test results are retained, not reopened or claimed as validation
 of the new requirements. Unfinished historical tasks must be reconciled before further execution.
 
-Feature 010 has a specification and quality checklist, not an implemented migration, file format,
-CLI replacement, or new runtime source. Run `/speckit-plan 010` next; preserve the active feature
-pointer. Do not replay a database plan or invent file-only command flags from historical examples.
+Feature 010 has design artifacts and partially implemented file-release/runtime work, not a
+completed legacy migration. Its [tasks](010-manifest-csv-catalogs/tasks.md) track remaining work;
+do not reset its status to specification-only, replay a database plan, or invent command flags.
+Features 011 and 012 have their own design artifacts/tasks and remain separate requirements.
+Neither draft status nor checked historical tasks establish that all current acceptance criteria pass.
 Broader aspect rules and example tickers remain educational/test reference material, not seeds
 for production catalogs or automatic representation approval. See [D-F010](decisions.md).
 
@@ -95,6 +145,12 @@ docs/
 ```
 
 ## Reading order
+
+For application work, start with the authority map above, then the active owning specification,
+its directly relevant contracts, and the reconciled plan/tasks. Read 010 for publication and 012
+for the pending identity/membership boundary. Do not start a new feature from a replaced spec.
+
+For the separate educational domain:
 
 1. `../docs/glossary/glossary.md`: learn the vocabulary first.
 2. `decisions.md`: understand which source conflicts were settled, and how.

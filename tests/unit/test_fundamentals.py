@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from market_leadership.domain.fundamentals import (
+from market_data.domain.fundamentals import (
     FinancialQuarter,
     FundamentalBundle,
     build_scorecard,

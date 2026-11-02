@@ -1,5 +1,9 @@
 # Implementation Plan: Simplified Live Discovery
 
+> Consolidated into [004](../004-sector-stock-explorer/spec.md) on 2026-11-02.
+> This plan is historical evidence, not independent scope. Reconcile before execution;
+> the [redirect](spec.md) maps original requirements and preserves the baseline.
+
 > **2026-10-31 alignment:** Preserve the two-tab, live-yfinance, no-fallback UI decisions.
 > [Feature 010](../010-manifest-csv-catalogs/spec.md) replaces independent membership/catalog
 > configuration with one manifest-backed reviewed file release shared by both tabs.

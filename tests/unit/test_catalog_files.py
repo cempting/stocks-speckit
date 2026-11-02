@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from market_leadership.domain.catalog import CatalogError, Scope
-from market_leadership.infrastructure import catalog_files
-from market_leadership.infrastructure.catalog_files import (
+from market_data import catalog as catalog_files
+from market_data.catalog import (
     ARTIFACT_LIMIT,
     CatalogReader,
     load_release,
 )
+from market_data.domain.catalog import CatalogError, Scope
 
 SCOPE = Scope("US", "TEST_CLASSIFICATION", "TEST_VERSION")
 AS_OF = date(2026, 10, 30)

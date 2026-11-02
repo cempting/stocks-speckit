@@ -113,8 +113,8 @@ def collect(database, roots):
 
 
 def accepted(database, inventory, **overrides):
+    from market_data.domain.local_etf_evidence import qualification_issues
     from market_leadership.application.discover_etf_candidates import record_etf_candidate_review
-    from market_leadership.domain.local_etf_evidence import qualification_issues
 
     evidence = next(
         e for e in inventory.evidence if e.resource == "analyzer" and e.label == "Semiconductors"

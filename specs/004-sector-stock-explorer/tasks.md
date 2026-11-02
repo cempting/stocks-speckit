@@ -1,5 +1,9 @@
 # Tasks: Sector-to-Stock Explorer
 
+> Consolidation notice (2026-11-02): [004](spec.md) owns former 003's live interface/momentum.
+> Reconcile unfinished work against the consolidated spec, 006's five-column stock table and
+> 010/012 migration boundaries. Existing task IDs/completion markers and test evidence are retained.
+
 **2026-11-01 presentation amendment**: Current regression tests cover clickable sector and
 industry names, stable node identity despite duplicate names, hidden industry Status,
 Representation, and Representation type columns, and navigation to uncovered/empty cohorts with

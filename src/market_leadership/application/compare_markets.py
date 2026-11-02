@@ -8,9 +8,9 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
+from market_data.domain.models import Market
+from market_data.domain.regimes import calculate_market_sentiment
 from market_leadership.application.exchange_calendar import get_calendar
-from market_leadership.domain.models import Market
-from market_leadership.domain.regimes import calculate_market_sentiment
 
 
 @dataclass(frozen=True, slots=True)

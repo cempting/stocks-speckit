@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from market_leadership.domain.industry_etf_mappings import ClassificationEtfMapping, mapping_for
+from market_data.domain.industry_etf_mappings import ClassificationEtfMapping, mapping_for
 
 
 def test_mapping_is_scoped_and_date_bound() -> None:

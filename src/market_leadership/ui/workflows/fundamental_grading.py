@@ -4,14 +4,14 @@ from math import ceil
 
 import streamlit as st
 
-from market_leadership.bootstrap import load_selected_fundamentals
-from market_leadership.config import Settings
-from market_leadership.domain.fundamentals import FundamentalBundle, FundamentalRequest
-from market_leadership.domain.stock_selection import (
+from market_data.domain.fundamentals import FundamentalBundle, FundamentalRequest
+from market_data.domain.stock_selection import (
     MembershipCatalog,
     MembershipEntry,
     SelectionContext,
 )
+from market_leadership.bootstrap import load_selected_fundamentals
+from market_leadership.config import Settings
 from market_leadership.infrastructure.stock_membership import validate_live_access
 from market_leadership.infrastructure.yfinance_fundamentals import FundamentalAcquisitionError
 from market_leadership.ui.cache import cached_scorecard

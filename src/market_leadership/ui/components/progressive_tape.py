@@ -10,8 +10,8 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
-from market_leadership.domain.peer_scores import BlockPeerScore, PeerScorecard
-from market_leadership.domain.stock_chart import build_discovery_chart_preview
+from market_data.domain.peer_scores import BlockPeerScore, PeerScorecard
+from market_data.domain.stock_chart import build_discovery_chart_preview
 from market_leadership.ui.dataframe import render_dataframe
 from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS, performance_column_styles
 

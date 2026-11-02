@@ -1,4 +1,4 @@
-# Feature Specification: Progressive Stock Screener
+# Feature Specification: Technical Screening and Component Score Definitions
 
 **Feature Identifier**: `001-market-leadership-screener`
 
@@ -6,7 +6,7 @@
 
 **Created**: 2026-10-26
 
-**Updated**: 2026-10-31 (aligned with feature 010)
+**Updated**: 2026-11-02 (application ownership consolidated)
 
 **Status**: Draft — revised scope; ready for implementation planning
 
@@ -26,11 +26,24 @@ the hierarchy links industries to sectors and optional sub-industries to industr
 manifest registers reviewed ETF, benchmark, and governance sources. No embedded listing,
 automatic largest-stock proxy, or catalog database is a runtime alternative.
 
-The three-stage/index-filter narrative below records the original scope, not a request to
-restore removed controls. Current navigation is governed by feature 003, progressive regional
-tapes by feature 004, stock columns/aggregate display by features 005-006, and exact ETF/basket
-representation by features 007-008. Financial calculations and evidence rules remain applicable
-where consumed by those features. See the [cross-feature authority map](../README.md).
+This feature owns technical criteria, the adaptive consolidation heuristic, financial metric
+definitions, and component-score percentiles. [004](../004-sector-stock-explorer/spec.md) owns
+live navigation, progressive tapes and momentum; [002](../002-fundamental-grading-layout/spec.md)
+owns the eight-slot raw financial matrix; [006](../006-stock-table-columns/spec.md) owns the
+five-column comparison and Total Score; [008](../008-industry-representation-tools/spec.md)
+owns exact ETF/basket representation. Do not duplicate those requirements here or interpret
+historical scenarios as permission to restore root tabs, index filters, or removed columns.
+See the [cross-feature authority map](../README.md).
+
+[012](../012-stock-industry-memberships/spec.md) separately revises issuer/instrument/listing
+ownership, custom overlapping memberships, descendant rollups, and industry-specific peer
+contexts through reviewed versioned adoption. Component formulas and minimum peer counts
+remain unchanged; no sector-level score may be chosen or averaged from overlapping industries.
+Company-risk evidence and permissions are owned by [011](../011-company-risk-evidence/spec.md).
+
+The original user stories, clarification record, and acceptance coverage below retain context.
+Current UI tests follow 004/006; old three-stage/index/universe controls and displayed raw-metric
+lists are historical wherever superseded. Plans/tasks must be reconciled before further execution.
 
 This specification replaces the previous active requirements for this feature, in alignment with
 constitution v3.0.0. The experience is one progressive screening journey, not separately routed
@@ -199,35 +212,23 @@ raw values, percentile ties, block scores, period labels, invalid denominators, 
 
 ### Functional Requirements
 
-- **FR-001**: The product MUST provide three progressive stages within one screening experience:
-  Sector/Industry Screen, Industry Deep-Dive, and Fundamental Grading. Each stage MUST show the
-  active selection and explain unavailable prerequisites.
-- **FR-002**: Initial runtime discovery MUST support US-listed common stocks, NYSE/Nasdaq exchange
-  filters, and large-/mid-/small-cap filters. Available exchanges, instruments, index universes,
-  sources, dates, and actual coverage MUST be visible.
-- **FR-003**: S&P 500 and Russell 2000 universe filters MUST use documented membership with an
-  effective date. Unavailable memberships MUST be labelled unavailable rather than implied
-  complete or substituted with current/other-universe data.
-- **FR-004**: Multiple selected indices MUST form a deduplicated union; selected exchanges and cap
-  bands MUST then intersect that union. Without an index selection, the available US common-stock
-  universe applies. Multiple sectors form a union within that universe.
-- **FR-005**: Industry ranking MUST use the selected representation's absolute adjusted price
-  return over one completed-session interval or five completed-session intervals:
-  `100 * (ending close / starting close - 1)`. The default period MUST be one week.
-- **FR-006**: Positive returns MUST be labelled gaining, negative declining, and zero neutral.
-  Ranking MUST default to descending return within the displayed, labelled industry selection;
-  ascending return and gaining/declining/neutral/all filters MUST be available. Exact ties share
-  rank and use name then stable identifier for display order; insufficient rows have no rank.
-- **FR-007**: Every industry row MUST show parent sector, representation symbol/type, period,
-  return/direction, rank, observation date, source and sufficiency. A representation's membership
-  and exposure limitations MUST be accessible.
-- **FR-008**: Use an exact effective reviewed industry/sub-industry ETF from the manifest-backed
-  files; otherwise only an explicitly approved basket under feature 008 may supply alternative
-  momentum. No automatic stock/index proxy or parent substitution is permitted. Absent qualified
-  evidence leaves the node visibly not covered or insufficient.
-- **FR-009**: The member-stock table MUST show all available matching members of the selected
-  industry and universe, without a silent top-N cap. Pagination is permitted. It MUST show stock
-  identity, industry, market cap, selected-period return, technical criterion states and coverage.
+- **FR-001**: Navigation ownership is transferred to 004 FR-001-FR-004 and FR-033. The original
+  three-stage requirement is superseded; no third root tab is required.
+- **FR-002**: Regional discovery and coverage ownership is transferred to 004 FR-015/FR-024.
+  Original exchange/capitalization filter controls are historical, not current UI requirements.
+- **FR-003**: The original named-index selector is retired by 004's region-scoped navigation.
+  Historical index membership, if used as evidence, MUST retain its documented effective dates;
+  it MUST NOT be inferred complete or silently substituted.
+- **FR-004**: The original multi-index/multi-sector control requirement is superseded by 004.
+  Effective member inclusion and deduplication follow 010 and the reviewed 012 version on adoption.
+- **FR-005**: Return calculation and period ownership is transferred to 004 FR-035.
+- **FR-006**: Direction, scoped ranking and tie ownership is transferred to 004 FR-035/FR-036.
+- **FR-007**: Industry row/context evidence ownership is transferred to 004 FR-004/FR-029/FR-038.
+- **FR-008**: Representation approval and source ownership is transferred to 008 FR-011-FR-016.
+- **FR-009**: Member discovery MUST retain every available matching instrument without a silent
+  top-N cap; pagination is permitted. Visible table fields follow 006, not the original
+  price/component/criterion-column list. Applicable technical evidence remains accessible
+  without adding columns to the mandatory comparison table.
 - **FR-010**: Table interaction MUST permit stock selection and sorting, not alteration of
   retrieved prices, fundamentals, classifications, or calculated scores. All matching stocks
   MUST have access to scorecards; row selection may focus comparison, not silently exclude others.
@@ -255,9 +256,10 @@ raw values, percentile ties, block scores, period labels, invalid denominators, 
 - **FR-017**: Changing sector, industry, universe, or criteria MUST retain valid selections and
   clear only invalid dependent industry/stock choices. User selection state MUST remain private
   to the session and survive ordinary reruns.
-- **FR-018**: Fundamental grading MUST display the same Quality, Growth and Cash Flow blocks for
-  every matching stock, with 0–100 values, raw inputs/units, fiscal periods, publication dates,
-  peer-group definition/count and explicit insufficiency.
+- **FR-018**: Quality, Growth and Cash Flow component scores MUST use the same definitions for
+  every eligible stock, with 0–100 values, input units, fiscal periods, publication dates,
+  peer-group definition/count and explicit insufficiency accessible. Raw matrix layout follows
+  002; comparison-table aggregate display follows 006.
 - **FR-019**: Quality MUST equally weight ROE and net profit margin; Growth MUST equally weight
   revenue YoY growth and diluted EPS YoY growth; Cash Flow MUST equally weight free-cash-flow
   yield and operating-cash-flow YoY growth. Metric definitions and percentile rules below apply.
@@ -265,6 +267,8 @@ raw values, percentile ties, block scores, period labels, invalid denominators, 
   before technical filters or row selection, evaluated at the same information cutoff. Each
   metric needs at least five valid peers; each block needs both constituent metric scores.
   Missing values MUST NOT be zero-filled or cause weights to be silently redistributed.
+  Under reviewed 012 adoption, membership includes effective descendants, deduplicates instruments,
+  and retains exact scoped industry/cohort/date context; shared company facts do not share peer scores.
 - **FR-021**: Financial comparisons MUST use information published by the analysis cutoff, matching
   accounting-period definitions and currency bases. Incompatible, missing, or invalid financial
   observations MUST be insufficient with a reason; other valid stock blocks remain visible.
@@ -346,13 +350,14 @@ every visually apparent sideways period.
   including that stock. Require N ≥ 5; all-equal valid values score 50.
 - **Blocks**: Each block is the arithmetic mean of its two percentile scores, displayed to one
   decimal place. Calculate from unrounded inputs and round only for presentation. Do not combine
-  the three blocks into a new overall grade or use them to change price-performance direction.
+  them into an independently invented grade or use them to change price-performance direction.
+  The separately specified complete three-block Total Score is owned by 006, not prohibited here.
 
 ### Requirement Acceptance Coverage
 
 | Requirements | Acceptance coverage |
 |---|---|
-| FR-001–FR-008 | US1 scenarios 1–5; return/direction/ranking and universe edge cases |
+| FR-001–FR-008 | Historical US1 context; current owners 004 and 008 replace superseded navigation/control cases |
 | FR-009–FR-013 | US2 scenarios 1–4, 6–7; insufficient history and exact-boundary examples |
 | FR-014–FR-016 | US1 scenario 6; US2 scenarios 4–5; heuristic boundary/truncation examples |
 | FR-017 | US1 scenario 4; US2 scenario 6; parent/universe changes |

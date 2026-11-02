@@ -2,8 +2,9 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from hashlib import sha256
 from math import isfinite
+from typing import Literal
 
-from market_leadership.domain.peer_scores import PeerFacts
+from market_data.domain.peer_scores import PeerFacts
 
 METRIC_GROUPS = (
     (
@@ -68,6 +69,12 @@ class FundamentalBundle:
     warnings: tuple[str, ...] = ()
     market_cap: float | None = None
     market_cap_as_of: date | None = None
+    issuer_discriminator: str | None = None
+    profile_state: Literal["available", "missing", "inconclusive", "failed"] = "missing"
+    profile_failure: str | None = None
+    trading_currency: str | None = None
+    profile_cik: str | None = None
+    profile_domain: str | None = None
 
     @property
     def fingerprint(self) -> str:

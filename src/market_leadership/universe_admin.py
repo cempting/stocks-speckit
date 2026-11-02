@@ -9,19 +9,18 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+from market_data.domain.local_etf_evidence import (
+    REPORT_VERSION,
+    selected_review,
+    support_reasons,
+)
+from market_data_tools.catalog_admin import run_command as run_catalog_command
 from market_leadership.application.discover_etf_candidates import (
     collect_etf_candidates,
     record_etf_candidate_review,
     review_etf_candidates,
 )
 from market_leadership.application.industry_representations import representation_worklist
-from market_leadership.config import resolve_catalog_manifest
-from market_leadership.domain.catalog import CatalogError
-from market_leadership.domain.local_etf_evidence import (
-    REPORT_VERSION,
-    selected_review,
-    support_reasons,
-)
 from market_leadership.infrastructure.region_database import SCHEMA_VERSION, RegionDatabase
 from market_leadership.infrastructure.universe_import import (
     ImportReport,
@@ -227,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
         "activate-catalog",
         "recover-catalog",
     ):
-        return _catalog_lifecycle(arguments)
+        return run_catalog_command(arguments)
     database = RegionDatabase(arguments.database)
     try:
         if arguments.command == "init":
@@ -428,92 +427,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     parser.error("unsupported command")
     return 2
-
-
-def _catalog_lifecycle(arguments: argparse.Namespace) -> int:
-    from market_leadership.infrastructure.catalog_files import (
-        PublicationError,
-        activate_release,
-        initialize_store,
-        load_release,
-        recover_release,
-    )
-
-    report: dict[str, object] = {
-        "report_version": "market-catalog-cli-1",
-        "command": arguments.command,
-        "status": "complete",
-        "publication_state": "not_published",
-        "catalog": None,
-        "result": {},
-    }
-    try:
-        if arguments.command == "catalog-init":
-            initialize_store(arguments.directory)
-            report["result"] = {"directory": str(arguments.directory.absolute())}
-        elif arguments.command == "validate-catalog":
-            snapshot = load_release(arguments.release_manifest)
-            report["catalog"] = {
-                "release_id": snapshot.release.release_id,
-                "catalog_revision": snapshot.catalog_revision,
-                "catalog_changed": False,
-            }
-            report["result"] = {
-                "nodes": len(snapshot.nodes),
-                "stock_rows": len(snapshot.stocks),
-                "ledger_records": len(snapshot.ledger),
-                "coverage": [
-                    {"region_id": r.region_id, "state": r.coverage_state}
-                    for r in snapshot.release.regions
-                ],
-            }
-        else:
-            entry = resolve_catalog_manifest(arguments.manifest)
-            if arguments.command == "activate-catalog":
-                result = activate_release(
-                    entry,
-                    arguments.release_manifest,
-                    expected_release=(
-                        None if arguments.expected_release == "none" else arguments.expected_release
-                    ),
-                )
-            else:
-                result = recover_release(
-                    entry,
-                    arguments.release_manifest,
-                    target_sha256=arguments.target_manifest_sha256,
-                    expected_entry_sha256=arguments.expected_entry_sha256,
-                )
-            report["publication_state"] = "published"
-            report["catalog"] = {
-                "release_id": result.release_id,
-                "catalog_revision": result.catalog_revision,
-                "catalog_changed": result.catalog_changed,
-            }
-            report["result"] = {"manifest_path": str(result.manifest_path)}
-    except (CatalogError, OSError) as error:
-        code = error.code if isinstance(error, CatalogError) else "catalog_io"
-        state = error.publication_state if isinstance(error, PublicationError) else "not_published"
-        report["publication_state"] = state
-        report["status"] = (
-            "indeterminate"
-            if state == "unknown"
-            else "conflict"
-            if code in ("release_conflict", "writer_conflict", "entry_conflict")
-            else "failed"
-        )
-        report["result"] = {"error_code": code}
-        if isinstance(error, PublicationError) and error.operation_id is not None:
-            report["result"] = {
-                "error_code": code,
-                "operation_id": error.operation_id,
-                "expected_release": error.expected_release,
-            }
-        print(f"Catalog operation failed: {code}", file=sys.stderr)
-        print(json.dumps(report, indent=2))
-        return 2
-    print(json.dumps(report, indent=2))
-    return 0
 
 
 if __name__ == "__main__":

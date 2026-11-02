@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from market_leadership.domain.catalog import (
+from market_data.domain.catalog import (
     Artifact,
     Basket,
     BasketDefinition,
@@ -44,8 +44,8 @@ from market_leadership.domain.catalog import (
     parse_utc,
     validate_catalog,
 )
-from market_leadership.domain.industry_representations import BasketConstituent
-from market_leadership.domain.local_etf_evidence import CollectionRun, Evidence, ReviewDecision
+from market_data.domain.industry_representations import BasketConstituent
+from market_data.domain.local_etf_evidence import CollectionRun, Evidence, ReviewDecision
 
 SCOPE = Scope("US", "TEST_CLASSIFICATION", "TEST_VERSION")
 PERIOD = Period(date(2020, 1, 1))
@@ -741,7 +741,7 @@ def test_domain_import_succeeds_with_sql_unavailable(tmp_path: Path) -> None:
     source = Path(__file__).parents[2] / "src"
     script = (
         "import sys; sys.path.insert(0, sys.argv[1]); sys.modules['sqlite3'] = None; "
-        "from market_leadership.domain import catalog; "
+        "from market_data.domain import catalog; "
         "assert not any(name.startswith('market_leadership.infrastructure') "
         "for name in sys.modules)"
     )

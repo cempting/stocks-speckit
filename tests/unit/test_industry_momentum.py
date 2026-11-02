@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_leadership.domain.industry_momentum import (
+from market_data.domain.industry_momentum import (
     IndustryRepresentation,
     industry_momentum_frame,
     industry_symbols,
@@ -92,7 +92,7 @@ def test_industry_momentum_shows_sector_style_trends_for_selected_sectors() -> N
 def test_reviewed_basket_momentum_is_weighted_constituent_returns_only() -> None:
     from decimal import Decimal
 
-    from market_leadership.domain.industry_representations import (
+    from market_data.domain.industry_representations import (
         BasketConstituent,
         ReviewedRepresentation,
         representation_performance,
@@ -121,7 +121,7 @@ def test_reviewed_basket_momentum_is_weighted_constituent_returns_only() -> None
 
 
 def test_inactive_and_invalid_representations_never_produce_momentum() -> None:
-    from market_leadership.domain.industry_representations import (
+    from market_data.domain.industry_representations import (
         ReviewedRepresentation,
         representation_performance,
     )

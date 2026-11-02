@@ -1,5 +1,11 @@
 # Contained-Stock Table Contract
 
+> Historical contract after the 2026-11-02 consolidation. Use the active
+> [006 specification](../../006-stock-table-columns/spec.md) and
+> [stock-table contract](../../006-stock-table-columns/contracts/stock-table.md).
+> The original Score label and column roster below are superseded; aggregate/evidence semantics
+> are retained in 006. This document does not authorize restoring removed columns.
+
 ## Scope
 
 This contract applies only to the contained-stocks table after an industry is selected. Sector,

@@ -1,7 +1,7 @@
 import streamlit as st
 
+from market_data.domain.catalog import CatalogError
 from market_leadership.config import load_settings
-from market_leadership.domain.catalog import CatalogError
 from market_leadership.ui.cache import load_catalog_snapshot
 from market_leadership.ui.navigation import clear_catalog_selections, preserve_catalog_controls
 from market_leadership.ui.theme import apply_theme

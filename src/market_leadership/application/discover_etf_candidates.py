@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import TypedDict
 from uuid import uuid4
 
-from market_leadership.application.industry_representations import representation_worklist
-from market_leadership.domain.local_etf_evidence import (
+from market_data.domain.local_etf_evidence import (
     Inventory,
     ReviewDecision,
     binding_nodes,
@@ -16,6 +15,7 @@ from market_leadership.domain.local_etf_evidence import (
     selected_review,
     support_reasons,
 )
+from market_leadership.application.industry_representations import representation_worklist
 from market_leadership.infrastructure.local_etf_sources import inspect_sources, utc_observation
 from market_leadership.infrastructure.region_database import RegionDatabase
 

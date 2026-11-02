@@ -1,5 +1,9 @@
 # Implementation Plan: Contained Stock Score Summary
 
+> Consolidated into [006](../006-stock-table-columns/spec.md) on 2026-11-02.
+> This plan is historical evidence, not independent scope. Reconcile before execution;
+> the [redirect](spec.md) maps original requirements and preserves the baseline.
+
 > **2026-10-31 alignment:** The score calculation/load rules remain applicable; feature 006
 > supersedes the old visible column label/order. Inputs now target the activated regional stock
 > CSV/hierarchy release under [feature 010](../010-manifest-csv-catalogs/spec.md), not a separate

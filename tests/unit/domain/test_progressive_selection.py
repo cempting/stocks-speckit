@@ -1,6 +1,6 @@
 from datetime import date
 
-from market_leadership.domain.progressive_selection import (
+from market_data.domain.progressive_selection import (
     ProgressiveSelection,
     reconcile_progressive_selection,
 )

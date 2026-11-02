@@ -1,5 +1,9 @@
 # Tasks: Industry Momentum Table Spike
 
+> Consolidated into [004](../004-sector-stock-explorer/spec.md) on 2026-11-02.
+> Retain these task IDs/completion markers as historical evidence, not an independent backlog.
+> Reconcile unfinished work with the active owner before execution; do not replay snapshot plans.
+
 **Input**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), and
 [quickstart.md](./quickstart.md)
 

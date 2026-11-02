@@ -8,8 +8,8 @@ from typing import Literal
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
-from market_leadership.domain.catalog import CatalogError
-from market_leadership.infrastructure.catalog_files import load_release
+from market_data.catalog import load_release
+from market_data.domain.catalog import CatalogError
 
 
 def contract_schema() -> dict[str, object]:
@@ -26,7 +26,7 @@ def validator() -> Draft202012Validator:
 
 
 def test_packaged_schema_matches_contract() -> None:
-    resource = files("market_leadership.infrastructure").joinpath("catalog-manifest.schema.json")
+    resource = files("market_data.schemas").joinpath("catalog-manifest.schema.json")
     assert json.loads(resource.read_text()) == contract_schema()
 
 

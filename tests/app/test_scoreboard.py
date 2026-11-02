@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_leadership.domain.industry_momentum import (
+from market_data.domain.industry_momentum import (
     IndustryRepresentation,
     industry_momentum_frame,
 )

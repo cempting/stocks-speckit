@@ -7,6 +7,14 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
+from market_data.domain.fundamentals import FinancialQuarter, FundamentalBundle
+from market_data.domain.models import (
+    ClassificationLevel,
+    ClassificationNode,
+    Market,
+    ProxyType,
+)
+from market_data.domain.proxies import DocumentedRepresentation
 from market_leadership.application.exchange_calendar import get_calendar
 from market_leadership.application.ports import (
     ProviderCapability,
@@ -14,14 +22,6 @@ from market_leadership.application.ports import (
     WeeklyPriceHistory,
 )
 from market_leadership.application.weekly_calendar import latest_completed_market_week
-from market_leadership.domain.fundamentals import FinancialQuarter, FundamentalBundle
-from market_leadership.domain.models import (
-    ClassificationLevel,
-    ClassificationNode,
-    Market,
-    ProxyType,
-)
-from market_leadership.domain.proxies import DocumentedRepresentation
 from market_leadership.infrastructure.provider_validation import canonicalize_daily_history
 from market_leadership.infrastructure.snapshot_errors import SchemaMismatch, SourceUnavailable
 

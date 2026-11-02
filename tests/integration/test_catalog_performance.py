@@ -6,8 +6,8 @@ from hashlib import sha256
 from pathlib import Path
 from time import perf_counter
 
-from market_leadership.infrastructure import catalog_files
-from market_leadership.infrastructure.catalog_files import CatalogReader, load_release
+from market_data import catalog as catalog_files
+from market_data.catalog import CatalogReader, load_release
 from tests.fixtures.catalogs.performance import expand_performance_release
 
 AS_OF = date(2026, 10, 30)
@@ -34,10 +34,10 @@ def test_exact_sc004_cold_and_warm_handling(
     parses = 0
     original = catalog_files._csv
 
-    def counted_parse(raw, role):
+    def counted_parse(raw, role, release_format):
         nonlocal parses
         parses += 1
-        return original(raw, role)
+        return original(raw, role, release_format)
 
     monkeypatch.setattr(catalog_files, "_csv", counted_parse)
     cold: list[float] = []

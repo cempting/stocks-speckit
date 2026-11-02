@@ -1,9 +1,16 @@
 # Progressive Discovery UI Contract
 
-**2026-10-31 target amendment**: Catalog source authority follows
+**2026-11-02 consolidation**: [Feature 004](../spec.md) owns this contract and incorporates
+former feature 003's live interface/momentum scope. Catalog source authority follows
 [feature 010](../../010-manifest-csv-catalogs/spec.md); implementation/cutover is pending.
-Preserve accepted chart/control behavior. Features 005-006 supply the later stock aggregate/columns,
+Preserve accepted chart/control behavior. Feature 006 supplies the stock aggregate/columns,
 and feature 008 governs labeled baskets. See the [authority map](../../README.md).
+
+[Feature 012](../../012-stock-industry-memberships/spec.md) separately defines reviewed adoption
+of a custom overlapping membership scheme, deeper single-parent hierarchy, descendant rollups,
+industry-specific cohorts, retained unassigned-stock lookup, and issuer/listing continuity.
+Those versioned changes override only the affected membership assumptions below; they do not
+change the two-tab baseline, five-column stock table, explicit load behavior, or ETF approvals.
 
 ## Root and stages
 
@@ -79,7 +86,7 @@ and feature 008 governs labeled baskets. See the [authority map](../../README.md
 - The stock tape contains exactly Price chart + 50 MA, Volume chart, Ticker, CAP Type,
   and Total Score under feature 006's 2026-11-01 amendment. The Ticker button includes the company
   name; no separate Name column appears. CAP Type uses existing valid capitalization evidence.
-- Total Score uses feature 005's equal mean of all three available Quality/Growth/Cash Flow peer
+- Total Score uses feature 006's equal mean of all three available Quality/Growth/Cash Flow peer
   blocks; it remains explicitly unavailable/insufficient/not loaded/error otherwise. Component
   scores retain the 001 peer formulas and are not inferred from the eight raw display metrics.
 - Activating a stock row opens that same stable instrument identity. A changed ticker or display

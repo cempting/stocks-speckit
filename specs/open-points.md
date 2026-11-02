@@ -6,11 +6,13 @@ status: living
 
 # Open points register
 
-**Application scope note (2026-10-31)**: This generated register tracks educational aspect
+**Application scope note (2026-11-02)**: This generated register tracks educational aspect
 decisions, not completed implementation or pending feature design. [D-F010](decisions.md) and
 the [application authority map](README.md) supersede conflicting catalog/proxy defaults for the
-current screener. Feature 010's file contracts, migration, and runtime refactor still require
-planning/implementation even though this domain register contains no open items.
+current screener. Feature 010 has file contracts and partial implementation, with cutover work
+remaining; feature 012 separately defines the versioned identity/membership revision.
+The application consolidation recorded as D-FCONSOL-01 does not close pending implementation
+or design validation merely because this educational domain register contains no open items.
 
 All open points are closed. This register is generated from section 9 of each aspect spec and the persona (`python3 gen_open.py`); it lists no open item.
 

@@ -19,9 +19,15 @@ def _run(monkeypatch, catalog_release):
     return AppTest.from_file(PAGE).run(timeout=20)
 
 
+def _select_industry(app, prefix, node_id):
+    selectbox = app.selectbox(prefix + "industry")
+    option = next(value for value in selectbox.options if value.endswith(f"[{node_id}]"))
+    return selectbox.select(option)
+
+
 def _stocks(app):
     app.button(PREFIX + "sector_tape_select_test-sector").click().run(timeout=20)
-    app.selectbox(PREFIX + "industry").select("test-cloud").run(timeout=20)
+    _select_industry(app, PREFIX, "test-cloud").run(timeout=20)
     return app
 
 
@@ -104,7 +110,7 @@ def test_breadcrumbs_allow_return_from_industry_and_empty_stock_lists(monkeypatc
     assert not app.exception
     assert PREFIX + "sector" not in app.session_state
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
-    app.selectbox(PREFIX + "industry").select("test-empty").run()
+    _select_industry(app, PREFIX, "test-empty").run()
     assert any("no active stock memberships" in item.value for item in app.info)
     app.button(PREFIX + "breadcrumb_sector").click().run()
     assert not app.exception
@@ -138,7 +144,7 @@ def test_sector_and_industry_selection_replaces_tape_and_shows_all_members(
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value == "Sector performance" for item in app.subheader)
-    app.selectbox(PREFIX + "industry").select("test-cloud").run(timeout=20)
+    _select_industry(app, PREFIX, "test-cloud").run(timeout=20)
     assert not app.exception
     assert any(item.value == "Contained stocks" for item in app.subheader)
     assert any(item.label == "TEST_STOCK_1 · Test stock 1" for item in app.button)
@@ -245,7 +251,7 @@ def test_stock_views_do_not_request_hidden_industry_proxy(monkeypatch, catalog_r
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert set(calls[-1]) == {"TEST_ETF", "TEST_INVENTORY"}
     calls.clear()
-    app.selectbox(PREFIX + "industry").select("test-cloud").run()
+    _select_industry(app, PREFIX, "test-cloud").run()
     assert not app.exception
     assert ("TEST_STOCK_1",) in calls
     assert all("TEST_INVENTORY" not in symbols for symbols in calls)
@@ -333,12 +339,15 @@ def test_industry_deep_dive_uses_same_file_memberships_and_preserves_missing_com
     configure_ui(monkeypatch, catalog_release)
     app = AppTest.from_file(DEEP).run()
     app.selectbox("market_leadership.screening.sector").select("test-sector").run()
-    app.selectbox("market_leadership.screening.industry").select("test-cloud").run()
+    _select_industry(app, "market_leadership.screening.", "test-cloud").run()
     assert not app.exception
-    assert any("TEST_STOCK_1" in str(item.value) for item in app.dataframe)
+    frame = app.dataframe[0].value
+    member = frame.loc[frame["Instrument ID"] == "test-stock-1"].iloc[0]
+    assert member["Membership"] == "Inherited"
+    assert "test-specialist" in member["Direct membership paths"]
     picker = app.multiselect("market_leadership.screening.stocks")
     assert picker.options == ["TEST_STOCK_1 · Test stock 1"]
-    from market_leadership.infrastructure.catalog_files import CatalogReader
+    from market_data.catalog import CatalogReader
     from market_leadership.infrastructure.stock_membership import membership_entry
 
     snapshot = CatalogReader().read(catalog_release.parent / "CURRENT.json")
@@ -392,9 +401,11 @@ def test_reviewed_zero_member_industry_is_visible_without_fabricated_stocks(
     calls = configure_ui(monkeypatch, catalog_release)
     app = AppTest.from_file(PAGE).run()
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
-    assert "test-empty" in app.selectbox(PREFIX + "industry").options
+    assert any(
+        option.endswith("[test-empty]") for option in app.selectbox(PREFIX + "industry").options
+    )
     calls.clear()
-    app.selectbox(PREFIX + "industry").select("test-empty").run()
+    _select_industry(app, PREFIX, "test-empty").run()
     assert not app.exception
     assert any("no active stock memberships" in item.value for item in app.info)
     assert calls == [("TEST_ETF",)]
@@ -407,14 +418,22 @@ def test_total_score_requires_complete_quality_growth_and_cash_flow(
 ):
     from dataclasses import replace
 
-    from market_leadership.domain.peer_scores import BlockPeerScore
+    from market_data.domain.peer_scores import BlockPeerScore
     from tests.app.test_stock_detail import _score_result
 
     configure_ui(monkeypatch, catalog_release)
     cohorts = []
 
-    def score(members, *, cutoff, refresh=False, cohort_fingerprint=None):
+    def score(
+        members,
+        *,
+        cutoff,
+        refresh=False,
+        cohort_fingerprint=None,
+        comparison_context=None,
+    ):
         cohorts.append(tuple(member.instrument_id for member in members))
+        assert comparison_context is not None
         result = _score_result(members)
         evidence = result.stocks[0]
         card = replace(
@@ -434,6 +453,61 @@ def test_total_score_requires_complete_quality_growth_and_cash_flow(
     assert not app.exception
     assert cohorts == [("test-stock-1",)]
     assert any(item.value == ("Insufficient" if missing else "60.0") for item in app.markdown)
+
+
+def test_peer_scores_keep_separate_contexts_and_reuse_a_b_a_results(
+    monkeypatch,
+    catalog_release,
+):
+    from dataclasses import replace
+
+    from tests.app.test_stock_detail import _score_result
+
+    configure_ui(monkeypatch, catalog_release)
+    calls = []
+
+    def score(
+        members,
+        *,
+        cutoff,
+        refresh=False,
+        cohort_fingerprint=None,
+        comparison_context=None,
+    ):
+        del cutoff, refresh
+        assert comparison_context is not None
+        calls.append(
+            (comparison_context.industry_id, tuple(item.instrument_id for item in members))
+        )
+        return replace(
+            _score_result(members),
+            cohort_fingerprint=cohort_fingerprint,
+            context=comparison_context,
+        )
+
+    monkeypatch.setattr("market_leadership.application.score_industry.score_industry", score)
+    app = _stocks(AppTest.from_file(PAGE).run(timeout=20))
+    next(
+        button for button in app.button if button.label == "Load peer scores"
+    ).click().run(timeout=20)
+    assert calls[0][0] == "test-cloud"
+
+    _select_industry(app, PREFIX, "test-hardware").run(timeout=20)
+    assert len(calls) == 1
+    next(
+        button for button in app.button if button.label == "Load peer scores"
+    ).click().run(timeout=20)
+    assert calls[1][0] == "test-hardware"
+
+    _select_industry(app, PREFIX, "test-cloud").run(timeout=20)
+    assert not app.exception
+    assert len(calls) == 2
+    results = app.session_state[PREFIX + "scores"]
+    assert len(results) == 2
+    assert {result.context.industry_id for result in results.values()} == {
+        "test-cloud",
+        "test-hardware",
+    }
 
 
 def test_multiple_regions_default_to_us_and_clear_descendants_on_switch(
@@ -501,16 +575,21 @@ def test_multiple_regions_default_to_us_and_clear_descendants_on_switch(
 def test_reviewed_subindustry_remains_a_gap_row_with_exact_members(monkeypatch, catalog_release):
     app = _run(monkeypatch, catalog_release)
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
-    assert "test-specialist" in app.selectbox(PREFIX + "industry").options
-    assert app.button(PREFIX + "industry_tape_select_test-specialist").label == "test-specialist"
+    assert any(
+        option.endswith("[test-specialist]")
+        for option in app.selectbox(PREFIX + "industry").options
+    )
+    specialist_label = app.button(PREFIX + "industry_tape_select_test-specialist").label
+    assert specialist_label.endswith("[test-specialist]")
+    assert "test-cloud" in specialist_label
     assert "Not covered" in app.button(PREFIX + "industry_tape_select_test-specialist").help
-    app.selectbox(PREFIX + "industry").select("test-specialist").run()
+    _select_industry(app, PREFIX, "test-specialist").run()
     assert not app.exception
     assert any(item.label == "TEST_STOCK_1 · Test stock 1" for item in app.button)
     assert not any("Unresolved placeholder" in item.label for item in app.button)
     deep = AppTest.from_file(DEEP).run()
     deep.selectbox("market_leadership.screening.sector").select("test-sector").run()
-    deep.selectbox("market_leadership.screening.industry").select("test-specialist").run()
+    _select_industry(deep, "market_leadership.screening.", "test-specialist").run()
     assert not deep.exception
     assert deep.multiselect("market_leadership.screening.stocks").options == [
         "TEST_STOCK_1 · Test stock 1"

@@ -1,4 +1,4 @@
-# Feature Specification: Stock Table Columns
+# Feature Specification: Stock Comparison Table and Total Score
 
 **Feature Branch**: `006-stock-table-columns`
 
@@ -6,7 +6,12 @@
 
 **Status**: Draft
 
-**Updated**: 2026-11-01 (remove redundant visible Name column)
+**Updated**: 2026-11-02 (absorbs feature 005; retains five-column amendment)
+
+**Consolidates**: [005: Contained stock aggregate](../005-contained-stock-score/spec.md).
+This document owns both the table presentation and aggregate/loading semantics. The redirect
+maps original requirement IDs; existing plans/tasks remain evidence to reconcile before execution,
+not a claim that consolidation implements or validates runtime behavior.
 
 **Input**: User description: "the stocks table shall have price chart + 50MA, volume chart,
 ticker, name, CAP type, Total Score"
@@ -23,6 +28,14 @@ manifest-backed release. No catalog database or embedded stock list is a runtime
 The five visible columns, current capitalization thresholds, explicit score-load behavior,
 and complete three-component aggregate remain unchanged; catalog provenance belongs in existing
 context/disclosures, not additional table columns.
+
+[Feature 004](../004-sector-stock-explorer/spec.md) owns navigation and chart presentation,
+[001](../001-market-leadership-screener/spec.md) owns component-score formulas,
+and [002](../002-fundamental-grading-layout/spec.md) owns the financial matrix.
+[Feature 012](../012-stock-industry-memberships/spec.md) separately owns the versioned custom
+membership revision: descendant rollups deduplicate instruments and peer results retain the exact
+industry/cohort context. It does not change aggregate weights, add columns, or authorize hidden
+loads. The migration remains an explicit adoption step.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -112,6 +125,18 @@ remain explicit.
   stable instrument/listing identities, exact scope, and effective membership periods.
   File-only cutover MUST preserve the five-column presentation and explicit load behavior;
   invalid catalog evidence MUST be reported, not filled with embedded lists or stale rows.
+- **FR-010**: Total Score MUST distinguish numeric calculated, not loaded, insufficient,
+  unavailable, and error states. Non-numeric states MUST NOT be displayed as zero, a stale
+  score, or a partial-component mean. With complete scores,
+  `Total Score = (Quality + Growth + Cash Flow) / 3`; every row uses that same rule.
+- **FR-011**: Observed, Chart Status, component-score, Score Status, standalone Name, and price
+  columns MUST NOT be restored. Removing metadata columns MUST preserve chart-cell insufficiency,
+  unavailable evidence, and unresolved-placeholder identity disclosures.
+- **FR-012**: A release or membership-context change MUST reconcile invalid selections and
+  affected peer results while retaining unchanged eligible raw evidence and valid cohorts.
+  A score MUST NOT be reused in a different industry/cohort merely because the instrument is
+  unchanged. Feature 012's per-request reuse and explicitly loaded new-peer rules apply on
+  adoption; rendering or context changes alone MUST NOT initiate hidden evidence requests.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -137,6 +162,10 @@ remain explicit.
 - **SC-005**: With the legacy catalog database unavailable, controlled release changes produce
   100% correct effective member rows and zero stale selections while retaining exactly five
   columns, unchanged CAP Type/Total Score rules, and zero hidden loading actions.
+- **SC-006**: In controlled complete, incomplete, not-loaded, insufficient, unavailable, error,
+  and placeholder cases, 100% of Total Score cells show the exact complete three-component
+  mean at the established precision or the correct explicit non-numeric state. Missing any
+  component produces zero partial means; ordinary rendering initiates zero score loads.
 
 ## Assumptions
 

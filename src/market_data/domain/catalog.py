@@ -9,11 +9,11 @@ from decimal import Decimal, InvalidOperation
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Literal, cast
 
-from market_leadership.domain.industry_representations import (
+from market_data.domain.industry_representations import (
     BasketConstituent,
     validate_weights,
 )
-from market_leadership.domain.local_etf_evidence import (
+from market_data.domain.local_etf_evidence import (
     CatalogObservation,
     CollectionRun,
     Evidence,
@@ -35,6 +35,7 @@ type ArtifactRole = Literal[
     "benchmarks",
     "audit",
     "migration_archive",
+    "membership_migration",
 ]
 type BenchmarkPurpose = Literal["sp500_comparison", "market_sentiment"]
 type CatalogType = Literal[
@@ -54,15 +55,19 @@ ARTIFACT_ROLES = frozenset(
         "benchmarks",
         "audit",
         "migration_archive",
+        "membership_migration",
     }
 )
 
 
 class CatalogError(ValueError):
-    def __init__(self, code: str, field: str) -> None:
+    def __init__(self, code: str, field: str, *, context: str | None = None) -> None:
         self.code = code
         self.field = field
-        super().__init__(f"{code}: {field}")
+        message = f"{code}: {field}"
+        if context:
+            message = f"{message} ({context})"
+        super().__init__(message)
 
 
 def require_text(value: object, field: str) -> None:
@@ -210,10 +215,13 @@ class Classification:
     source_id: str
     approval_reference: str
     period: Period
+    scheme_kind: Literal["custom"] | None = None
 
     def __post_init__(self) -> None:
         for field in ("scheme_name", "source_id", "approval_reference"):
             require_text(getattr(self, field), field)
+        if self.scheme_kind not in (None, "custom"):
+            raise CatalogError("invalid_scheme_kind", "scheme_kind")
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,9 +351,14 @@ class CatalogRelease:
     evidence_sources: tuple[EvidenceSource, ...]
     artifacts: tuple[Artifact, ...]
     research_sources: tuple[ResearchSource, ...]
+    format: Literal["market-catalog-release-1", "market-catalog-release-2"] = (
+        "market-catalog-release-1"
+    )
 
     def __post_init__(self) -> None:
         require_text(self.release_id, "release_id")
+        if self.format not in ("market-catalog-release-1", "market-catalog-release-2"):
+            raise CatalogError("invalid_release_format", "format")
         require_utc(self.created_at, "created_at", nullable=False)
         require_hash(self.catalog_revision, "catalog_revision")
         for field in ("regions", "evidence_sources", "artifacts", "research_sources"):
@@ -365,6 +378,16 @@ class CatalogRelease:
             raise CatalogError("invalid_audit_count", "artifacts")
         known_regions = {region.region_id for region in self.regions}
         known_scopes = {c.scope for region in self.regions for c in region.classifications}
+        if self.format == "market-catalog-release-1":
+            if any(classification.scheme_kind is not None for region in self.regions
+                   for classification in region.classifications):
+                raise CatalogError("invalid_scheme_kind", "scheme_kind")
+        elif any(
+            classification.scheme_kind != "custom"
+            for region in self.regions
+            for classification in region.classifications
+        ):
+            raise CatalogError("invalid_scheme_kind", "scheme_kind")
         for artifact in self.artifacts:
             if artifact.region_id is not None and artifact.region_id not in known_regions:
                 raise CatalogError("unknown_region", "artifacts")
@@ -377,14 +400,25 @@ class CatalogRelease:
                 if scope not in known_scopes:
                     raise CatalogError("unknown_scope", "artifacts")
         for region in self.regions:
-            if region.status != "active":
+            if self.format == "market-catalog-release-1" and region.status != "active":
                 continue
             stocks = [
                 a for a in self.artifacts if a.role == "stocks" and a.region_id == region.region_id
             ]
             if len(stocks) != 1:
                 raise CatalogError("invalid_stock_artifact_count", "artifacts")
-            for role in ARTIFACT_ROLES - {"stocks", "audit", "migration_archive"}:
+            if self.format == "market-catalog-release-2" and any(
+                artifact.classification_id is not None
+                or artifact.classification_version is not None
+                for artifact in stocks
+            ):
+                raise CatalogError("unexpected_stock_scope", "artifacts")
+            for role in ARTIFACT_ROLES - {
+                "stocks",
+                "audit",
+                "migration_archive",
+                "membership_migration",
+            }:
                 if not any(
                     a.role == role and a.region_id in (None, region.region_id)
                     for a in self.artifacts
@@ -414,7 +448,7 @@ class HierarchyNode:
             raise CatalogError("invalid_sector_reference", "SectorId")
         if self.node_type == "sub_industry":
             require_text(self.parent_industry_id, "ParentIndustryId")
-        elif self.parent_industry_id is not None:
+        elif self.node_type == "sector" and self.parent_industry_id is not None:
             raise CatalogError("unexpected_parent", "ParentIndustryId")
         if self.approval_origin == "own":
             require_text(self.source_id, "SourceId")
@@ -544,6 +578,115 @@ class StockRow:
         ):
             return None
         return self.listing.provider_symbol
+
+
+@dataclass(frozen=True, slots=True)
+class StockInstrument:
+    instrument_id: str
+    region_id: str
+    company_id: str | None
+    name: str
+    resolution_state: Literal["identified", "placeholder"]
+
+    def __post_init__(self) -> None:
+        for field in ("instrument_id", "region_id", "name"):
+            require_text(getattr(self, field), field)
+        if self.company_id is not None:
+            require_text(self.company_id, "CompanyId")
+        if self.resolution_state not in ("identified", "placeholder"):
+            raise CatalogError("invalid_instrument_state", "ResolutionState")
+
+
+@dataclass(frozen=True, slots=True)
+class IndustryMembership:
+    membership_id: str
+    scope: Scope
+    instrument_id: str
+    industry_id: str
+    period: Period
+    source_id: str
+    approval_reference: str
+    review_state: Literal["reviewed"]
+
+    def __post_init__(self) -> None:
+        for field in (
+            "membership_id",
+            "instrument_id",
+            "industry_id",
+            "source_id",
+            "approval_reference",
+        ):
+            require_text(getattr(self, field), field)
+        if self.review_state != "reviewed":
+            raise CatalogError("unreviewed_membership", "MembershipReviewState")
+
+
+@dataclass(frozen=True, slots=True)
+class CatalogMember:
+    instrument: StockInstrument
+    memberships: tuple[IndustryMembership, ...]
+    listings: tuple[Listing, ...]
+
+    def __post_init__(self) -> None:
+        require_tuple(self.memberships, "memberships")
+        require_tuple(self.listings, "listings")
+        membership_ids = tuple(item.membership_id for item in self.memberships)
+        if len(set(membership_ids)) != len(membership_ids):
+            raise CatalogError("duplicate_membership", "MembershipId")
+        if any(
+            item.instrument_id != self.instrument.instrument_id
+            or item.scope.region_id != self.instrument.region_id
+            for item in self.memberships
+        ):
+            raise CatalogError("instrument_membership_mismatch", "InstrumentId")
+        listing_ids = tuple(item.listing_id for item in self.listings)
+        if len(set(listing_ids)) != len(listing_ids):
+            raise CatalogError("duplicate_listing", "ListingId")
+        if any(
+            item.instrument_id != self.instrument.instrument_id
+            or item.region_id != self.instrument.region_id
+            for item in self.listings
+        ):
+            raise CatalogError("listing_identity_mismatch", "ListingId")
+
+
+@dataclass(frozen=True, slots=True)
+class EffectiveMembershipPath:
+    membership: IndustryMembership
+    hierarchy: tuple[HierarchyNode, ...]
+
+    def __post_init__(self) -> None:
+        require_tuple(self.hierarchy, "hierarchy")
+        if (
+            not self.hierarchy
+            or self.hierarchy[0].node_type != "sector"
+            or self.hierarchy[-1].node_id != self.membership.industry_id
+            or any(node.scope != self.membership.scope for node in self.hierarchy)
+            or any(
+                (
+                    node.parent_industry_id
+                    if node.parent_industry_id is not None
+                    else node.sector_id
+                )
+                != parent.node_id
+                for parent, node in zip(self.hierarchy, self.hierarchy[1:], strict=False)
+            )
+        ):
+            raise CatalogError("invalid_membership_path", "hierarchy")
+
+
+@dataclass(frozen=True, slots=True)
+class ListingResolution:
+    state: Literal["available", "unavailable", "ambiguous"]
+    listing: Listing | None
+    reason: str
+
+    def __post_init__(self) -> None:
+        if self.state not in ("available", "unavailable", "ambiguous"):
+            raise CatalogError("invalid_listing_resolution", "state")
+        require_text(self.reason, "reason")
+        if (self.state == "available") != (self.listing is not None):
+            raise CatalogError("invalid_listing_resolution", "listing")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1155,6 +1298,92 @@ def _matching_nodes(
     return nodes
 
 
+def _validate_hierarchy_v2(
+    node_index: dict[tuple[Scope, str], list[HierarchyNode]],
+    nodes: tuple[HierarchyNode, ...],
+) -> None:
+    for node in nodes:
+        if node.node_type == "sector":
+            if node.sector_id != node.node_id or node.parent_industry_id is not None:
+                raise CatalogError(
+                    "invalid_sector_reference",
+                    "SectorId/ParentIndustryId",
+                    context=f"node={node.node_id}; sector={node.sector_id}",
+                )
+            continue
+        sectors = node_index.get((node.scope, node.sector_id), ())
+        if not sectors or any(item.node_type != "sector" for item in sectors):
+            raise CatalogError(
+                "invalid_sector_reference",
+                "SectorId",
+                context=f"node={node.node_id}; sector={node.sector_id}",
+            )
+        if node.parent_industry_id is None:
+            if node.node_type != "industry":
+                raise CatalogError(
+                    "missing_parent",
+                    "ParentIndustryId",
+                    context=f"node={node.node_id}",
+                )
+            if not _covered(tuple(item.period for item in sectors), node.period):
+                raise CatalogError(
+                    "invalid_sector_period",
+                    "SectorId",
+                    context=f"node={node.node_id}; sector={node.sector_id}",
+                )
+        else:
+            parents = node_index.get((node.scope, node.parent_industry_id), ())
+            if (
+                not parents
+                or any(item.node_type == "sector" or item.sector_id != node.sector_id
+                       for item in parents)
+                or not _covered(tuple(item.period for item in parents), node.period)
+            ):
+                raise CatalogError(
+                    "invalid_parent_reference",
+                    "ParentIndustryId",
+                    context=f"node={node.node_id}; parent={node.parent_industry_id}",
+                )
+
+    scope_nodes: dict[Scope, list[HierarchyNode]] = defaultdict(list)
+    for (scope, _), scoped_nodes in node_index.items():
+        scope_nodes[scope].extend(scoped_nodes)
+    for scoped_nodes in scope_nodes.values():
+        boundaries: set[date] = set()
+        for node in scoped_nodes:
+            boundaries.add(node.period.start)
+            if node.period.end is not None and node.period.end < date.max:
+                boundaries.add(date.fromordinal(node.period.end.toordinal() + 1))
+        for boundary in sorted(boundaries):
+            active = {
+                node.node_id: node
+                for node in scoped_nodes
+                if node.period.active_on(boundary)
+            }
+            for node in active.values():
+                visited: set[str] = set()
+                node_id: str | None = node.node_id
+                while node_id is not None:
+                    if node_id in visited:
+                        raise CatalogError(
+                            "hierarchy_cycle",
+                            "ParentIndustryId",
+                            context=f"node={node.node_id}; date={boundary.isoformat()}",
+                        )
+                    visited.add(node_id)
+                    current = active.get(node_id)
+                    if current is None:
+                        raise CatalogError(
+                            "inactive_parent",
+                            "ParentIndustryId",
+                            context=(
+                                f"node={node.node_id}; parent={node_id}; "
+                                f"date={boundary.isoformat()}"
+                            ),
+                        )
+                    node_id = current.parent_industry_id
+
+
 def validate_catalog(
     classifications: tuple[Classification, ...],
     sources: tuple[EvidenceSource, ...],
@@ -1165,6 +1394,9 @@ def validate_catalog(
     benchmarks: tuple[Benchmark, ...],
     baskets: tuple[Basket, ...] = (),
     inventory: tuple[ListingInventory, ...] = (),
+    *,
+    format_version: Literal[1, 2] = 1,
+    instruments: tuple[StockInstrument, ...] = (),
 ) -> None:
     source_index = {source.source_id: source for source in sources}
     if len(source_index) != len(sources):
@@ -1185,29 +1417,39 @@ def validate_catalog(
         previous = node_index[(node.scope, node.node_id)]
         if any(
             node.period.overlaps(other.period)
-            or (node.node_type, node.sector_id, node.parent_industry_id)
-            != (
-                other.node_type,
-                other.sector_id,
-                other.parent_industry_id,
+            or (node.node_type, node.sector_id) != (other.node_type, other.sector_id)
+            or (
+                format_version == 1
+                and node.parent_industry_id != other.parent_industry_id
             )
             for other in previous
         ):
             raise CatalogError("conflicting_node", "NodeId")
         previous.append(node)
-    for node in nodes:
-        _matching_nodes(node_index, node.scope, node.sector_id, "sector", node.period)
-        if node.node_type == "sub_industry":
-            if node.parent_industry_id is None:
-                raise CatalogError("missing_parent", "ParentIndustryId")
-            _matching_nodes(
-                node_index,
-                node.scope,
-                node.parent_industry_id,
-                "industry",
-                node.period,
-                node.sector_id,
-            )
+    if format_version == 1:
+        for node in nodes:
+            _matching_nodes(node_index, node.scope, node.sector_id, "sector", node.period)
+            if node.node_type == "industry" and node.parent_industry_id is not None:
+                raise CatalogError("unexpected_parent", "ParentIndustryId")
+            if node.node_type == "sub_industry":
+                if node.parent_industry_id is None:
+                    raise CatalogError("missing_parent", "ParentIndustryId")
+                _matching_nodes(
+                    node_index,
+                    node.scope,
+                    node.parent_industry_id,
+                    "industry",
+                    node.period,
+                    node.sector_id,
+                )
+    else:
+        _validate_hierarchy_v2(node_index, nodes)
+
+    instrument_index: dict[str, StockInstrument] = {}
+    for instrument in instruments:
+        if instrument.instrument_id in instrument_index:
+            raise CatalogError("duplicate_instrument", "InstrumentId")
+        instrument_index[instrument.instrument_id] = instrument
 
     listing_index: dict[str, Listing] = {}
     for listing in (
@@ -1251,7 +1493,7 @@ def validate_catalog(
 
     row_ids: set[str] = set()
     membership_index: dict[str, StockRow] = {}
-    instrument_index: dict[str, tuple[str | None, str, str]] = {}
+    row_instrument_metadata: dict[str, tuple[str | None, str, str]] = {}
     cohorts: dict[tuple[Scope, str], list[StockRow]] = defaultdict(list)
     physical: set[tuple[str, str | None]] = set()
     for row in stocks:
@@ -1294,23 +1536,41 @@ def validate_catalog(
                 raise CatalogError("conflicting_membership", "MembershipId")
         membership_index[row.membership_id] = row
         metadata = (row.company_id, row.name, row.resolution_state)
-        if (
-            row.instrument_id in instrument_index
-            and instrument_index[row.instrument_id] != metadata
-        ):
+        if row.instrument_id in row_instrument_metadata and row_instrument_metadata[
+            row.instrument_id
+        ] != metadata:
             raise CatalogError("conflicting_instrument", "InstrumentId")
-        instrument_index[row.instrument_id] = metadata
+        row_instrument_metadata[row.instrument_id] = metadata
+        if format_version == 2:
+            projected = instrument_index.get(row.instrument_id)
+            if projected is None or (
+                projected.region_id,
+                projected.company_id,
+                projected.name,
+                projected.resolution_state,
+            ) != (row.scope.region_id, row.company_id, row.name, row.resolution_state):
+                raise CatalogError("instrument_registry_mismatch", "InstrumentId")
         _source_approval(source_index, row.source_id, row.approval_reference)
-        _matching_nodes(node_index, row.scope, row.industry_id, "industry", row.period)
-        if row.sub_industry_id is not None:
-            sub_nodes = _matching_nodes(
-                node_index, row.scope, row.sub_industry_id, "sub_industry", row.period
-            )
-            if any(node.parent_industry_id != row.industry_id for node in sub_nodes):
-                raise CatalogError("wrong_sub_industry_parent", "SubIndustryId")
+        if format_version == 1:
+            _matching_nodes(node_index, row.scope, row.industry_id, "industry", row.period)
+            if row.sub_industry_id is not None:
+                sub_nodes = _matching_nodes(
+                    node_index, row.scope, row.sub_industry_id, "sub_industry", row.period
+                )
+                if any(node.parent_industry_id != row.industry_id for node in sub_nodes):
+                    raise CatalogError("wrong_sub_industry_parent", "SubIndustryId")
+        else:
+            targets = node_index.get((row.scope, row.industry_id), ())
+            if (
+                not targets
+                or any(node.node_type == "sector" for node in targets)
+                or not _covered(tuple(node.period for node in targets), row.period)
+            ):
+                raise CatalogError("invalid_membership_target", "IndustryId")
         previous_cohort = cohorts[(row.scope, row.instrument_id)]
         if any(
             row.period.overlaps(other.period)
+            and format_version == 1
             and (
                 row.industry_id != other.industry_id
                 or (

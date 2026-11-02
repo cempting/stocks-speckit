@@ -3,13 +3,33 @@
 import json
 from collections.abc import Callable
 from dataclasses import asdict
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
+from typing import cast
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
 
+from market_data.catalog import CatalogSnapshot
+from market_data.company_evidence import CompanyEvidenceFiles
+from market_data.domain.catalog import CatalogError, CatalogMember, Listing, Scope, StockRow
+from market_data.domain.company_evidence import (
+    CompanyEvidenceRequest,
+    company_association_fingerprint,
+)
+from market_data.domain.industry_representations import (
+    ReviewedRepresentation,
+    representation_performance,
+)
+from market_data.domain.sector_performance import (
+    InsufficientHistoryError,
+    PerformancePeriod,
+    calculate_absolute_performance,
+    calculate_performance,
+)
+from market_data.domain.stock_chart import build_stock_chart_evidence
+from market_data.domain.stock_selection import StockIdentitySelection
 from market_leadership.application.discover_sectors import (
     DiscoveryResult,
     discover_sectors_from_history,
@@ -18,30 +38,20 @@ from market_leadership.application.discover_sectors import (
     load_industry_representations,
 )
 from market_leadership.application.industry_representations import snapshot_representation_worklist
+from market_leadership.application.load_company_evidence import CompanyEvidenceLoadResult
 from market_leadership.application.load_stock_history import (
     StockHistoryBatch,
 )
 from market_leadership.application.market_sessions import latest_completed_us_session
 from market_leadership.application.score_industry import IndustryScoreResult
 from market_leadership.config import Settings, load_settings
-from market_leadership.domain.catalog import CatalogError, Scope, StockRow
-from market_leadership.domain.industry_representations import (
-    ReviewedRepresentation,
-    representation_performance,
-)
-from market_leadership.domain.sector_performance import (
-    InsufficientHistoryError,
-    PerformancePeriod,
-    calculate_absolute_performance,
-    calculate_performance,
-)
-from market_leadership.domain.stock_chart import build_stock_chart_evidence
-from market_leadership.infrastructure.catalog_files import CatalogSnapshot
 from market_leadership.infrastructure.stock_membership import (
     load_region_membership,
     membership_entry,
+    membership_path_labels,
 )
 from market_leadership.ui.cache import load_catalog_snapshot, load_member_history
+from market_leadership.ui.catalog_labels import industry_path_label
 from market_leadership.ui.components.progressive_tape import (
     StockTapeRow,
     attach_chart_series,
@@ -60,6 +70,20 @@ _SECTOR_KEY = _PREFIX + "sector"
 _INDUSTRY_KEY = _PREFIX + "industry"
 _STOCK_KEY = _PREFIX + "stock"
 _STOCK_PICKER_KEY = _PREFIX + "stock_picker"
+_LOOKUP_QUERY_KEY = _PREFIX + "lookup_query"
+_LOOKUP_INSTRUMENT_KEY = _PREFIX + "lookup_instrument"
+_LOOKUP_LISTING_KEY = _PREFIX + "lookup_listing"
+_LOOKUP_OPEN_KEY = _PREFIX + "lookup_open"
+_LOOKUP_CONTEXT_KEY = _PREFIX + "lookup_context"
+_LOOKUP_HISTORY_KEY = _PREFIX + "lookup_history"
+_LOOKUP_HISTORY_CONTEXT_KEY = _PREFIX + "lookup_history_context"
+_MEMBER_HISTORY_KEY = _PREFIX + "member_history"
+_MEMBER_HISTORY_CONTEXT_KEY = _PREFIX + "member_history_context"
+_EVIDENCE_FINANCIAL_CONTEXT_KEY = _PREFIX + "evidence_financial_context"
+_EVIDENCE_FINANCIAL_GENERATION_KEY = _PREFIX + "evidence_financial_generation"
+_EVIDENCE_FINANCIAL_PROCESSED_KEY = _PREFIX + "evidence_financial_processed"
+_EVIDENCE_RESEARCH_CONTEXT_KEY = _PREFIX + "evidence_research_context"
+_EVIDENCE_RESEARCH_GENERATION_KEY = _PREFIX + "evidence_research_generation"
 _SCORES_KEY = _PREFIX + "scores"
 _SCORE_CONTEXT_KEY = _PREFIX + "score_context"
 
@@ -67,20 +91,389 @@ _SCORE_CONTEXT_KEY = _PREFIX + "score_context"
 def _clear_stock_selection() -> None:
     st.session_state.pop(_STOCK_KEY, None)
     st.session_state.pop(_STOCK_PICKER_KEY, None)
+    st.session_state.pop(_MEMBER_HISTORY_KEY, None)
+    st.session_state.pop(_MEMBER_HISTORY_CONTEXT_KEY, None)
+
+
+def _clear_lookup_selection() -> None:
+    st.session_state.pop(_LOOKUP_INSTRUMENT_KEY, None)
+    st.session_state.pop(_LOOKUP_LISTING_KEY, None)
+    st.session_state.pop(_LOOKUP_OPEN_KEY, None)
+    st.session_state.pop(_LOOKUP_CONTEXT_KEY, None)
+    st.session_state.pop(_LOOKUP_HISTORY_KEY, None)
+    st.session_state.pop(_LOOKUP_HISTORY_CONTEXT_KEY, None)
+
+
+def _company_evidence_controls(
+    snapshot: CatalogSnapshot,
+    settings: Settings,
+    *,
+    instrument_id: str,
+    listing_id: str,
+    region_id: str,
+    as_of: date,
+) -> tuple[
+    CompanyEvidenceLoadResult | None,
+    CompanyEvidenceLoadResult | None,
+    Callable[[], None] | None,
+    Callable[[], None] | None,
+]:
+    from pathlib import Path
+
+    from market_leadership.bootstrap import load_selected_company_evidence
+
+    store = CompanyEvidenceFiles(Path(settings.company_evidence_root))
+    try:
+        association = store.find_active_association(
+            instrument_id=instrument_id,
+            listing_id=listing_id,
+            provider_id="yfinance",
+            as_of=as_of,
+        )
+        assessments = store.list_source_assessments()
+    except (OSError, RuntimeError, ValueError) as error:
+        st.error(f"Company evidence controls could not be loaded: {error}")
+        return None, None, None, None
+    if association is None or association.region_id != region_id:
+        st.info("Company evidence is unavailable until a dated issuer binding is reviewed.")
+        return None, None, None, None
+
+    financial_assessment = next(
+        (
+            item
+            for item in assessments
+            if item.source_id == association.provider_id and item.role == "financial"
+        ),
+        None,
+    )
+    disclosure_assessments = tuple(
+        item for item in assessments if item.role == "disclosure"
+    )
+    research_source_id = (
+        st.selectbox(
+            "Reviewed research source",
+            options=tuple(item.source_id for item in disclosure_assessments),
+            index=None,
+            key=_PREFIX + "research_source_" + association.association_id,
+        )
+        if disclosure_assessments
+        else None
+    )
+    research_assessment = next(
+        (
+            item
+            for item in disclosure_assessments
+            if item.source_id == research_source_id
+        ),
+        None,
+    )
+
+    financial_result: CompanyEvidenceLoadResult | None = None
+    research_result: CompanyEvidenceLoadResult | None = None
+    on_load_financial: Callable[[], None] | None = None
+    on_load_research: Callable[[], None] | None = None
+
+    if financial_assessment is None:
+        st.info("No financial source assessment is registered for this provider.")
+    else:
+        financial_context = (
+            association.association_id,
+            company_association_fingerprint(association, "financial"),
+            financial_assessment.fingerprint,
+            as_of,
+        )
+        if st.session_state.get(_EVIDENCE_FINANCIAL_CONTEXT_KEY) != financial_context:
+            st.session_state[_EVIDENCE_FINANCIAL_CONTEXT_KEY] = financial_context
+            st.session_state[_EVIDENCE_FINANCIAL_GENERATION_KEY] = 0
+            st.session_state[_EVIDENCE_FINANCIAL_PROCESSED_KEY] = 0
+
+        def request_financial() -> None:
+            st.session_state[_EVIDENCE_FINANCIAL_GENERATION_KEY] += 1
+
+        on_load_financial = request_financial
+        generation = st.session_state[_EVIDENCE_FINANCIAL_GENERATION_KEY]
+        processed = st.session_state[_EVIDENCE_FINANCIAL_PROCESSED_KEY]
+        if generation:
+            mode = (
+                "current"
+                if generation > processed and as_of == datetime.now(UTC).date()
+                else "historical"
+            )
+            request = CompanyEvidenceRequest(
+                association=association,
+                scope="financial",
+                mode=mode,
+                as_of=as_of,
+                provider_id=association.provider_id,
+                source_ids=(financial_assessment.source_id,),
+                binding_fingerprint=company_association_fingerprint(
+                    association, "financial"
+                ),
+                assessment_fingerprint=financial_assessment.fingerprint,
+                history_window=4,
+                normalization_revision="company-evidence-1",
+                schema_revision="company-evidence-1",
+                refresh=False,
+            )
+            try:
+                financial_result = load_selected_company_evidence(request, snapshot)
+            except (OSError, RuntimeError, ValueError) as error:
+                st.error(f"Financial evidence could not be loaded: {error}")
+            finally:
+                st.session_state[_EVIDENCE_FINANCIAL_PROCESSED_KEY] = generation
+
+    if not disclosure_assessments:
+        st.info("No independently reviewed research sources are registered.")
+    elif research_assessment is None:
+        st.info("Choose a reviewed disclosure source to load stored research.")
+    else:
+        research_context = (
+            association.association_id,
+            company_association_fingerprint(association, "research"),
+            research_assessment.fingerprint,
+            as_of,
+        )
+        if st.session_state.get(_EVIDENCE_RESEARCH_CONTEXT_KEY) != research_context:
+            st.session_state[_EVIDENCE_RESEARCH_CONTEXT_KEY] = research_context
+            st.session_state[_EVIDENCE_RESEARCH_GENERATION_KEY] = 0
+
+        def request_research() -> None:
+            st.session_state[_EVIDENCE_RESEARCH_GENERATION_KEY] += 1
+
+        on_load_research = request_research
+        generation = st.session_state[_EVIDENCE_RESEARCH_GENERATION_KEY]
+        if generation:
+            try:
+                financial_snapshot = store.load_latest_snapshot(
+                    association.association_id, "financial"
+                )
+                verified_association = (
+                    financial_snapshot.outcome.verified_association
+                    if financial_snapshot is not None
+                    else None
+                )
+                if verified_association is None or verified_association.state != "verified":
+                    st.warning(
+                        "Research requires a stored, independently verified financial issuer "
+                        "identity before claims can be attached."
+                    )
+                elif (
+                    verified_association.research_binding_reference is None
+                    or verified_association.research_identity_evidence is None
+                ):
+                    st.warning("No independently reviewed research issuer binding is available.")
+                else:
+                    request = CompanyEvidenceRequest(
+                        association=verified_association,
+                        scope="research",
+                        mode="historical",
+                        as_of=as_of,
+                        provider_id=verified_association.provider_id,
+                        source_ids=(research_assessment.source_id,),
+                        binding_fingerprint=company_association_fingerprint(
+                            verified_association, "research"
+                        ),
+                        assessment_fingerprint=research_assessment.fingerprint,
+                        history_window=4,
+                        normalization_revision="company-evidence-1",
+                        schema_revision="company-evidence-1",
+                        refresh=False,
+                    )
+                    research_result = load_selected_company_evidence(request, snapshot)
+            except (OSError, RuntimeError, ValueError) as error:
+                st.error(f"Stored research could not be loaded: {error}")
+
+    return (
+        financial_result,
+        research_result,
+        on_load_financial,
+        on_load_research,
+    )
 
 
 def _clear_industry_descendants() -> None:
     st.session_state.pop(_INDUSTRY_KEY, None)
     st.session_state.pop(_STOCK_KEY, None)
     st.session_state.pop(_STOCK_PICKER_KEY, None)
-    st.session_state.pop(_SCORES_KEY, None)
-    st.session_state.pop(_SCORE_CONTEXT_KEY, None)
+
+
+def _render_stock_lookup(
+    snapshot: CatalogSnapshot,
+    *,
+    settings: Settings,
+    region_id: str,
+    as_of: date,
+    dark_mode: bool,
+) -> bool:
+    st.subheader("Find a stock")
+    query = st.text_input("Search retained stock identities", key=_LOOKUP_QUERY_KEY).strip()
+    if not query:
+        _clear_lookup_selection()
+        return False
+    matches: tuple[CatalogMember, ...] = snapshot.lookup_instruments(region_id, query)
+    if not matches:
+        _clear_lookup_selection()
+        st.info("No retained stock identity matches this search.")
+        return False
+    instrument_ids = tuple(item.instrument.instrument_id for item in matches)
+    if st.session_state.get(_LOOKUP_INSTRUMENT_KEY) not in (*instrument_ids, None):
+        _clear_lookup_selection()
+    by_id = {item.instrument.instrument_id: item for item in matches}
+    selected_id = st.selectbox(
+        "Matching stock identities",
+        options=instrument_ids,
+        index=None,
+        key=_LOOKUP_INSTRUMENT_KEY,
+        format_func=lambda key: (
+            f"{by_id[key].instrument.name} · {key} · "
+            f"{len(by_id[key].listings)} listing(s)"
+        ),
+    )
+    if selected_id is None:
+        if len(matches) > 1:
+            st.info("Choose one exact stock identity before opening its detail.")
+        return False
+
+    member = by_id[selected_id]
+    listings = tuple(
+        listing
+        for listing in member.listings
+        if listing.instrument_type == "stock" and listing.active_on(as_of)
+    )
+    listing_ids = tuple(listing.listing_id for listing in listings)
+    if st.session_state.get(_LOOKUP_LISTING_KEY) not in (*listing_ids, None):
+        st.session_state.pop(_LOOKUP_LISTING_KEY, None)
+    listing_by_id = {listing.listing_id: listing for listing in listings}
+    listing_id = (
+        st.selectbox(
+            "Active verified listing",
+            options=listing_ids,
+            index=None,
+            key=_LOOKUP_LISTING_KEY,
+            format_func=lambda key: _listing_lookup_label(listing_by_id[key]),
+        )
+        if listing_ids
+        else None
+    )
+    if not listing_ids:
+        st.info("No verified listing is active on this date; no remote data will be requested.")
+    detail_context = (member.instrument.instrument_id, listing_id, as_of, snapshot.catalog_revision)
+    if st.session_state.get(_LOOKUP_CONTEXT_KEY) != detail_context:
+        st.session_state.pop(_LOOKUP_OPEN_KEY, None)
+        st.session_state.pop(_LOOKUP_HISTORY_KEY, None)
+        st.session_state.pop(_LOOKUP_HISTORY_CONTEXT_KEY, None)
+        st.session_state[_LOOKUP_CONTEXT_KEY] = detail_context
+    if st.button("Open stock detail", key=_PREFIX + "open_lookup"):
+        if listing_ids and listing_id is None:
+            st.info("Select the exact listing to open its detail.")
+            return False
+        st.session_state[_LOOKUP_OPEN_KEY] = True
+    if st.session_state.get(_LOOKUP_OPEN_KEY) is not True:
+        return False
+
+    listing = listing_by_id[listing_id] if listing_id is not None else None
+    selection = StockIdentitySelection(
+        instrument_id=member.instrument.instrument_id,
+        company_id=member.instrument.company_id,
+        region_id=member.instrument.region_id,
+        name=member.instrument.name,
+        listing_id=listing.listing_id if listing else None,
+        symbol=listing.provider_symbol if listing else None,
+        exchange=listing.exchange if listing else None,
+        currency=listing.currency if listing else None,
+    )
+    history_context = (detail_context, listing.listing_id if listing else None)
+    if st.session_state.get(_LOOKUP_HISTORY_CONTEXT_KEY) != history_context:
+        st.session_state.pop(_LOOKUP_HISTORY_KEY, None)
+        st.session_state[_LOOKUP_HISTORY_CONTEXT_KEY] = history_context
+    history_requested = st.session_state.get(_LOOKUP_HISTORY_KEY) == history_context
+    load_history = listing is not None and st.button(
+        "Load selected history", key=_PREFIX + "load_lookup_history"
+    )
+    refresh_history = listing is not None and st.button(
+        "Refresh selected history", key=_PREFIX + "refresh_lookup_history"
+    )
+    if listing is not None and (load_history or refresh_history):
+        st.session_state[_LOOKUP_HISTORY_KEY] = history_context
+        history_requested = True
+    history_result = None
+    if listing is not None and history_requested:
+        try:
+            from market_leadership.bootstrap import load_selected_stock_history
+
+            history_result = load_selected_stock_history(
+                snapshot,
+                region_id=region_id,
+                instrument_id=selection.instrument_id,
+                listing_id=listing.listing_id,
+                as_of=as_of,
+                require_primary=False,
+                refresh=refresh_history,
+            )
+        except (OSError, RuntimeError, ValueError) as error:
+            st.error(f"Selected listing history could not be loaded: {error}")
+    history = (
+        history_result.series[0].history
+        if history_result is not None and history_result.series
+        else pd.DataFrame(columns=["close", "volume"])
+    )
+    chart = build_stock_chart_evidence(selection.instrument_id, history, as_of=as_of)
+    if history_result is not None and history_result.series:
+        item = history_result.series[0]
+        st.caption(f"Selected listing history: {item.state}")
+        if item.reason:
+            st.info(item.reason)
+        for start, end in item.unverifiable_intervals:
+            st.warning(
+                f"History continuity unavailable from {start.isoformat()} through "
+                f"{end.isoformat()}."
+            )
+    elif listing is not None:
+        st.caption("No price request has been made; use Load selected history to continue.")
+    if listing is not None:
+        (
+            financial_evidence,
+            research_evidence,
+            on_load_financial,
+            on_load_research,
+        ) = _company_evidence_controls(
+            snapshot,
+            settings,
+            instrument_id=selection.instrument_id,
+            listing_id=listing.listing_id,
+            region_id=region_id,
+            as_of=as_of,
+        )
+    else:
+        financial_evidence = None
+        research_evidence = None
+        on_load_financial = None
+        on_load_research = None
+    render_stock_detail(
+        selection,
+        chart,
+        scorecard=None,
+        score_state="not_loaded",
+        score_reason="Peer scores require a reviewed industry membership.",
+        dark_mode=dark_mode,
+        on_return=_clear_lookup_selection,
+        financial_evidence=financial_evidence,
+        research_evidence=research_evidence,
+        on_load_financial=on_load_financial,
+        on_load_research=on_load_research,
+    )
+    return True
+
+
+def _listing_lookup_label(listing: Listing) -> str:
+    return (
+        f"{listing.provider_symbol} · {listing.exchange} · {listing.currency} · "
+        f"{listing.listing_id}"
+    )
 
 
 def _clear_member_context() -> None:
     _clear_stock_selection()
-    st.session_state.pop(_SCORES_KEY, None)
-    st.session_state.pop(_SCORE_CONTEXT_KEY, None)
 
 
 def _clear_region_descendants() -> None:
@@ -289,6 +682,15 @@ def _render_member_tape(
         st.info("This reviewed industry has no active stock memberships for the selected date.")
         return
 
+    active_nodes = snapshot.active_nodes(scope, requested_as_of)
+    selected_node = next(
+        (node for node in active_nodes if node.node_id == industry_id),
+        None,
+    )
+    if selected_node is None:
+        raise CatalogError("inactive_node", "NodeId")
+    comparison_label = industry_path_label(selected_node, active_nodes)
+
     provider_symbols = snapshot.provider_symbols(scope, industry_id, requested_as_of)
     history_batch: StockHistoryBatch | None = None
     history_by_symbol: dict[str, object] = {}
@@ -321,7 +723,15 @@ def _render_member_tape(
     score_members = tuple(
         entry
         for member in members
-        if (entry := membership_entry(snapshot, member, requested_as_of)) is not None
+        if (
+            entry := membership_entry(
+                snapshot,
+                member,
+                requested_as_of,
+                selected_node_id=industry_id,
+            )
+        )
+        is not None
     )
     membership_revision = membership_result.revision or revision
     score_context = (
@@ -331,34 +741,71 @@ def _render_member_tape(
         membership_revision,
         requested_as_of,
     )
-    saved_scores = st.session_state.get(_SCORES_KEY)
-    if st.session_state.get(_SCORE_CONTEXT_KEY) != score_context:
-        st.session_state.pop(_SCORES_KEY, None)
-        st.session_state.pop(_SCORE_CONTEXT_KEY, None)
-    score_result = (
-        saved_scores
-        if st.session_state.get(_SCORE_CONTEXT_KEY) == score_context
-        and isinstance(saved_scores, IndustryScoreResult)
-        else None
-    )
+    saved_results = st.session_state.get(_SCORES_KEY)
+    score_results: dict[object, object] = {}
+    if isinstance(saved_results, dict):
+        score_results.update(cast(dict[object, object], saved_results))
+    saved_score = score_results.get(score_context)
+    score_result = saved_score if isinstance(saved_score, IndustryScoreResult) else None
     if score_members:
         if st.button("Load peer scores", key=_PREFIX + "load_scores"):
             try:
                 with st.spinner("Loading complete industry peer evidence..."):
-                    from market_leadership.application.score_industry import score_industry
+                    from market_leadership.application.score_industry import (
+                        PEER_OBSERVATION_BASIS,
+                        PEER_SCORE_RULES_REVISION,
+                        PeerComparisonContext,
+                        score_industry,
+                    )
+
+                    eligible_ids = tuple(entry.instrument_id for entry in score_members)
+                    eligible_id_set = set(eligible_ids)
+                    listing_identities = tuple(
+                        sorted(
+                            {
+                                (member.instrument_id, member.listing.listing_id)
+                                for member in members
+                                if member.instrument_id in eligible_id_set
+                                and member.listing is not None
+                            }
+                        )
+                    )
+                    comparison_context = PeerComparisonContext(
+                        scope,
+                        industry_id,
+                        requested_as_of,
+                        eligible_ids,
+                        listing_identities,
+                        membership_revision,
+                        PEER_SCORE_RULES_REVISION,
+                        PEER_OBSERVATION_BASIS,
+                    )
 
                     score_result = score_industry(
                         score_members,
                         cutoff=requested_as_of,
                         refresh=force_refresh,
                         cohort_fingerprint=membership_revision,
+                        comparison_context=comparison_context,
                     )
-                st.session_state[_SCORES_KEY] = score_result
+                score_results[score_context] = score_result
+                st.session_state[_SCORES_KEY] = score_results
                 st.session_state[_SCORE_CONTEXT_KEY] = score_context
             except (OSError, RuntimeError, ValueError) as error:
                 st.error(f"Industry peer scores could not be loaded: {error}")
     else:
         st.caption("Peer scores are unavailable because no verified primary listing is present.")
+
+    if score_result is not None and score_result.context is not None:
+        context = score_result.context
+        st.caption(
+            f"Peer comparison {comparison_label} · "
+            f"{context.scope.region_id}/{context.scope.classification_id}"
+            f"@{context.scope.classification_version} · "
+            f"membership as of {context.membership_as_of.isoformat()} · "
+            f"{len(context.eligible_instrument_ids)} eligible instruments · "
+            f"rules {context.rules_revision} · {context.observation_basis}"
+        )
 
     scores_by_id = (
         {item.instrument_id: item for item in score_result.stocks}
@@ -408,16 +855,16 @@ def _render_member_tape(
     ) or st.session_state.get(_STOCK_PICKER_KEY) not in (*stock_by_id, None):
         _clear_stock_selection()
         selected_stock_id = None
-#    if not isinstance(selected_stock_id, str) or selected_stock_id not in stock_by_id:
-#        selected_stock_id = st.selectbox(
-#            "Open stock detail",
-#            options=tuple(stock_by_id),
-#            index=None,
-#            key=_STOCK_PICKER_KEY,
-#            format_func=lambda key: _stock_label(stock_by_id[key], requested_as_of),
-#        )
-#        if selected_stock_id is not None:
-#            st.session_state[_STOCK_KEY] = selected_stock_id
+    if not isinstance(selected_stock_id, str) or selected_stock_id not in stock_by_id:
+        selected_stock_id = st.selectbox(
+            "Open stock detail",
+            options=tuple(stock_by_id),
+            index=None,
+            key=_STOCK_PICKER_KEY,
+            format_func=lambda key: _stock_label(stock_by_id[key], requested_as_of),
+        )
+        if selected_stock_id is not None:
+            st.session_state[_STOCK_KEY] = selected_stock_id
     if selected_stock_id is not None:
         member = stock_by_id[selected_stock_id]
         if member.provider_symbol_on(requested_as_of) is None:
@@ -428,19 +875,98 @@ def _render_member_tape(
                 _clear_stock_selection()
                 st.rerun()
             return
-        entry = membership_entry(snapshot, member, requested_as_of)
+        entry = membership_entry(
+            snapshot,
+            member,
+            requested_as_of,
+            selected_node_id=industry_id,
+        )
         if entry is None:
             st.error("This security has no eligible verified primary listing.")
             return
+        selected_listing = member.listing
+        if selected_listing is None:
+            st.error("This security has no retained listing for the selected date.")
+            return
         symbol = symbol_by_id.get(member.instrument_id, entry.symbol)
-        evidence = history_by_symbol.get(symbol)
-        chart_history = getattr(evidence, "history", pd.DataFrame(columns=["close", "volume"]))
+        member_history_context = (
+            membership_revision,
+            entry.instrument_id,
+            selected_listing.listing_id,
+            requested_as_of,
+        )
+        if (
+            st.session_state.get(_MEMBER_HISTORY_CONTEXT_KEY) != member_history_context
+        ):
+            st.session_state.pop(_MEMBER_HISTORY_KEY, None)
+            st.session_state[_MEMBER_HISTORY_CONTEXT_KEY] = member_history_context
+        history_requested = (
+            st.session_state.get(_MEMBER_HISTORY_KEY) == member_history_context
+        )
+        load_selected_history = st.button(
+            "Load continuity-filtered history",
+            key=_PREFIX + "load_member_detail_history",
+        )
+        refresh_selected_history = st.button(
+            "Refresh continuity-filtered history",
+            key=_PREFIX + "refresh_member_detail_history",
+        )
+        if load_selected_history or refresh_selected_history:
+            st.session_state[_MEMBER_HISTORY_KEY] = member_history_context
+            history_requested = True
+        selected_history: StockHistoryBatch | None = None
+        if history_requested:
+            try:
+                from market_leadership.bootstrap import load_selected_stock_history
+
+                selected_history = load_selected_stock_history(
+                    snapshot,
+                    region_id=scope.region_id,
+                    instrument_id=entry.instrument_id,
+                    listing_id=selected_listing.listing_id,
+                    as_of=requested_as_of,
+                    require_primary=True,
+                    refresh=refresh_selected_history,
+                )
+            except (OSError, RuntimeError, ValueError) as error:
+                st.error(f"Continuity-filtered member history could not be loaded: {error}")
+        history_series = (
+            selected_history.series[0]
+            if selected_history and selected_history.series
+            else None
+        )
+        chart_history = (
+            history_series.history
+            if history_series is not None
+            else pd.DataFrame(columns=["close", "volume"])
+        )
+        if history_series is not None:
+            st.caption(f"Selected listing history: {history_series.state}")
+            if history_series.reason:
+                st.info(history_series.reason)
+            for start, end in history_series.unverifiable_intervals:
+                st.warning(
+                    f"History continuity unavailable from {start.isoformat()} through "
+                    f"{end.isoformat()}."
+                )
+        else:
+            st.caption(
+                "The detail chart uses no history until continuity-filtered history is loaded."
+            )
         chart = build_stock_chart_evidence(
             member.instrument_id,
-            chart_history if isinstance(chart_history, pd.DataFrame) else pd.DataFrame(),
+            chart_history,
             as_of=requested_as_of,
         )
         score = scores_by_id.get(member.instrument_id)
+        evidence_controls = _company_evidence_controls(
+            snapshot,
+            settings,
+            instrument_id=entry.instrument_id,
+            listing_id=selected_listing.listing_id,
+            region_id=scope.region_id,
+            as_of=requested_as_of,
+        )
         render_stock_detail(
             entry,
             chart,
@@ -449,6 +975,17 @@ def _render_member_tape(
             score_reason=score.reason if score else None,
             dark_mode=bool(st.session_state.get("dark_mode", False)),
             on_return=_clear_stock_selection,
+            financial_evidence=evidence_controls[0],
+            research_evidence=evidence_controls[1],
+            on_load_financial=evidence_controls[2],
+            on_load_research=evidence_controls[3],
+            comparison_context_label=comparison_label,
+            direct_membership_paths=membership_path_labels(
+                snapshot,
+                scope,
+                member.instrument_id,
+                requested_as_of,
+            ),
         )
         return
 
@@ -653,6 +1190,14 @@ def render_discovery(
         )
     with refresh_column:
         force_refresh = st.button("Refresh data", use_container_width=True)
+    if _render_stock_lookup(
+        snapshot,
+        settings=settings,
+        region_id=selected_region_id,
+        as_of=requested_as_of,
+        dark_mode=bool(st.session_state.get("dark_mode", False)),
+    ):
+        return
     try:
         scope = snapshot.scope_on(selected_region_id, requested_as_of)
         nodes = snapshot.active_nodes(scope, requested_as_of)
@@ -678,7 +1223,9 @@ def render_discovery(
         for node in nodes
         if node.node_type in ("industry", "sub_industry") and node.sector_id == selected_sector_id
     )
-    industry_names = {industry.node_id: industry.name for industry in industries}
+    industry_names = {
+        industry.node_id: industry_path_label(industry, nodes) for industry in industries
+    }
     selected_industry_id: str | None = None
     if selected_sector_id:
         industry_ids = tuple(industry.node_id for industry in industries)
@@ -694,14 +1241,14 @@ def render_discovery(
             st.info("The selected sector has no active industries.")
             return
         selected_industry_id = st.session_state.get(_INDUSTRY_KEY)
-        #st.selectbox(
-        #    "Industry",
-        #    options=industry_ids,
-        #    index=None,
-        #    key=_INDUSTRY_KEY,
-        #    on_change=_clear_member_context,
-        #    format_func=lambda key: industry_names[key],
-        #)
+        st.selectbox(
+            "Industry",
+            options=industry_ids,
+            index=None,
+            key=_INDUSTRY_KEY,
+            on_change=_clear_member_context,
+            format_func=lambda key: industry_names[key],
+        )
 
     stock_label = None
     if selected_industry_id is not None:
@@ -727,7 +1274,7 @@ def render_discovery(
     )
 
     selected_entities = (
-        tuple((industry.node_id, industry.name) for industry in industries)
+        tuple((industry.node_id, industry_names[industry.node_id]) for industry in industries)
         if selected_sector_id
         else tuple((sector.sector_id, sector.name) for sector in sectors)
     )

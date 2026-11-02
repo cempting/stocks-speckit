@@ -1,6 +1,60 @@
 # stocks-speckit
 SDD + Python = Awesome App for Stock Screening
 
+## App, shared data, and maintenance tools
+
+Three Python packages have separate responsibilities within this repository:
+
+| Package | Responsibility |
+|---|---|
+| [`market_leadership`](src/market_leadership/) | Streamlit UI, application use cases, live-provider acquisition and application caches |
+| [`market_data`](src/market_data/) | Shared immutable domain records/calculations, versioned schemas, validation, catalog and issuer-evidence file stores |
+| [`market_data_tools`](src/market_data_tools/) | Offline catalog publication/recovery and reviewed source/issuer maintenance |
+
+Dependency direction is app -> shared data and tools -> shared data. Neither the
+shared package nor the maintenance tools import the app, Streamlit, or live
+providers. The packages are currently shipped together in one wheel; this is not
+a multi-service deployment or three independently versioned distributions.
+Legacy domain/store imports and admin module entry points remain compatibility
+aliases. New code should use the owning packages above.
+
+The [v2 manifest](src/market_data/schemas/catalog-manifest-v2.schema.json)
+and [v1 manifest](src/market_data/schemas/catalog-manifest.schema.json) are packaged
+with their shared reader/validator. There is no separate, weaker tool-only schema:
+the tooling validates the same bytes and references that the app reads. Unsupported
+versions and invalid candidates fail before publication. Schema versions and CSV
+headers have not changed in this package extraction.
+
+Actual catalog releases stay outside Python source, under the configured catalog
+store; company evidence and live observation caches remain separate stores. Author
+reviewed candidate files outside published releases, validate the entire release,
+and publish using the expected current release ID. Do not edit published files or
+grant permissions through import/refresh. In deployments, give the app read-only
+access to catalog releases and CURRENT, and reserve catalog write access for the
+maintenance process; app cache/evidence write permissions are separate.
+
+The app still fetches live prices and financials. Tooling supplies the reviewed
+instrument/listing/provider-symbol, classification, benchmark, representation and
+source-permission metadata needed to make those requests; it does not collect
+prices, fabricate market observations, or authorize unreviewed sources.
+
+[Package-boundary tests](tests/contract/test_package_boundaries.py) enforce import
+direction, run tools without app/UI/provider/database imports, publish v1/v2
+releases for the app reader without network access, and reject incompatible
+candidates without replacing CURRENT. Existing market-provider contract tests
+continue to validate live adapter output shapes. The
+[compatibility workflow](.github/workflows/data-contracts.yml) runs these checks,
+publication regressions, lint, type checking and wheel builds on pushes and PRs.
+
+Validation after extraction: the compatibility workflow's selector passed **180
+tests**; the full source-free suite passed **849**, with **3 existing failures**
+in the legacy-retirement checks (embedded local research defaults, the runtime
+fixture import, and legacy SQLite administration). Those retirement requirements
+remain tracked separately; they are not waived by the new package-boundary tests.
+Ruff, strict Pyright, the wheel build/resource check and both installed CLI entry
+points passed. The existing 10,000-instrument benchmark also passed its cold
+<=5 s, warm <=1 s and no-warm-reparse checks.
+
 ## Catalog direction and implementation status
 
 [Feature 010: Manifest-managed CSV catalogs](specs/010-manifest-csv-catalogs/spec.md) is the
@@ -21,29 +75,48 @@ the application/review/migration cutover is **not yet complete**:
 The existing [sector ETF CSV](.data/sector-etf-representations.csv) has blank classification
 references: it is listing evidence, not an automatically approved GICS mapping file.
 See the [cross-feature authority map](specs/README.md) for alignment of all earlier specifications.
+Application requirements are consolidated into nine distinct specs: Discovery absorbs feature 003,
+the stock comparison table absorbs 005, and industry representations absorb 007. Original paths
+retain redirects and historical requirement mappings. The five-column stock table, two-tab live
+interface, and separate company-evidence and versioned membership requirements remain unchanged.
 Remaining work is tracked in [feature 010 tasks](specs/010-manifest-csv-catalogs/tasks.md).
 
-**Current runtime remains pre-cutover.** The commands below operate the implemented regional
-database/research workflow. Embedded sector/benchmark and legacy catalog code still requires the
-010 refactor. Do not assume these commands publish a manifest release or that documentation
-alignment has migrated any data.
+The legacy regional database/research commands remain available, but are not the
+file-release publication path below. The package separation does not complete
+the remaining review/migration cutover work or migrate production data.
 
 ### Isolated file-release administration
 
-These new commands validate and publish registered files without initializing a database:
+The catalog-maintenance CLI is separate from the legacy SQLite-oriented
+`market-universe` workflow. It validates and publishes complete, versioned file
+releases using the same manifest, parser, and integrity checks as the app; it does
+not initialize or mutate the legacy database. Use the module form below during
+development or the installed `market-catalog` command in deployments:
 
 ```bash
-uv run python -m market_leadership.universe_admin catalog-init \
+uv run python -m market_data_tools.catalog_admin catalog-init \
   --directory .data/catalog-validation
-uv run python -m market_leadership.universe_admin validate-catalog \
+uv run python -m market_data_tools.catalog_admin validate-catalog \
   --release-manifest tests/fixtures/catalogs/reviewed-us/manifest.json
-uv run python -m market_leadership.universe_admin activate-catalog \
+uv run python -m market_data_tools.catalog_admin activate-catalog \
   --manifest .data/catalog-validation/CURRENT.json \
   --release-manifest tests/fixtures/catalogs/reviewed-us/manifest.json \
   --expected-release none
 ```
 
+`market-company-evidence` (or
+`python -m market_data_tools.company_evidence_admin`) provides the separate
+`review-source` and `bind-issuer` commands. Both require explicit review inputs
+and expected revisions; neither performs collection or edits catalog membership.
+The old `python -m market_leadership.catalog_admin` and
+`python -m market_leadership.company_evidence_admin` entry points still delegate
+to the maintenance package.
+
 The fixture is synthetic test evidence: never activate it into the production store.
+The catalog tooling maintains instruments, listings, classification and data-source
+metadata according to the shared v2 contract. The app continues to fetch live price
+and financial observations from its configured provider; the catalog tool does not
+copy market observations into the stock catalog.
 `--manifest` overrides `MARKET_CATALOG_MANIFEST_PATH`, then `.data/catalog/CURRENT.json`.
 Validation is read-only and reports a recomputed catalog revision; activation copies captured
 inputs, retains ledger history, and assigns the published identity/revision under a writer lock.

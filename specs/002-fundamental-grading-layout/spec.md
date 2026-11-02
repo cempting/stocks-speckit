@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Updated**: 2026-10-31 (catalog alignment; original layout scope retained)
+**Updated**: 2026-11-02 (matrix ownership separated from historical navigation)
 
 **Input**: Modify Tab 3 (Fundamental Grading) to reproduce a three-column layout:
 Quality contains Gross Margin, Operating Margin, and ROCE; Growth contains Sales YoY,
@@ -22,11 +22,20 @@ membership, review evidence, and release validation. Stock selections come from 
 stock CSV with exact industry references and the reviewed hierarchy, not a separately configured
 JSON catalog or catalog database. Synthetic catalogs remain isolated automated-test inputs.
 
-The Tab 3/three-step foundation scenarios below are historical layout requirements: feature 003
-removed that root tab and runtime evidence-mode controls. They do not authorize restoring either.
+The Tab 3/three-step foundation scenarios below are historical navigation context:
+[feature 004](../004-sector-stock-explorer/spec.md), incorporating 003, owns the current two-tab
+root interface and removes runtime evidence-mode controls. They do not authorize restoring either.
 Financial scorecards consumed by current stock surfaces retain their layout/evidence semantics.
 The single-provider rule in constitution v3.0.0 remains binding; the earlier requested amendment
 below was not permission to switch providers. See the [authority map](../README.md).
+
+This feature owns only the three-column/eight-slot matrix, commentary, EPS consistency,
+and quarterly histories. [001](../001-market-leadership-screener/spec.md) owns peer component
+formulas; [006](../006-stock-table-columns/spec.md) owns table columns/Total Score;
+[011](../011-company-risk-evidence/spec.md) owns cash-flow risk warnings and company enrichment.
+The raw display metrics are not a replacement formula for the six percentile inputs in 001.
+[012](../012-stock-industry-memberships/spec.md) owns versioned identity/membership and fact reuse,
+without changing matrix layout. Existing plans/tasks retain evidence but require reconciliation.
 
 ## Planning Clarifications
 
@@ -56,12 +65,12 @@ three-column matrix so I can locate and compare its financial characteristics.
 **Why this priority**: The specified grouping and ordering are the core requested
 change and make the scorecard consistently readable.
 
-**Independent Test**: Open Tab 3 for a stock with all eight metrics available and
+**Independent Test**: Open the current stock scorecard for a stock with all eight metrics available and
 compare its headings, metric labels, order, and values with the reference matrix.
 
 **Acceptance Scenarios**:
 
-1. **Given** a stock with complete fundamental data, **When** its Tab 3 scorecard
+1. **Given** a stock with complete fundamental data, **When** its current stock scorecard
    appears at a desktop viewport, **Then** three equally sized structural columns
    appear from left to right as Quality, Growth, and Cash Flow.
 2. **Given** the three columns, **When** the user reads top to bottom, **Then**
@@ -133,7 +142,10 @@ and verify the exact fallback text, stable layout, and preservation of valid dat
 
 ---
 
-### User Story 4 - Reach Grading Through the Three-Step Flow (Priority: P1)
+### Historical User Story 4 - Reach Grading Through the Three-Step Flow
+
+Superseded by 004's two-tab navigation. The scenarios below preserve original design evidence,
+not an active requirement for a third tab, routed page, or runtime fixture catalog.
 
 As an investor, I want to select an industry, inspect its dated available stock
 members, and choose stocks for grading without switching between routed pages.
@@ -208,7 +220,7 @@ or the required three-column structure.
 
 ### Functional Requirements
 
-- **FR-001**: Tab 3, labelled Fundamental Grading, MUST display each stock's metric
+- **FR-001**: Current stock-detail/scorecard surfaces MUST display each stock's metric
   matrix in exactly three equal-width structural columns on desktop, headed
   Quality, Growth, and Cash Flow from left to right.
 - **FR-002**: The columns MUST contain the following exact labels and top-to-bottom
@@ -241,22 +253,21 @@ or the required three-column structure.
 - **FR-008**: Every metric label and column heading MUST remain visible regardless
   of data sufficiency. One missing metric MUST NOT suppress another valid metric
   or the enclosing column.
-- **FR-009**: The matrix MUST apply consistently to every stock presented in Tab 3,
+- **FR-009**: The matrix MUST apply consistently to every stock presented on current scorecard surfaces,
   including stocks reached through existing pagination or selection controls.
 - **FR-010**: This feature MUST replace earlier displayed raw-metric lists only
   where they conflict with FR-002. It MUST NOT change industry-peer grading
   formulas, peer populations, financial cutoffs, stock eligibility, filters, or
-  valid selection persistence. The approved navigation migration in FR-012 is the
-  sole exception to preserving navigation. Existing aggregate grades and evidence
+  valid selection persistence. Navigation follows the active 004 specification, not
+  the superseded three-step flow. Existing aggregate grades and evidence
   disclosures may remain outside the eight-slot matrix; this feature does not
   invent aggregate grading logic that is absent from the current implementation.
 - **FR-011**: Metric availability MUST remain distinct from operational errors.
   Existing data-source failure, freshness, and sufficiency disclosures MUST remain
   accessible alongside the updated matrix.
-- **FR-012**: The app MUST provide the three stages named in Story 4 as one
-  progressive tabbed experience, replacing routed page transitions and providing
-  migration guidance for existing entry links. Retiring `/discovery` and
-  `/industry-discovery` is a minor pre-1.0 release impact.
+- **FR-012**: Root navigation ownership is transferred to 004 FR-033. The historical third-tab
+  requirement is superseded; retirement of `/discovery` and `/industry-discovery` remains
+  migration history with minor pre-1.0 impact, not an instruction to restore those routes.
 - **FR-013**: Industry Deep-Dive MUST allow selection only from dated, reviewed membership in
   the activated manifest-backed regional stock CSV and hierarchy. It MUST display coverage
   limits and pass stable instrument/listing identities to available scorecard surfaces.
@@ -313,9 +324,10 @@ or the required three-column structure.
   performance without consulting external documentation.
 - **SC-006**: Existing filtering, valid retained selections, implemented aggregate
   grading outcomes, and financial evidence disclosures remain unchanged in
-  regression scenarios; the intentional navigation migration passes Story 4.
-- **SC-007**: A fixture-based walkthrough completes all three stages for two
-  selected stocks; invalid parent changes leave zero invalid selected stock IDs.
+  regression scenarios; navigation follows 004 rather than historical Story 4.
+- **SC-007**: An automated-test-only fixture walkthrough reaches current scorecard surfaces for
+  two selected stocks through 004's two-tab flow; invalid parent changes leave zero invalid
+  selected stock IDs. No third runtime tab or fixture-mode control is required.
 - **SC-008**: Four-, five-, and eight-quarter chart examples show exactly four,
   five, and eight chronological bars; a three-quarter example shows the history
   limitation without hiding an otherwise available current value.
@@ -332,11 +344,11 @@ or the required three-column structure.
   no additional screenshot-specific colors, typography, spacing, or decorations
   are inferred.
 - This is a presentation-focused extension of the
-  [Progressive Stock Screener specification](../001-market-leadership-screener/spec.md).
-  It overrides that specification's displayed raw-metric list for Tab 3, but does
+  [technical/scoring specification](../001-market-leadership-screener/spec.md).
+  It overrides that specification's earlier displayed raw-metric list, but does
   not redefine its scoring formulas or expand the screening journey.
-- The owning surfaces are the app entrypoint, the approved three-step selection
-  foundation, and a new Fundamental Grading scorecard. This workflow specifies
+- The owning surfaces are the current stock-detail/scorecard presentation, not a new
+  Fundamental Grading root tab. This workflow specifies
   the change only; implementation and tests follow in planning and tasks.
 - Existing financial definitions, formatting conventions, and analytical rules
   are reused where available. Planning must identify evidence sources for all
@@ -348,7 +360,7 @@ or the required three-column structure.
 - A valid value without an interpretation uses the neutral commentary fallback;
   this request does not introduce new financial-rating thresholds or investment
   recommendations.
-- Existing stock controls are absent, so the approved foundation introduces them.
+- The historical stock-selection foundation does not authorize restoring removed controls.
   Adaptive consolidation, new technical filters, revised ranking algorithms, and
   new peer-scoring algorithms from the larger parent feature are not implicitly
   included. Existing discovery calculations are reused with accurate labels;
@@ -356,9 +368,7 @@ or the required three-column structure.
 - No complete authorized live industry membership source is supplied automatically.
   Runtime membership uses the reviewed regional CSV/hierarchy release; deterministic fixtures
   support automated tests only. Provenance, coverage, and display-rights review remain required.
-- The grading workflow uses yfinance. Legacy daily discovery may use its explicitly
-  selected provider only after a separately approved and ratified constitution
-  amendment permits distinct providers by workflow; until then, deployments must
-  comply with the existing single-source rule.
+- The runtime financial workflow uses yfinance under the single-source rule. The historical
+  separate-provider proposal is not an approved runtime exception.
 - Desktop is the reference three-column view; narrow-screen reflow preserves
   reading order.

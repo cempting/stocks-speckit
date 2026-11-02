@@ -4,8 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from market_leadership.infrastructure.catalog_files import PublicationError
+from market_data.catalog import PublicationError
+from market_data_tools.catalog_admin import main as catalog_admin_main
 from market_leadership.universe_admin import main
+
+
+@pytest.fixture(autouse=True)
+def isolated_catalog_entry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "MARKET_CATALOG_MANIFEST_PATH", str(tmp_path / "default-store/CURRENT.json")
+    )
 
 
 def test_lifecycle_commands_do_not_initialize_sql(
@@ -67,6 +75,25 @@ def test_lifecycle_commands_do_not_initialize_sql(
     assert "release_conflict" in output.err
 
 
+def test_standalone_catalog_tool_validates_contract_without_legacy_commands(
+    catalog_release: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert (
+        catalog_admin_main(
+            ["validate-catalog", "--release-manifest", str(catalog_release)]
+        )
+        == 0
+    )
+    report = json.loads(capsys.readouterr().out)
+    assert report["report_version"] == "market-catalog-cli-1"
+    assert report["status"] == "complete"
+    assert report["catalog"]["release_id"]
+    with pytest.raises(SystemExit) as error:
+        catalog_admin_main(["init"])
+    assert error.value.code == 2
+
+
 def test_catalog_selection_cli_overrides_environment(
     catalog_release: Path,
     tmp_path: Path,
@@ -121,7 +148,7 @@ def test_uncertain_commit_is_never_reported_as_rollback(
         raise PublicationError("commit_indeterminate", publication_state="unknown")
 
     monkeypatch.setattr(
-        "market_leadership.infrastructure.catalog_files.activate_release", uncertain
+        "market_data_tools.catalog_admin.activate_release", uncertain
     )
     assert (
         main(

@@ -5,7 +5,7 @@ from datetime import date
 
 import pandas as pd
 
-from market_leadership.domain.sector_performance import (
+from market_data.domain.sector_performance import (
     InsufficientHistoryError,
     calculate_absolute_performance,
 )

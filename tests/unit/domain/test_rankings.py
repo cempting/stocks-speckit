@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-from market_leadership.domain.rankings import (
+from market_data.domain.rankings import (
     LeadershipCandidate,
     LeadershipStatus,
     MissingRankingReason,
@@ -10,7 +10,7 @@ from market_leadership.domain.rankings import (
     PriorWeeklyRank,
     rank_leadership,
 )
-from market_leadership.domain.relative_strength import MissingStrengthReason, RelativeStrengthResult
+from market_data.domain.relative_strength import MissingStrengthReason, RelativeStrengthResult
 
 
 def _candidate(

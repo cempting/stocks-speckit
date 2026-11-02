@@ -2,8 +2,8 @@ from datetime import date
 
 import pytest
 
-from market_leadership.domain.models import ProxyType
-from market_leadership.domain.proxies import DocumentedRepresentation, select_representation
+from market_data.domain.models import ProxyType
+from market_data.domain.proxies import DocumentedRepresentation, select_representation
 
 
 def _representation(**overrides) -> DocumentedRepresentation:

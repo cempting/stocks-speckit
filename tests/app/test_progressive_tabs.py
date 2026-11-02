@@ -11,8 +11,14 @@ from tests.fixtures.catalogs.ui import configure_ui
 ROOT = Path(__file__).parents[2]
 
 
+def _select_industry(app, key, node_id):
+    selectbox = app.selectbox(key + "industry")
+    option = next(value for value in selectbox.options if value.endswith(f"[{node_id}]"))
+    return selectbox.select(option)
+
+
 def test_entrypoint_has_two_tabs_and_resolves_catalog_once(monkeypatch, catalog_release):
-    from market_leadership.infrastructure.catalog_files import CatalogReader
+    from market_data.catalog import CatalogReader
 
     calls = configure_ui(monkeypatch, catalog_release)
     reads = []
@@ -90,7 +96,7 @@ def test_discovery_does_not_read_legacy_experimental_catalog(monkeypatch, catalo
 def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_cache(
     monkeypatch, catalog_release
 ):
-    from market_leadership.infrastructure.catalog_files import CatalogReader, activate_release
+    from market_data.catalog import CatalogReader, activate_release
     from market_leadership.ui.workflows import discovery_page
     from tests.app.test_stock_detail import _score_result
     from tests.fixtures.catalogs.ui import edit_csv
@@ -112,8 +118,16 @@ def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_
 
     monkeypatch.setattr(discovery_page, "discover_sectors_from_history", calculate)
 
-    def score(members, *, cutoff, refresh=False, cohort_fingerprint=None):
+    def score(
+        members,
+        *,
+        cutoff,
+        refresh=False,
+        cohort_fingerprint=None,
+        comparison_context=None,
+    ):
         score_calls.append(cohort_fingerprint)
+        assert comparison_context is not None
         return _score_result(members)
 
     monkeypatch.setattr("market_leadership.application.score_industry.score_industry", score)
@@ -121,9 +135,9 @@ def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_
     discovery = "market_leadership.progressive_discovery."
     screening = "market_leadership.screening."
     app.button(discovery + "sector_tape_select_test-sector").click().run()
-    app.selectbox(discovery + "industry").select("test-cloud").run()
+    _select_industry(app, discovery, "test-cloud").run()
     app.selectbox(screening + "sector").select("test-sector").run()
-    app.selectbox(screening + "industry").select("test-cloud").run()
+    _select_industry(app, screening, "test-cloud").run()
     app.multiselect(screening + "stocks").select("test-stock-1").run()
     next(button for button in app.button if button.label == "Load peer scores").click().run()
     app.segmented_control(discovery + "thumbnail_period").set_value("1w").run()

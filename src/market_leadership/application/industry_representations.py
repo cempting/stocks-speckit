@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
-from market_leadership.domain.catalog import Scope
-from market_leadership.domain.industry_representations import ReviewedRepresentation
-from market_leadership.infrastructure.catalog_files import CatalogSnapshot
+from market_data.catalog import CatalogSnapshot
+from market_data.domain.catalog import Scope
+from market_data.domain.industry_representations import ReviewedRepresentation
 from market_leadership.infrastructure.region_database import RegionDatabase
 
 

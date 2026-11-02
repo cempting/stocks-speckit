@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from market_leadership.domain.regimes import calculate_market_sentiment
+from market_data.domain.regimes import calculate_market_sentiment
 
 
 def _frame(closes: list[float]) -> pd.DataFrame:
@@ -71,7 +71,7 @@ def test_exact_threshold_is_flat_even_when_close_crosses_average(
 
     # Force an exact fitted slope so floating-point OLS noise cannot move an equality case.
     monkeypatch.setattr(
-        "market_leadership.domain.regimes.np.polyfit",
+        "market_data.domain.regimes.np.polyfit",
         lambda x, y, degree: np.array([slope, 0.0]),
     )
     result = calculate_market_sentiment(_frame(closes), benchmark="LOCAL")

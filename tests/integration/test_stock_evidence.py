@@ -1,19 +1,27 @@
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from market_data.catalog import load_release
+from market_data.company_evidence import CompanyEvidenceFiles
+from market_data.domain.company_evidence import (
+    CompanyAssociation,
+    company_association_id,
+)
+from market_data.domain.fundamentals import (
+    FundamentalBundle,
+    FundamentalRequest,
+)
+from market_data.domain.stock_selection import MembershipEntry
 from market_leadership.application.load_stock_history import (
+    load_selected_listing_history,
     load_stock_history,
     verified_primary_provider_symbols,
 )
 from market_leadership.application.score_industry import score_industry
-from market_leadership.domain.fundamentals import (
-    FundamentalBundle,
-    FundamentalRequest,
-)
-from market_leadership.domain.stock_selection import MembershipEntry
 from market_leadership.infrastructure.fixture_provider import FixtureProvider
 from market_leadership.infrastructure.region_database import (
     ListingRecord,
@@ -22,6 +30,7 @@ from market_leadership.infrastructure.region_database import (
 )
 from market_leadership.infrastructure.universe_import import import_reviewed_file
 from market_leadership.ui.cache import load_member_history
+from tests.membership_helpers import build_v2_release, membership_fixture
 
 
 class RecordingProvider(FixtureProvider):
@@ -39,6 +48,105 @@ class RecordingProvider(FixtureProvider):
     ) -> dict[str, pd.DataFrame]:
         self.requests.append(symbols)
         return super().fetch_daily_history(symbols, start=start, end=end, force=force)
+
+
+class MixedTickerReuseProvider:
+    provider_id = "yfinance"
+
+    def __init__(self) -> None:
+        self.requests: list[tuple[tuple[str, ...], date, date]] = []
+
+    def fetch_daily_history(
+        self,
+        symbols: tuple[str, ...],
+        *,
+        start: date,
+        end: date,
+        force: bool = False,
+    ) -> dict[str, pd.DataFrame]:
+        del force
+        self.requests.append((symbols, start, end))
+        return {
+            "FIXTURE": pd.DataFrame(
+                {
+                    "close": [10.0, 20.0, 21.0, 30.0],
+                    "volume": [100.0, 200.0, 210.0, 300.0],
+                },
+                index=pd.DatetimeIndex(
+                    ["2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25"]
+                ),
+            )
+        }
+
+
+def _reviewed_continuity_association(catalog_revision: str) -> CompanyAssociation:
+    effective_from = date(2026, 10, 23)
+    effective_to = date(2026, 10, 24)
+    return CompanyAssociation(
+        association_id=company_association_id(
+            instrument_id="share-class-a",
+            listing_id="listing-a-primary",
+            source_id="yfinance",
+            effective_from=effective_from,
+            effective_to=effective_to,
+        ),
+        instrument_id="share-class-a",
+        listing_id="listing-a-primary",
+        region_id="US",
+        company_id=None,
+        provider_id="yfinance",
+        provider_symbol="FIXTURE",
+        exchange="FIXTUREEX",
+        trading_currency="USD",
+        catalog_revision=catalog_revision,
+        effective_from=effective_from,
+        effective_to=effective_to,
+        issuer_key="domain:issuer.example",
+        cik=None,
+        issuer_domain="issuer.example",
+        binding_reference="reviewed-continuity-reference",
+        identity_evidence=None,
+        state="unresolved",
+        reason="Financial profile corroboration is not required for price history",
+    )
+
+
+def _listing_association(
+    catalog_revision: str,
+    *,
+    instrument_id: str,
+    listing_id: str,
+    provider_symbol: str,
+    effective_from: date = date(2020, 1, 1),
+    effective_to: date | None = None,
+) -> CompanyAssociation:
+    return CompanyAssociation(
+        association_id=company_association_id(
+            instrument_id=instrument_id,
+            listing_id=listing_id,
+            source_id="yfinance",
+            effective_from=effective_from,
+            effective_to=effective_to,
+        ),
+        instrument_id=instrument_id,
+        listing_id=listing_id,
+        region_id="US",
+        company_id=None,
+        provider_id="yfinance",
+        provider_symbol=provider_symbol,
+        exchange="FIXTUREEX",
+        trading_currency="USD",
+        catalog_revision=catalog_revision,
+        effective_from=effective_from,
+        effective_to=effective_to,
+        issuer_key="domain:issuer.example",
+        cik=None,
+        issuer_domain="issuer.example",
+        binding_reference="reviewed-continuity-reference",
+        identity_evidence=None,
+        state="unresolved",
+        reason="Financial profile corroboration is not required for price history",
+    )
 
 
 def test_reviewed_placeholder_promotion_enables_only_accepted_verified_listing(
@@ -83,6 +191,246 @@ def test_member_history_requests_only_active_selected_industry_members():
         series.observed_on is not None and series.observed_on <= result.requested_as_of
         for series in result.series
     )
+
+
+def test_selected_history_filters_predecessor_and_successor_rows_to_reviewed_continuity(
+    catalog_release: Path, tmp_path: Path
+) -> None:
+    fixture = membership_fixture(deep_levels=4)
+    expired_memberships = replace(
+        fixture,
+        stocks=tuple(
+            {**row, "MembershipEffectiveTo": "2024-12-31"}
+            if row["RowKind"] == "membership"
+            else row
+            for row in fixture.stocks
+        ),
+    )
+    manifest = build_v2_release(
+        catalog_release,
+        tmp_path / "catalog-v2",
+        expired_memberships,
+    )
+    catalog = load_release(manifest)
+    as_of = date(2026, 10, 24)
+    scope = catalog.scope_on("US", as_of)
+    assert catalog.members(scope, "industry-a", as_of) == ()
+    association = _reviewed_continuity_association(catalog.catalog_revision)
+    provider = MixedTickerReuseProvider()
+
+    result = load_selected_listing_history(
+        provider,
+        catalog,
+        association,
+        as_of=date(2026, 10, 24),
+        lookback_days=10,
+    )
+
+    series = result.series[0]
+    assert provider.requests == [
+        (("FIXTURE",), date(2026, 10, 23), date(2026, 10, 24))
+    ]
+    assert list(series.history["close"]) == [20.0, 21.0]
+    assert list(series.history["volume"]) == [200.0, 210.0]
+    assert series.observed_on == date(2026, 10, 24)
+    assert series.unverifiable_intervals == (
+        (date(2026, 10, 14), date(2026, 10, 22)),
+    )
+
+
+def test_selected_history_rechecks_stored_binding_and_targets_cache_refresh(
+    catalog_release: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from market_leadership.bootstrap import load_selected_stock_history
+
+    manifest = build_v2_release(
+        catalog_release,
+        tmp_path / "catalog-v2",
+        membership_fixture(deep_levels=4),
+    )
+    catalog = load_release(manifest)
+    association = _reviewed_continuity_association(catalog.catalog_revision)
+    root = tmp_path / "company-evidence"
+    monkeypatch.setenv("COMPANY_EVIDENCE_ROOT", str(root))
+    monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path / "market-cache"))
+    store = CompanyEvidenceFiles(root)
+    first_revision = store.save_association(association, expected_revision=None)
+    provider = MixedTickerReuseProvider()
+    monkeypatch.setattr(
+        "market_leadership.bootstrap.build_request_provider",
+        lambda *_args, **_kwargs: provider,
+    )
+    arguments = {
+        "catalog": catalog,
+        "region_id": "US",
+        "instrument_id": "share-class-a",
+        "listing_id": "listing-a-primary",
+        "as_of": date(2026, 10, 24),
+        "require_primary": True,
+    }
+
+    first = load_selected_stock_history(**arguments)
+    again = load_selected_stock_history(**arguments)
+    assert first.series[0].history.equals(again.series[0].history)
+    assert len(provider.requests) == 1
+
+    changed_binding = replace(association, binding_reference="updated-reviewed-reference")
+    store.save_association(changed_binding, expected_revision=first_revision)
+    rebound = load_selected_stock_history(**arguments)
+    refreshed = load_selected_stock_history(**arguments, refresh=True)
+    assert rebound.series[0].history.equals(refreshed.series[0].history)
+    assert len(provider.requests) == 3
+
+
+def test_selected_history_keeps_share_class_listings_in_separate_cache_entries(
+    catalog_release: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from market_leadership.ui.cache import load_selected_listing_history
+
+    manifest = build_v2_release(
+        catalog_release,
+        tmp_path / "catalog-v2",
+        membership_fixture(deep_levels=4),
+    )
+    catalog = load_release(manifest)
+
+    class DistinctListingProvider:
+        provider_id = "yfinance"
+
+        def __init__(self) -> None:
+            self.requests: list[tuple[str, ...]] = []
+
+        def fetch_daily_history(
+            self,
+            symbols: tuple[str, ...],
+            *,
+            start: date,
+            end: date,
+            force: bool = False,
+        ) -> dict[str, pd.DataFrame]:
+            del start, force
+            self.requests.append(symbols)
+            return {
+                symbol: pd.DataFrame(
+                    {
+                        "close": [10.0 if symbol == "FIXTURE" else 20.0],
+                        "volume": [100.0],
+                    },
+                    index=pd.DatetimeIndex([end]),
+                )
+                for symbol in symbols
+            }
+
+    provider = DistinctListingProvider()
+    monkeypatch.setattr(
+        "market_leadership.bootstrap.build_request_provider",
+        lambda *_args, **_kwargs: provider,
+    )
+    source_path = str(tmp_path / "separate-listing-cache")
+    as_of = date(2026, 10, 24)
+    primary = _listing_association(
+        catalog.catalog_revision,
+        instrument_id="share-class-a",
+        listing_id="listing-a-primary",
+        provider_symbol="FIXTURE",
+    )
+    other_class = _listing_association(
+        catalog.catalog_revision,
+        instrument_id="share-class-b",
+        listing_id="listing-b",
+        provider_symbol="FIXTURE_B",
+    )
+
+    first = load_selected_listing_history(
+        source_path,
+        catalog,
+        primary,
+        as_of,
+        retry_limit=1,
+    )
+    reused = load_selected_listing_history(
+        source_path,
+        catalog,
+        primary,
+        as_of,
+        retry_limit=1,
+    )
+    second_class = load_selected_listing_history(
+        source_path,
+        catalog,
+        other_class,
+        as_of,
+        retry_limit=1,
+    )
+
+    assert provider.requests == [("FIXTURE",), ("FIXTURE_B",)]
+    assert first.series[0].history["close"].tolist() == [10.0]
+    assert reused.series[0].history["close"].tolist() == [10.0]
+    assert second_class.series[0].history["close"].tolist() == [20.0]
+
+
+def test_selected_history_blocks_expired_nonprimary_and_unverified_listings_before_provider(
+    catalog_release: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from market_leadership.ui.cache import load_selected_listing_history
+
+    manifest = build_v2_release(
+        catalog_release,
+        tmp_path / "catalog-v2",
+        membership_fixture(deep_levels=4),
+    )
+    catalog = load_release(manifest)
+    calls: list[tuple[str, ...]] = []
+
+    class FailIfFetched:
+        provider_id = "yfinance"
+
+        def fetch_daily_history(self, symbols: tuple[str, ...], **_kwargs):
+            calls.append(symbols)
+            raise AssertionError("Ineligible listings must not request history")
+
+    monkeypatch.setattr(
+        "market_leadership.bootstrap.build_request_provider",
+        lambda *_args, **_kwargs: FailIfFetched(),
+    )
+    arguments = {
+        "source_cache_path": str(tmp_path / "blocked-listing-cache"),
+        "catalog": catalog,
+        "as_of": date(2026, 10, 24),
+        "retry_limit": 1,
+    }
+    ineligible = (
+        _listing_association(
+            catalog.catalog_revision,
+            instrument_id="share-class-a",
+            listing_id="listing-a-secondary",
+            provider_symbol="FIXTURE.A2",
+        ),
+        _listing_association(
+            catalog.catalog_revision,
+            instrument_id="unverified-listing",
+            listing_id="listing-unverified",
+            provider_symbol="FIXTURE_UNVERIFIED",
+        ),
+        _listing_association(
+            catalog.catalog_revision,
+            instrument_id="share-class-a",
+            listing_id="listing-a-primary",
+            provider_symbol="FIXTURE",
+            effective_to=date(2020, 12, 31),
+        ),
+    )
+
+    for association in ineligible:
+        result = load_selected_listing_history(association=association, **arguments)
+        assert result.series[0].state == "unavailable"
+    assert calls == []
 
 
 def test_successful_member_history_is_cached_by_membership_scope(

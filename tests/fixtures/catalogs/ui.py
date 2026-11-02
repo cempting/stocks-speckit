@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from market_leadership.infrastructure.catalog_files import load_release
+from market_data.catalog import load_release
 
 
 def edit_csv(manifest: Path, role: str, edit: Callable[[list[dict[str, str]]], None]) -> None:

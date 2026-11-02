@@ -1,5 +1,9 @@
 # Implementation Plan: Sector-to-Stock Explorer
 
+> Consolidation notice (2026-11-02): [004](spec.md) now incorporates former 003's live
+> interface/momentum requirements. Reconcile this plan and retained 003 evidence with the active
+> specification before execution. Preserve completed tasks/tests; no new implementation is claimed.
+
 > **2026-11-01 presentation amendment:** Reuse the chart-tape renderer with node-ID-backed
 > name-button callbacks for sector-to-industry and industry-to-stock navigation. Apply selections
 > before widget rendering, using existing descendant invalidation. Hide industry Status and

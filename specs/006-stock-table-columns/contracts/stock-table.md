@@ -1,5 +1,8 @@
 # Stock Table Contract
 
+**Active owner (2026-11-02)**: [Feature 006](../spec.md), incorporating former feature 005.
+The original aggregate and current five-column presentation are one feature, not separate backlogs.
+
 ## Scope
 
 This contract applies only to the contained-stocks table after an industry is selected. Sector,
@@ -32,9 +35,22 @@ does not make a provider request.
 
 ## Total Score and Chart Evidence
 
-Total Score preserves the existing overall Score calculation and non-numeric states. The price
+Total Score is `(Quality + Growth + Cash Flow) / 3` only when all three component scores are
+available. Use the established score precision; never compute a partial mean or zero-fill a
+missing component. Numeric calculated, not loaded, insufficient, unavailable, and error states
+remain distinct. Components retain [001's formulas](../../001-market-leadership-screener/spec.md),
+not formulas inferred from the eight raw matrix metrics.
+
+The price
 chart retains its 50 MA and insufficient-moving-average disclosure; the volume chart retains its
 unavailable/insufficient disclosure. Neither behavior changes when CAP Type is unavailable.
+
+No separate Observed, Chart Status, component-score, Score Status, Name, or price column is
+restored. Unchanged eligible evidence may survive catalog changes, but invalid selections and
+affected peer contexts must be reconciled without implicit loading. On reviewed
+[012 adoption](../../012-stock-industry-memberships/spec.md), effective descendant membership
+deduplicates instruments; scores retain exact industry/cohort/date context and unchanged valid
+issuer requests are reused. Previously unrequested peers require explicit loading.
 
 ## Acceptance Evidence
 

@@ -1,5 +1,9 @@
 # Implementation Plan: Stock Table Columns
 
+> Consolidation notice (2026-11-02): [006](spec.md) now owns former 005's aggregate/evidence
+> semantics as well as the five-column table. Reconcile this plan and retained 005 evidence before
+> execution; completed tasks/tests are preserved, not revalidated by documentation changes.
+
 > **2026-11-01 presentation amendment:** Use five visible columns with the company name in the
 > Ticker button, not a separate Name column. Preserve CAP Type/Total Score semantics and
 > explicit loading. [Feature 010](../010-manifest-csv-catalogs/spec.md) changes catalog inputs to

@@ -1,0 +1,46 @@
+{
+  "format": "company-reviewed-claims-1",
+  "synthetic": true,
+  "issuer_key": "verified-domain:issuer.example",
+  "captured_at": "2026-01-02T12:00:00Z",
+  "claims": [
+    {
+      "claim_id": "claim-business-model",
+      "topic": "business_model",
+      "field_key": "revenue_model",
+      "summary": "Subscription revenue for synthetic customers",
+      "value": null,
+      "unit": null,
+      "currency": null,
+      "definition": "Management description of the recurring revenue model",
+      "kind": "management_claim",
+      "qualifications": "Synthetic fixture; management-reported",
+      "source_id": "reviewed-disclosure",
+      "assessment_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "document": "synthetic-annual-report",
+      "locator": "Business / Revenue model",
+      "publication_date": "2025-12-31",
+      "publication_precision": "day",
+      "state": "available"
+    },
+    {
+      "claim_id": "claim-competitive-advantage",
+      "topic": "competitive_advantage",
+      "field_key": "customer_switching",
+      "summary": "Management describes customer switching costs",
+      "value": null,
+      "unit": null,
+      "currency": null,
+      "definition": "Management description; not an independent moat rating",
+      "kind": "management_claim",
+      "qualifications": "Synthetic fixture; not independently assessed",
+      "source_id": "reviewed-disclosure",
+      "assessment_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "document": "synthetic-annual-report",
+      "locator": "Risk factors / Customer retention",
+      "publication_date": "2025-12-31",
+      "publication_precision": "day",
+      "state": "available"
+    }
+  ]
+}

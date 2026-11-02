@@ -9,7 +9,7 @@ from typing import Literal
 
 import pandas as pd
 
-from market_leadership.domain.sector_performance import (
+from market_data.domain.sector_performance import (
     InsufficientHistoryError,
     PerformancePeriod,
     calculate_absolute_performance,

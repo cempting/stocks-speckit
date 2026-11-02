@@ -5,8 +5,8 @@ from typing import Any, Protocol
 
 import pandas as pd
 
-from market_leadership.domain.models import ClassificationNode, Market
-from market_leadership.domain.proxies import DocumentedRepresentation
+from market_data.domain.models import ClassificationNode, Market
+from market_data.domain.proxies import DocumentedRepresentation
 
 
 @dataclass(frozen=True, slots=True)

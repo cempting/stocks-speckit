@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_leadership.domain.sector_performance import (
+from market_data.domain.sector_performance import (
     InsufficientHistoryError,
     calculate_performance,
     with_sma50,

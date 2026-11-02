@@ -7,7 +7,7 @@ from streamlit.testing.v1 import AppTest
 SCRIPT = """
 from dataclasses import replace
 import streamlit as st
-from market_leadership.domain.fundamentals import build_scorecard
+from market_data.domain.fundamentals import build_scorecard
 from market_leadership.infrastructure.fixture_provider import load_fundamental_fixture
 from market_leadership.ui.components.fundamental_matrix import render_fundamental_matrix
 card = build_scorecard(load_fundamental_fixture("SYN-A"))

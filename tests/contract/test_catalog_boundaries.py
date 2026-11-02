@@ -6,10 +6,11 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from market_data.catalog import load_release
 from market_leadership.application.discover_sectors import discover_sectors
-from market_leadership.infrastructure.catalog_files import load_release
 
 SOURCE = Path(__file__).parents[2] / "src/market_leadership"
+DATA_SOURCE = Path(__file__).parents[2] / "src/market_data"
 
 
 @pytest.mark.parametrize(
@@ -22,7 +23,8 @@ SOURCE = Path(__file__).parents[2] / "src/market_leadership"
     ],
 )
 def test_no_embedded_runtime_catalog(relative: str, names: set[str]) -> None:
-    tree = ast.parse((SOURCE / relative).read_text())
+    root = DATA_SOURCE if relative.startswith("domain/") else SOURCE
+    tree = ast.parse((root / relative).read_text())
     assignments = {
         node.id
         for statement in tree.body
@@ -62,7 +64,7 @@ def test_sql_is_exclusive_to_explicit_migration() -> None:
 
 
 def test_no_default_benchmark_in_regime_calculation() -> None:
-    tree = ast.parse((SOURCE / "domain/regimes.py").read_text())
+    tree = ast.parse((DATA_SOURCE / "domain/regimes.py").read_text())
     function = next(
         node
         for node in tree.body

@@ -1,5 +1,9 @@
 # Tasks: Industry ETF Momentum
 
+> Consolidated into [008](../008-industry-representation-tools/spec.md) on 2026-11-02.
+> Retain task IDs/completion markers as historical evidence, not an independent backlog.
+> Reconcile unfinished work with the active owner before execution.
+
 **Input**: Design documents from `/specs/007-industry-etf-momentum/`
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md),

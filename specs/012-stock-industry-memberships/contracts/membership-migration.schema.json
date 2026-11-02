@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Membership migration JSONL record, version 2",
+  "oneOf": [{"$ref": "#/$defs/summary"}, {"$ref": "#/$defs/record"}],
+  "$defs": {
+    "id": {"type": "string", "minLength": 1, "pattern": "\\S"},
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nullableId": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+    "ids": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["region_id", "classification_id", "classification_version"],
+      "properties": {
+        "region_id": {"$ref": "#/$defs/id"},
+        "classification_id": {"$ref": "#/$defs/id"},
+        "classification_version": {"$ref": "#/$defs/id"}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_records", "preserved", "transformed", "retained_historical", "unresolved"],
+      "properties": {
+        "source_records": {"type": "integer", "minimum": 0},
+        "preserved": {"type": "integer", "minimum": 0},
+        "transformed": {"type": "integer", "minimum": 0},
+        "retained_historical": {"type": "integer", "minimum": 0},
+        "unresolved": {"type": "integer", "minimum": 0}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type", "migration_id", "source_release_id", "source_manifest_sha256",
+        "source_catalog_revision", "target_scope", "target_data_sha256", "state",
+        "review_source_id", "approval_reference", "counts"
+      ],
+      "properties": {
+        "record_type": {"const": "membership_migration_summary"},
+        "migration_id": {"$ref": "#/$defs/id"},
+        "source_release_id": {"$ref": "#/$defs/id"},
+        "source_manifest_sha256": {"$ref": "#/$defs/hash"},
+        "source_catalog_revision": {"$ref": "#/$defs/hash"},
+        "target_scope": {"$ref": "#/$defs/scope"},
+        "target_data_sha256": {"$ref": "#/$defs/hash"},
+        "state": {"enum": ["prepared", "approved"]},
+        "review_source_id": {"$ref": "#/$defs/nullableId"},
+        "approval_reference": {"$ref": "#/$defs/nullableId"},
+        "counts": {"$ref": "#/$defs/counts"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "approved"}}},
+          "then": {
+            "properties": {
+              "review_source_id": {"$ref": "#/$defs/id"},
+              "approval_reference": {"$ref": "#/$defs/id"}
+            }
+          },
+          "else": {
+            "properties": {
+              "review_source_id": {"type": "null"},
+              "approval_reference": {"type": "null"}
+            }
+          }
+        }
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type", "migration_id", "source_artifact_id", "source_record_key",
+        "source_record_sha256", "source_identity", "disposition", "target_row_ids",
+        "target_membership_ids", "approval_mode", "review_source_id",
+        "approval_reference", "reason"
+      ],
+      "properties": {
+        "record_type": {"const": "membership_migration_record"},
+        "migration_id": {"$ref": "#/$defs/id"},
+        "source_artifact_id": {"$ref": "#/$defs/id"},
+        "source_record_key": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}},
+        "source_record_sha256": {"$ref": "#/$defs/hash"},
+        "source_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scope", "instrument_id", "listing_id", "membership_id", "node_ids"],
+          "properties": {
+            "scope": {"anyOf": [{"$ref": "#/$defs/scope"}, {"type": "null"}]},
+            "instrument_id": {"$ref": "#/$defs/nullableId"},
+            "listing_id": {"$ref": "#/$defs/nullableId"},
+            "membership_id": {"$ref": "#/$defs/nullableId"},
+            "node_ids": {"$ref": "#/$defs/ids"}
+          }
+        },
+        "disposition": {"enum": ["preserved", "transformed", "retained_historical", "unresolved"]},
+        "target_row_ids": {"$ref": "#/$defs/ids"},
+        "target_membership_ids": {"$ref": "#/$defs/ids"},
+        "approval_mode": {"enum": ["unchanged_reviewed", "new_reviewed", "not_operational"]},
+        "review_source_id": {"$ref": "#/$defs/nullableId"},
+        "approval_reference": {"$ref": "#/$defs/nullableId"},
+        "reason": {"$ref": "#/$defs/id"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"approval_mode": {"enum": ["unchanged_reviewed", "new_reviewed"]}}},
+          "then": {
+            "properties": {
+              "review_source_id": {"$ref": "#/$defs/id"},
+              "approval_reference": {"$ref": "#/$defs/id"}
+            }
+          },
+          "else": {
+            "properties": {
+              "target_membership_ids": {"maxItems": 0},
+              "review_source_id": {"type": "null"},
+              "approval_reference": {"type": "null"}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

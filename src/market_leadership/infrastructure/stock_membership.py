@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Literal
 
+from market_data.catalog import CatalogSnapshot
+from market_data.domain.catalog import CatalogError, Region, Scope, StockRow
+from market_data.domain.stock_selection import MembershipCatalog, MembershipEntry
 from market_leadership.config import Settings
-from market_leadership.domain.catalog import CatalogError, Region, Scope, StockRow
-from market_leadership.domain.stock_selection import MembershipCatalog, MembershipEntry
-from market_leadership.infrastructure.catalog_files import CatalogSnapshot
 
 MembershipLoadState = Literal["available", "empty_membership"]
 
@@ -40,26 +40,60 @@ def load_region_membership(
 
 
 def membership_entry(
-    snapshot: CatalogSnapshot, row: StockRow, as_of: date
+    snapshot: CatalogSnapshot,
+    row: StockRow,
+    as_of: date,
+    *,
+    selected_node_id: str | None = None,
 ) -> MembershipEntry | None:
     symbol = row.provider_symbol_on(as_of)
     if symbol is None:
         return None
-    nodes = snapshot.active_nodes(row.scope, as_of)
-    industry = next((node for node in nodes if node.node_id == row.industry_id), None)
-    if industry is None:
-        raise CatalogError("inactive_node", "IndustryId")
-    sector = next((node for node in nodes if node.node_id == industry.sector_id), None)
+    selected_id = selected_node_id or row.industry_id
+    effective_memberships = snapshot.memberships_for_instrument(
+        row.scope, row.instrument_id, as_of
+    )
+    direct_path = next(
+        (
+            item
+            for item in effective_memberships
+            if item.membership.membership_id == row.membership_id
+        ),
+        None,
+    )
+    if direct_path is None:
+        return None
+    path_node_ids = tuple(node.node_id for node in direct_path.hierarchy)
+    if selected_id not in path_node_ids:
+        return None
+    selected_index = path_node_ids.index(selected_id)
+    if selected_index == 0:
+        return None
+    industry = direct_path.hierarchy[selected_index]
+    sector = direct_path.hierarchy[0]
     listing = row.listing
     if (
-        sector is None
-        or listing is None
+        listing is None
         or listing.period is None
         or listing.exchange is None
         or listing.currency is None
     ):
         raise CatalogError("incomplete_verified_listing", "ListingId")
-    end_dates = tuple(end for end in (row.period.end, listing.period.end) if end is not None)
+    effective_nodes = direct_path.hierarchy[: selected_index + 1]
+    start_dates = (
+        row.period.start,
+        listing.period.start,
+        *(node.period.start for node in effective_nodes),
+    )
+    end_dates = tuple(
+        end
+        for end in (
+            row.period.end,
+            listing.period.end,
+            *(node.period.end for node in effective_nodes),
+        )
+        if end is not None
+    )
     return MembershipEntry(
         row.instrument_id,
         row.company_id,
@@ -71,8 +105,21 @@ def membership_entry(
         sector.name,
         industry.node_id,
         industry.name,
-        max(row.period.start, listing.period.start),
+        max(start_dates),
         min(end_dates) if end_dates else None,
+    )
+
+
+def membership_path_labels(
+    snapshot: CatalogSnapshot,
+    scope: Scope,
+    instrument_id: str,
+    as_of: date,
+) -> tuple[str, ...]:
+    return tuple(
+        f"{' / '.join(node.name for node in path.hierarchy)} "
+        f"[{path.membership.industry_id}]"
+        for path in snapshot.memberships_for_instrument(scope, instrument_id, as_of)
     )
 
 

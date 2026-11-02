@@ -3,7 +3,7 @@ from datetime import date
 
 import pytest
 
-from market_leadership.domain.peer_scores import (
+from market_data.domain.peer_scores import (
     PeerFacts,
     calculate_peer_scores,
 )

@@ -106,7 +106,8 @@
         "role": {
           "enum": [
             "hierarchy", "stocks", "etf_listings", "sector_etfs", "industry_etfs",
-            "sub_industry_etfs", "benchmarks", "audit", "migration_archive"
+            "sub_industry_etfs", "benchmarks", "audit", "migration_archive",
+            "membership_migration"
           ]
         },
         "path": { "$ref": "#/$defs/path" },

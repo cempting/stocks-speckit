@@ -12,12 +12,12 @@ from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from pathlib import Path
 
-from market_leadership.domain.industry_representations import (
+from market_data.domain.industry_representations import (
     BasketConstituent,
     ReviewedRepresentation,
     validate_weights,
 )
-from market_leadership.domain.local_etf_evidence import (
+from market_data.domain.local_etf_evidence import (
     CollectionRun,
     Evidence,
     Inventory,

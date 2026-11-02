@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-from market_leadership.domain.relative_strength import (
+from market_data.domain.relative_strength import (
     MissingStrengthReason,
     RelativeStrengthResult,
 )

@@ -1,5 +1,12 @@
 # Industry ETF Momentum Table Contract
 
+> Historical ETF-only contract after the 2026-11-02 consolidation. The active
+> [008 specification](../../008-industry-representation-tools/spec.md) and
+> [representation contract](../../008-industry-representation-tools/contracts/representation-workflow.md)
+> retain these mapping/evidence semantics alongside explicitly approved baskets.
+> Row layout and tooltips follow [004](../../004-sector-stock-explorer/spec.md); this historical
+> roster does not mandate extra visible columns.
+
 Mappings, exact node/listing identities, effective scope, and approval provenance resolve from
 the activated manifest-backed files under [feature 010](../../010-manifest-csv-catalogs/spec.md),
 not SQL or embedded ETF catalogs. The ETF state table below describes ETF evidence only;

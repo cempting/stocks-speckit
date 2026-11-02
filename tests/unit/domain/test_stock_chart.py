@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_leadership.domain.stock_chart import (
+from market_data.domain.stock_chart import (
     build_discovery_chart_preview,
     build_stock_chart_evidence,
 )

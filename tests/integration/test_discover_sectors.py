@@ -5,11 +5,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from market_data.catalog import load_release
 from market_leadership.application.discover_sectors import (
     discover_sectors,
     discover_sectors_from_snapshot,
 )
-from market_leadership.infrastructure.catalog_files import load_release
 from tests.integration.test_catalog_workflows import SCOPE, edit_rows
 
 

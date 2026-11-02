@@ -1,0 +1,58 @@
+{
+  "format": "company-evidence-financial-cases-1",
+  "synthetic": true,
+  "cases": [
+    {
+      "case": "verified-domain-with-null-issuer-ids",
+      "profile_issuer_key": null,
+      "profile_cik": null,
+      "profile_domain": "issuer.example",
+      "binding_evidence": "reviewed-domain-control",
+      "binding_domain": "issuer.example",
+      "profile_evidence_reference": "profile-capture:domain-case",
+      "expected_state": "verified",
+      "expected_company_id": null,
+      "expected_cik": null,
+      "expected_facts": ["revenue", "operating_cash_flow"]
+    },
+    {
+      "case": "same-ticker-successor",
+      "profile_issuer_key": null,
+      "profile_cik": null,
+      "profile_domain": "successor.example",
+      "binding_evidence": "reviewed-domain-control:predecessor",
+      "binding_domain": "predecessor.example",
+      "profile_evidence_reference": "profile-capture:successor-case",
+      "expected_state": "mismatch",
+      "expected_company_id": null,
+      "expected_cik": null,
+      "expected_facts": []
+    },
+    {
+      "case": "missing-profile",
+      "profile_issuer_key": null,
+      "profile_cik": null,
+      "profile_domain": null,
+      "binding_evidence": "reviewed-domain-control",
+      "binding_domain": "issuer.example",
+      "profile_evidence_reference": null,
+      "expected_state": "unresolved",
+      "expected_company_id": null,
+      "expected_cik": null,
+      "expected_facts": []
+    },
+    {
+      "case": "inconclusive-profile",
+      "profile_issuer_key": null,
+      "profile_cik": null,
+      "profile_domain": null,
+      "binding_evidence": "reviewed-domain-control",
+      "binding_domain": "issuer.example",
+      "profile_evidence_reference": "profile-capture:inconclusive-case",
+      "expected_state": "unresolved",
+      "expected_company_id": null,
+      "expected_cik": null,
+      "expected_facts": []
+    }
+  ]
+}

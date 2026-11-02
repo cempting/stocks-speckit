@@ -1,5 +1,11 @@
 # Live Discovery UI Contract
 
+**Retained supporting contract (2026-11-02)**:
+[Feature 004](../../004-sector-stock-explorer/spec.md) is the active owner after consolidation.
+This path remains stable for existing references; it is not an independent feature 003 backlog.
+The progressive tape/tooltip baseline and reviewed 012 membership boundary in 004 take precedence
+over older fixed-depth wording below.
+
 ## Root Interface
 
 The root application exposes exactly two tabs:
