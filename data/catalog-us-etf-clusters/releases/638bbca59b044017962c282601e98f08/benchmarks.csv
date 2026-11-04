@@ -1,0 +1,3 @@
+BenchmarkId,RegionId,Purpose,Label,ListingId,EffectiveFrom,EffectiveTo,SourceId,ApprovalReference
+us-spy-sp500_comparison,US,sp500_comparison,S&P 500 (SPY),ssga-listing-spy,2026-10-30,,SSGA_ISSUER_FACT_REVIEW_20261031,LOCAL_ISSUER_LISTING_AND_EXPOSURE_VERIFICATION_20261031
+us-spy-market_sentiment,US,market_sentiment,S&P 500 (SPY),ssga-listing-spy,2026-10-30,,SSGA_ISSUER_FACT_REVIEW_20261031,LOCAL_ISSUER_LISTING_AND_EXPOSURE_VERIFICATION_20261031

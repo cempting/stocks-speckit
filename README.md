@@ -4,17 +4,19 @@ A Streamlit application for exploring US market leadership by sector and industr
 
 ## Status
 
-The current app reads a locally published, reviewed file catalog and fetches live
+The current app reads the checked-in, locally published US catalog and fetches live
 market observations from yfinance when requested. A separately deployable
 `market-structure` service and persistent observation cache are being implemented
 ([Feature 013](specs/013-market-structure-service/spec.md)). They are **not ready to
 run**. The app does not yet consume that service.
 
-There is no bundled production US universe and no command that automatically
-discovers, classifies, or approves the US market. You must prepare and review the
-catalog inputs described below. The small catalog under
-[`tests/fixtures/catalogs/reviewed-us/`](tests/fixtures/catalogs/reviewed-us/) is
-synthetic test data only; it is not suitable for production or live data requests.
+The bundled catalog at [`data/catalog-us-etf-clusters/`](data/catalog-us-etf-clusters/)
+is a **partial US-listed research universe**, not a complete market database or an
+official GICS classification. It contains 10,695 retained NYSE/NASDAQ records, 116
+hierarchy nodes, 11 sector ETFs and 19 custom ETF exposure clusters, reviewed from
+source records dated 2026-10-30/31. The custom clusters are not official industries
+or ETF holdings. Uncovered groups remain explicit; consult the catalog's coverage
+description before interpreting results.
 
 ## Prepare and run locally
 
@@ -28,13 +30,14 @@ From the repository root:
 uv sync --all-packages
 ```
 
-### 2. Prepare a reviewed catalog
+### 2. Prepare or update a reviewed catalog
 
-Prepare a release directory containing a manifest and its registered CSV/JSONL
-artifacts. A usable catalog needs reviewed US region/classification metadata,
-hierarchy, stock memberships and listings, ETF listings and mappings, benchmarks,
-and governance/audit records. Do not invent approvals or infer classifications from
-company names or provider labels.
+The repository includes a reviewed default catalog, so no catalog setup is needed
+for the initial run. To update or replace it, prepare a new release directory
+containing a manifest and its registered CSV/JSONL artifacts. Include reviewed
+US region/classification metadata, hierarchy, stock memberships/listings, ETF
+listings/mappings, benchmarks, and governance/audit records. Do not invent
+approvals or infer classifications from company names or provider labels.
 
 The [catalog file contract](specs/010-manifest-csv-catalogs/contracts/catalog-files.md)
 defines the CSV fields and validation rules. First validate your candidate:
@@ -44,22 +47,21 @@ uv run market-catalog validate-catalog \
   --release-manifest /absolute/path/to/your-release/manifest.json
 ```
 
-After you have reviewed the validation result, initialize a local catalog store and
-publish the candidate. For its first release, use `none`; for later releases, pass the
-currently active release ID as `--expected-release`.
+After reviewing validation, publish the candidate as a new immutable release.
+Read the current `release_id` from
+[`CURRENT.json`](data/catalog-us-etf-clusters/CURRENT.json) and supply it as
+`--expected-release` (use `none` only when creating an empty store):
 
 ```bash
-uv run market-catalog catalog-init --directory .data/catalog
-
 uv run market-catalog activate-catalog \
-  --manifest .data/catalog/CURRENT.json \
+  --manifest data/catalog-us-etf-clusters/CURRENT.json \
   --release-manifest /absolute/path/to/your-release/manifest.json \
-  --expected-release none
+  --expected-release CURRENT_RELEASE_ID
 ```
 
 Activation revalidates and copies the registered inputs into an immutable release.
-Do not edit files under published releases. Author and validate a new candidate,
-then activate it against the current release ID. See the
+Do not edit files under published releases. Commit the new `CURRENT.json` and release
+files together. See the
 [catalog CLI guide](specs/010-manifest-csv-catalogs/quickstart.md) for lifecycle
 details.
 
@@ -69,8 +71,8 @@ details.
 uv run streamlit run streamlit_app.py
 ```
 
-Open the local URL printed by Streamlit. The default catalog entry is
-`.data/catalog/CURRENT.json`. To use another entry, set
+Open the local URL printed by Streamlit. The runner defaults to
+`data/catalog-us-etf-clusters/CURRENT.json`. To use another entry, set
 `MARKET_CATALOG_MANIFEST_PATH`, for example:
 
 ```bash
@@ -78,10 +80,10 @@ MARKET_CATALOG_MANIFEST_PATH=/absolute/path/to/CURRENT.json \
   uv run streamlit run streamlit_app.py
 ```
 
-The app has **Discovery** and **Industry Deep-Dive** tabs. It needs a valid catalog
-entry to show the reviewed structure. Use the UI's refresh/load actions to request
-market data; yfinance does not require an API key. Stop the app with Ctrl-C in the
-terminal.
+The app has **Discovery** and **Industry Deep-Dive** tabs. Discovery loads the
+selected catalog scope's daily market data from yfinance on page load and refresh;
+the provider needs no API key. The first run may therefore require an internet
+connection. Stop the app with Ctrl-C in the terminal.
 
 For a UI-only smoke test, you may point the app at the synthetic test manifest:
 
@@ -96,7 +98,9 @@ a production catalog.
 ## Local configuration and data
 
 The app loads `.env` if present. Catalog selection defaults to
-`.data/catalog/CURRENT.json`; `MARKET_CATALOG_MANIFEST_PATH` overrides that path.
+`data/catalog-us-etf-clusters/CURRENT.json`; `MARKET_CATALOG_MANIFEST_PATH`
+overrides that path. Copy `.env.example` to `.env` only if you want to configure
+local paths or retry behavior; the example already selects the repository catalog.
 `MARKET_DATA_CACHE_PATH` sets the local market-data cache (default
 `.cache/market-data`), and `MARKET_DATA_SOURCE_CACHE_PATH` can set a separate source
 cache (defaults to the same location). `MARKET_DATA_RETRY_LIMIT` defaults to `2`.

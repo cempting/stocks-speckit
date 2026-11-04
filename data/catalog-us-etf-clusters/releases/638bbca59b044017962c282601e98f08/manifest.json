@@ -1,0 +1,178 @@
+{
+  "artifacts": [
+    {
+      "artifact_id": "hierarchy",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "hierarchy.csv",
+      "region_id": "US",
+      "required": true,
+      "role": "hierarchy",
+      "row_count": 116,
+      "sha256": "d8f68b6b5de573dc75cd49d3b38f7ec9c4a7aae8d9a7e095cfd653bea0d46368"
+    },
+    {
+      "artifact_id": "stocks",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "stocks-US.csv",
+      "region_id": "US",
+      "required": true,
+      "role": "stocks",
+      "row_count": 10695,
+      "sha256": "24777dcc71ab9d5b2b65084c5c9934e8c0cfd8e5ac885388ca4faef88c39bd75"
+    },
+    {
+      "artifact_id": "etf_listings",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "etf-listings.csv",
+      "region_id": "US",
+      "required": true,
+      "role": "etf_listings",
+      "row_count": 31,
+      "sha256": "f8c31f0529ad83c996114b62b65c93f974e095be4148b0915ed68aa63633914d"
+    },
+    {
+      "artifact_id": "sector_etfs",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "sector-etfs.csv",
+      "region_id": "US",
+      "required": true,
+      "role": "sector_etfs",
+      "row_count": 11,
+      "sha256": "dc222432d9837ab98d0070921e0adeb0465cfe5ed66004314b1db76a709b8a7a"
+    },
+    {
+      "artifact_id": "industry_etfs",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "industry-etfs.csv",
+      "region_id": "US",
+      "required": true,
+      "role": "industry_etfs",
+      "row_count": 19,
+      "sha256": "b41c176cef571cb56fe8d8c6fbd16443107e7a388768c7bb9f60128412afcba0"
+    },
+    {
+      "artifact_id": "sub_industry_etfs",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "sub-industry-etfs.csv",
+      "region_id": "US",
+      "required": true,
+      "role": "sub_industry_etfs",
+      "row_count": 0,
+      "sha256": "394939943705341a5ca1560590ec582b7eb5200e82d25f795c3c8b1d786b7a89"
+    },
+    {
+      "artifact_id": "benchmarks",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "benchmarks.csv",
+      "region_id": "US",
+      "required": true,
+      "role": "benchmarks",
+      "row_count": 2,
+      "sha256": "647e0c30836876a65f71888758d4d3d91b39d039b94d87ee7c0d8b1ef7bb993d"
+    },
+    {
+      "artifact_id": "audit",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "governance.jsonl",
+      "region_id": null,
+      "required": true,
+      "role": "audit",
+      "row_count": 148,
+      "sha256": "b736750d2997099081b6e3be3610b78db5f32bb4b6b52bc5b0f88144178a59e8"
+    },
+    {
+      "artifact_id": "migration_archive",
+      "classification_id": null,
+      "classification_version": null,
+      "path": "source-evidence-archive.jsonl",
+      "region_id": null,
+      "required": true,
+      "role": "migration_archive",
+      "row_count": 45135,
+      "sha256": "6c2faa3cc570bcc29ec76e34a2d8224e76da84141493397dda98ba23dc8712aa"
+    }
+  ],
+  "catalog_revision": "56f2b481beb5702f6cb6c70214e61063bf67722e8ce2ed580bae9ce2c9ece3cf",
+  "created_at": "2026-11-04T13:35:43.799746+00:00",
+  "evidence_sources": [
+    {
+      "approval_reference": "APPROVAL_NYSE_IMPORT",
+      "authority": "reviewed_local",
+      "coverage": "relevant-market",
+      "description": "nyse.csv",
+      "reviewed_at": "2026-10-30",
+      "source_id": "NYSE_202610",
+      "source_type": "local_file"
+    },
+    {
+      "approval_reference": "APPROVAL_NASDAQ",
+      "authority": "reviewed_local",
+      "coverage": "relevant-market",
+      "description": "nasdaq.csv",
+      "reviewed_at": "2026-10-30",
+      "source_id": "NASDAQ_202610",
+      "source_type": "local_file"
+    },
+    {
+      "approval_reference": "USER_SECTOR_ETF_SELECTION_20261030",
+      "authority": "reviewed_local",
+      "coverage": "11 sector ETF chart instruments only; not stock membership",
+      "description": "sector-etf-representations.csv",
+      "reviewed_at": "2026-10-30",
+      "source_id": "SECTOR_ETF_CHARTS_20261030",
+      "source_type": "local_file"
+    },
+    {
+      "approval_reference": "USER_SELECTED_ETF_EXPOSURE_CLUSTERS_20261031",
+      "authority": "Custom ETF exposure grouping, not an official GICS industry classification",
+      "coverage": "US-listed records in the captured source databases; partial market coverage",
+      "description": "User-authorized rule-based regrouping of existing reviewed NYSE/NASDAQ memberships",
+      "reviewed_at": "2026-10-31",
+      "source_id": "USER_ETF_CLUSTER_POLICY_20261031",
+      "source_type": "local_file"
+    },
+    {
+      "approval_reference": "LOCAL_ISSUER_LISTING_AND_EXPOSURE_VERIFICATION_20261031",
+      "authority": "Issuer facts checked for local personal research, not licensed taxonomy/display rights",
+      "coverage": "Verified selected SPDR industry/REIT ETFs and SPY benchmark",
+      "description": "Official State Street ETF listing and index facts captured in the registered archive",
+      "reviewed_at": "2026-10-31",
+      "source_id": "SSGA_ISSUER_FACT_REVIEW_20261031",
+      "source_type": "local_file"
+    }
+  ],
+  "format": "market-catalog-release-1",
+  "parent_release": null,
+  "regions": [
+    {
+      "classifications": [
+        {
+          "approval_reference": "USER_SELECTED_ETF_EXPOSURE_CLUSTERS_20261031",
+          "classification_id": "US-ETF-EXPOSURE-CLUSTERS",
+          "effective_from": "2026-10-30",
+          "effective_to": null,
+          "scheme_name": "GICS-aligned sectors with custom ETF exposure clusters and provider subgroups (NOT official GICS industries)",
+          "source_id": "USER_ETF_CLUSTER_POLICY_20261031",
+          "version": "2026-10-31.v1"
+        }
+      ],
+      "coverage_as_of": "2026-10-30",
+      "coverage_description": "10695 retained reviewed NYSE/NASDAQ records, 11 sector ETFs and 19 industry-exposure ETFs. Custom clusters, not official GICS industries or ETF holdings; uncovered groups remain explicit. Legacy source observations are dated 2026-10-30, not newly verified live listings. Local research only.",
+      "coverage_state": "partial",
+      "last_reviewed_at": "2026-10-31",
+      "name": "United States (US-listed research universe)",
+      "region_id": "US",
+      "status": "active"
+    }
+  ],
+  "release_id": "638bbca59b044017962c282601e98f08",
+  "research_sources": []
+}

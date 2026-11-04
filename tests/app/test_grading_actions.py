@@ -20,8 +20,8 @@ def test_root_does_not_render_legacy_fundamental_grading_actions(monkeypatch) ->
     assert not any(
         button.label in {"Load fundamentals", "Refresh displayed stocks"} for button in app.button
     )
-    screening_prefix = "market_leadership.screening."
+    fundamentals_prefix = "market_leadership.fundamentals."
     assert not any(
-        widget.key and widget.key.startswith(screening_prefix)
+        widget.key and widget.key.startswith(fundamentals_prefix)
         for widget in (*app.selectbox, *app.multiselect)
     )

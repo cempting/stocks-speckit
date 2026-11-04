@@ -226,6 +226,8 @@ __marimo__/
 
 # Local snapshots and editor/OS temporary files
 .data/
+/data/catalog-us-etf-clusters/.writer.lock
+/data/catalog-us-etf-clusters/.staging/
 .DS_Store
 *.tmp
 *.swp
