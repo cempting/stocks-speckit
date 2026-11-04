@@ -9,7 +9,6 @@ import pandas as pd
 from market_data.catalog import CatalogSnapshot
 from market_data.domain.company_evidence import CompanyAssociation
 from market_leadership.application.ports import MarketDataProvider
-from market_leadership.infrastructure.region_database import StockMembershipRecord
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,23 +100,6 @@ def prepare_listing_history_window(
         ),
         None,
     )
-
-
-def verified_primary_provider_symbols(
-    members: tuple[StockMembershipRecord, ...],
-) -> tuple[str, ...]:
-    symbols: list[str] = []
-    for member in members:
-        primary = member.primary_listing
-        if (
-            member.resolution_state == "identified"
-            and primary is not None
-            and primary.resolution_state == "verified"
-        ):
-            symbol = primary.provider_symbol or primary.symbol
-            if symbol and symbol not in symbols:
-                symbols.append(symbol)
-    return tuple(symbols)
 
 
 def load_stock_history(

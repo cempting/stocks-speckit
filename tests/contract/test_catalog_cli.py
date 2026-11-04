@@ -25,7 +25,7 @@ def test_lifecycle_commands_do_not_initialize_sql(
     def forbidden(*args: object, **kwargs: object) -> None:
         raise AssertionError("File lifecycle must never initialize SQL")
 
-    monkeypatch.setattr("market_leadership.universe_admin.RegionDatabase", forbidden)
+    monkeypatch.setattr("market_data_tools.legacy.universe_admin.RegionDatabase", forbidden)
     store = tmp_path / "catalog"
     assert main(["catalog-init", "--directory", str(store)]) == 0
     report = json.loads(capsys.readouterr().out)

@@ -367,42 +367,21 @@ def build_weekly_snapshot(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Publish daily input or calculated weekly snapshot"
+        description="Publish daily input snapshots from an explicitly selected live provider"
     )
-    parser.add_argument("--weekly", action="store_true")
-    parser.add_argument("--provider", choices=("fixture", "massive", "yfinance"), required=True)
+    parser.add_argument("--provider", choices=("massive", "yfinance"), required=True)
     parser.add_argument("--as-of", type=date.fromisoformat, required=True)
     parser.add_argument("--start", type=date.fromisoformat)
     parser.add_argument("--symbols", nargs="+")
-    parser.add_argument("--market", choices=("US", "JP", "GB"))
-    parser.add_argument("--level", choices=("SECTOR", "INDUSTRY"))
     parser.add_argument("--snapshot-id", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--force-refresh", action="store_true")
     args = parser.parse_args()
 
-    from market_leadership.infrastructure.fixture_provider import FixtureProvider
     from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
 
-    if args.weekly:
-        if args.provider != "fixture" or args.market is None or args.level is None:
-            parser.error("weekly builds require --provider fixture, --market and --level")
-        if args.start is not None or args.symbols is not None or args.force_refresh:
-            parser.error("--start, --symbols and --force-refresh apply only to daily inputs")
-        reference = build_weekly_snapshot(
-            FixtureProvider(),
-            ParquetSnapshotRepository(args.output),
-            snapshot_id=args.snapshot_id,
-            market_id=args.market,
-            level=args.level,
-            as_of=args.as_of,
-        )
-        print(reference.snapshot_id)
-        return
     if args.start is None or args.symbols is None:
         parser.error("daily input builds require --start and --symbols")
-    if args.market is not None or args.level is not None:
-        parser.error("--market and --level apply only to weekly builds")
 
     from dataclasses import replace
 

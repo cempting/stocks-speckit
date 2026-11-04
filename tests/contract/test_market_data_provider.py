@@ -4,13 +4,13 @@ import pandas as pd
 import pytest
 
 from market_leadership.application.ports import DataPointRequest
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
 from market_leadership.infrastructure.parquet_provider import ParquetSnapshotProvider
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
 from market_leadership.infrastructure.provider_validation import (
     canonicalize_daily_history,
     canonicalize_fx_rates,
 )
+from tests.support.fixture_provider import FixtureProvider
 
 
 @pytest.mark.parametrize(

@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from market_leadership.application.industry_representations import representation_worklist
+from market_data_tools.legacy.industry_representations import representation_worklist
 
 DAY = date(2026, 10, 30)
 

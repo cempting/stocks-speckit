@@ -16,21 +16,21 @@ from market_data.domain.fundamentals import (
     FundamentalRequest,
 )
 from market_data.domain.stock_selection import MembershipEntry
-from market_leadership.application.load_stock_history import (
-    load_selected_listing_history,
-    load_stock_history,
-    verified_primary_provider_symbols,
-)
-from market_leadership.application.score_industry import score_industry
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
-from market_leadership.infrastructure.region_database import (
+from market_data_tools.legacy.region_database import (
     ListingRecord,
     RegionDatabase,
     StockMembershipRecord,
 )
-from market_leadership.infrastructure.universe_import import import_reviewed_file
+from market_data_tools.legacy.stock_membership import verified_primary_provider_symbols
+from market_data_tools.legacy.universe_import import import_reviewed_file
+from market_leadership.application.load_stock_history import (
+    load_selected_listing_history,
+    load_stock_history,
+)
+from market_leadership.application.score_industry import score_industry
 from market_leadership.ui.cache import load_member_history
 from tests.membership_helpers import build_v2_release, membership_fixture
+from tests.support.fixture_provider import FixtureProvider
 
 
 class RecordingProvider(FixtureProvider):

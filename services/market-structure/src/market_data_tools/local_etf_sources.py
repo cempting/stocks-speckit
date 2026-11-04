@@ -18,21 +18,6 @@ from market_data.domain.local_etf_evidence import (
     identity,
 )
 
-DEFAULT_ROOTS = {
-    "sector_rotation": Path("~/Documents/learn/invest_screener/sector_rotation"),
-    "analyzer": Path("~/Claude/Projects/SectorStockScreener/Analyzer"),
-    "stockviewer": Path("~/Claude/Projects/SectorStockScreener/stockviewer"),
-    "stockfinder": Path("~/Claude/Projects/SectorStockScreener/stockfinder"),
-}
-DEFAULT_CATALOGS = {
-    "sector_rotation": (
-        ("src/constants.py", "US_INDUSTRY_ETFS"),
-        ("src/constants.py", "EUROPE_INDUSTRY_ETFS"),
-    ),
-    "analyzer": (("config.py", "INDUSTRY_ETFS"),),
-    "stockviewer": (),
-    "stockfinder": (("src/stockfinder/data.py", "INDUSTRY_ETFS"),),
-}
 CONTEXT_NAMES = {
     "US_SECTOR_ETFS": "sector_context",
     "EU_SECTOR_ETFS": "sector_context",
@@ -173,12 +158,12 @@ def inspect_sources(
     observed_at: datetime | None = None,
 ) -> Inventory:
     timestamp = utc_observation(observed_at)
-    configured = dict(DEFAULT_ROOTS)
-    for alias, path in (roots or {}).items():
-        if alias not in configured:
-            raise ValueError(f"Unknown local resource alias: {alias}")
-        configured[alias] = path
-    descriptors = {alias: list(items) for alias, items in DEFAULT_CATALOGS.items()}
+    if not roots or not catalogs:
+        raise ValueError("Local research requires explicit --root and --catalog inputs")
+    if any(not alias.strip() or alias != alias.strip() for alias in roots):
+        raise ValueError("Local resource aliases must be nonempty and trimmed")
+    configured = dict(roots)
+    descriptors: dict[str, list[tuple[str, str]]] = {alias: [] for alias in configured}
     for descriptor in catalogs:
         alias, equal, location = descriptor.partition("=")
         file, colon, catalog = location.rpartition(":")
@@ -186,6 +171,8 @@ def inspect_sources(
             raise ValueError("Catalog must use known RESOURCE=RELATIVE_PATH:CATALOG")
         if (file, catalog) not in descriptors[alias]:
             descriptors[alias].append((file, catalog))
+    if any(not items for items in descriptors.values()):
+        raise ValueError("Every configured root requires an explicit --catalog descriptor")
     resources: list[ResourceInspection] = []
     evidence: list[Evidence] = []
     for alias, configured_root in sorted(configured.items()):

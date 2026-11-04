@@ -11,7 +11,9 @@ from market_leadership import bootstrap
 from market_leadership.application.ports import DataPointRequest
 from market_leadership.config import Settings
 from market_leadership.infrastructure.massive_provider import MassiveProvider
+from market_leadership.infrastructure.provider_catalog import ConfiguredProviderCatalog
 from market_leadership.infrastructure.provider_validation import canonicalize_fx_rates
+from tests.support.fixture_provider import FixtureProvider
 
 _ACCEPTANCE = Path(__file__).resolve().parents[1] / "fixtures" / "acceptance" / "market_data.json"
 
@@ -47,6 +49,11 @@ def _request(market: Market, *, as_of: date) -> DataPointRequest:
 
 
 def _catalog(tmp_path, *provider_ids: str):
+    if provider_ids == ("fixture",):
+        provider = FixtureProvider()
+        return ConfiguredProviderCatalog(
+            (provider,), {"fixture": provider.capabilities()}, {}
+        )
     settings = Settings(
         default_provider=provider_ids[0],
         massive_available=False,

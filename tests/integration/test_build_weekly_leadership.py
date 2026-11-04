@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 
 from market_leadership.application.build_snapshot import build_weekly_snapshot
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
+from tests.support.fixture_provider import FixtureProvider
 
 
 def test_weekly_builder_publishes_separate_local_sector_and_industry_snapshots(tmp_path) -> None:
@@ -241,7 +241,7 @@ def test_weekly_builder_rejects_non_fixture_input_provider(tmp_path) -> None:
         )
 
 
-def test_offline_cli_publishes_weekly_without_changing_daily_flags(tmp_path) -> None:
+def test_runtime_cli_rejects_synthetic_provider_without_writing_snapshots(tmp_path) -> None:
     command = [
         sys.executable,
         "-m",
@@ -261,8 +261,7 @@ def test_offline_cli_publishes_weekly_without_changing_daily_flags(tmp_path) -> 
         str(tmp_path),
     ]
     built = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
-    assert built.returncode == 0, built.stderr
-    assert built.stdout.strip() == "us-weekly"
-    manifest, tables = ParquetSnapshotRepository(tmp_path).load_weekly("us-weekly")
-    assert manifest["as_of"] == "2026-10-23"
-    assert tables["entries"]["rank"].notna().all()
+    assert built.returncode == 2
+    assert "invalid choice: 'fixture'" in built.stderr
+    assert not built.stdout
+    assert not list(tmp_path.iterdir())

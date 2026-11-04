@@ -6,6 +6,7 @@ import shutil
 import tempfile
 from collections.abc import Iterator
 from datetime import UTC, date, datetime
+from importlib.resources import files
 from pathlib import Path
 from typing import Any, Protocol, cast
 
@@ -20,13 +21,10 @@ from market_leadership.infrastructure.snapshot_errors import (
     SnapshotNotFound,
 )
 
-_SCHEMA_PATH = (
-    Path(__file__).parents[3]
-    / "specs/001-market-leadership-screener/contracts/snapshot-manifest.schema.json"
-)
+_SCHEMA_PATH = files("market_data.schemas").joinpath("snapshot-manifest.schema.json")
 _MANIFEST_SCHEMA = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
 _MANIFEST_VALIDATOR = Draft202012Validator(_MANIFEST_SCHEMA, format_checker=FormatChecker())
-_WEEKLY_SCHEMA_PATH = _SCHEMA_PATH.with_name("weekly-snapshot-manifest.schema.json")
+_WEEKLY_SCHEMA_PATH = files("market_data.schemas").joinpath("weekly-snapshot-manifest.schema.json")
 _WEEKLY_VALIDATOR = Draft202012Validator(
     json.loads(_WEEKLY_SCHEMA_PATH.read_text(encoding="utf-8")),
     format_checker=FormatChecker(),

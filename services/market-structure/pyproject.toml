@@ -1,0 +1,23 @@
+[project]
+name = "market-structure"
+version = "0.1.0"
+description = "Independent reviewed market structure service and maintenance tools"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "market-data>=0.1,<0.2",
+  "starlette>=0.47,<1",
+  "uvicorn>=0.35,<1",
+]
+
+[project.scripts]
+market-structure = "market_structure.cli:main"
+market-catalog = "market_data_tools.catalog_admin:main"
+market-company-evidence = "market_data_tools.company_evidence_admin:main"
+market-universe-legacy = "market_data_tools.legacy.universe_admin:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/market_structure", "src/market_data_tools"]

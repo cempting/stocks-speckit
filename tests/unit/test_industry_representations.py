@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from market_leadership.infrastructure.region_database import RegionDatabase
+from market_data_tools.legacy.region_database import RegionDatabase
 
 DAY = date(2026, 10, 30)
 
@@ -73,7 +73,7 @@ def test_basket_approval_requires_valid_evidence_for_entire_period(representatio
 
 
 def test_invalidated_basket_is_explicit_and_has_no_request_symbols(representation_database):
-    from market_leadership.application.industry_representations import representation_worklist
+    from market_data_tools.legacy.industry_representations import representation_worklist
 
     approve_basket(representation_database)
     with representation_database.connect() as connection:

@@ -1,4 +1,4 @@
-"""Explicit local ETF research workflows; no runtime market-data collection."""
+"""Explicit legacy ETF research workflows; no runtime market-data collection."""
 
 from dataclasses import asdict
 from datetime import date, datetime
@@ -15,9 +15,9 @@ from market_data.domain.local_etf_evidence import (
     selected_review,
     support_reasons,
 )
-from market_leadership.application.industry_representations import representation_worklist
-from market_leadership.infrastructure.local_etf_sources import inspect_sources, utc_observation
-from market_leadership.infrastructure.region_database import RegionDatabase
+from market_data_tools.legacy.industry_representations import representation_worklist
+from market_data_tools.legacy.region_database import RegionDatabase
+from market_data_tools.local_etf_sources import inspect_sources, utc_observation
 
 
 class CandidateState(TypedDict):

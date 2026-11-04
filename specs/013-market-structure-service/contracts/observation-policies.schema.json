@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:market-structure:observation-policies:1",
+  "title": "Market structure observation policy registry v1",
+  "description": "Wire grammar only. Shared semantic validation also enforces fingerprints, review ordering, references, scope/capabilities, record-size limits and durable known restrictions; see ../data-model.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "policies"],
+  "properties": {
+    "format": {"const": "market-structure-observation-policies-1"},
+    "policies": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/Policy"}
+    }
+  },
+  "$defs": {
+    "Text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!\\s*$)[^\\u0000]+$"
+    },
+    "TextSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/Text"}
+    },
+    "ReviewTimestamp": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z(?![\\s\\S])"
+    },
+    "ExpiryDate": {
+      "type": ["string", "null"],
+      "format": "date",
+      "minLength": 10,
+      "maxLength": 10
+    },
+    "Policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id", "source_id", "provider_id", "status",
+        "reviewed_at", "review_reference", "expires_at", "allowed_uses",
+        "region_ids", "currencies", "frequencies", "return_bases",
+        "freshness_seconds", "max_retention_days", "fingerprint"
+      ],
+      "properties": {
+        "policy_id": {"$ref": "#/$defs/Text"},
+        "source_id": {"$ref": "#/$defs/Text"},
+        "provider_id": {"$ref": "#/$defs/Text"},
+        "status": {"enum": ["unreviewed", "approved", "denied", "revoked"]},
+        "reviewed_at": {"$ref": "#/$defs/ReviewTimestamp"},
+        "review_reference": {
+          "anyOf": [{"$ref": "#/$defs/Text"}, {"type": "null"}]
+        },
+        "expires_at": {"$ref": "#/$defs/ExpiryDate"},
+        "allowed_uses": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["collection", "display", "normalized_retention"]}
+        },
+        "region_ids": {"$ref": "#/$defs/TextSet"},
+        "currencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 3, "maxLength": 3, "pattern": "^[A-Z]{3}$"}
+        },
+        "frequencies": {"$ref": "#/$defs/TextSet"},
+        "return_bases": {"$ref": "#/$defs/TextSet"},
+        "freshness_seconds": {
+          "type": ["integer", "null"], "minimum": 1, "maximum": 3600
+        },
+        "max_retention_days": {
+          "type": ["integer", "null"], "minimum": 1
+        },
+        "fingerprint": {
+          "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "unreviewed"}}},
+          "then": {
+            "properties": {
+              "reviewed_at": {"type": "null"},
+              "review_reference": {"type": "null"},
+              "expires_at": {"type": "null"},
+              "freshness_seconds": {"type": "null"},
+              "max_retention_days": {"type": "null"},
+              "allowed_uses": {"maxItems": 0}
+            }
+          },
+          "else": {
+            "properties": {
+              "reviewed_at": {"type": "string"},
+              "review_reference": {"type": "string"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "approved"}}},
+          "then": {
+            "properties": {
+              "expires_at": {"type": "string"},
+              "freshness_seconds": {"type": "integer"},
+              "max_retention_days": {"type": "integer"},
+              "region_ids": {"minItems": 1},
+              "currencies": {"minItems": 1},
+              "frequencies": {"minItems": 1},
+              "return_bases": {"minItems": 1}
+            }
+          },
+          "else": {"properties": {"allowed_uses": {"maxItems": 0}}}
+        }
+      ]
+    }
+  }
+}

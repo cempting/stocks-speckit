@@ -1,5 +1,8 @@
 from datetime import date
 
+import pytest
+
+from market_data.domain.fundamentals import FundamentalRequest
 from market_leadership import bootstrap
 from market_leadership.application.ports import (
     DataPointRequest,
@@ -9,9 +12,33 @@ from market_leadership.application.ports import (
     select_provider,
 )
 from market_leadership.config import Settings
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
 from market_leadership.infrastructure.provider_catalog import ConfiguredProviderCatalog
 from market_leadership.infrastructure.yfinance_provider import YFinanceProvider
+from tests.support.fixture_provider import FixtureProvider
+
+
+@pytest.mark.parametrize("factory", [bootstrap.build_provider, bootstrap.build_request_provider])
+def test_runtime_factories_reject_synthetic_provider_without_writing_cache(
+    factory, tmp_path
+) -> None:
+    with pytest.raises(ValueError, match="Unknown market data provider: fixture"):
+        factory("fixture", str(tmp_path / "cache"))
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.parametrize("refresh", [False, True])
+def test_runtime_fundamentals_reject_synthetic_evidence_before_cache_or_network(
+    refresh, monkeypatch
+) -> None:
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Synthetic requests must not access runtime caches or providers")
+
+    monkeypatch.setattr(bootstrap, "load_fundamental_bundle", forbidden)
+    monkeypatch.setattr(bootstrap, "refresh_fundamental_bundle", forbidden)
+    with pytest.raises(ValueError, match="synthetic evidence is test-only"):
+        bootstrap.load_selected_fundamentals(
+            FundamentalRequest("SYN-A", provider_id="fixture"), refresh=refresh
+        )
 
 
 def _capability() -> ProviderCapability:

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from market_leadership.infrastructure.region_database import RegionDatabase
-from market_leadership.infrastructure.universe_import import import_reviewed_file
+from market_data_tools.legacy.region_database import RegionDatabase
+from market_data_tools.legacy.universe_import import import_reviewed_file
 
 
 def _write_csv(path: Path, rows: str) -> Path:

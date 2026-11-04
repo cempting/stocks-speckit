@@ -12,7 +12,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Literal, cast
 
-from market_leadership.infrastructure.region_database import RegionDatabase
+from market_data_tools.legacy.region_database import RegionDatabase
 
 ImportStatus = Literal["validated", "committed", "committed_partial", "rejected"]
 

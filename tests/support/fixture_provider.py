@@ -25,7 +25,7 @@ from market_leadership.application.weekly_calendar import latest_completed_marke
 from market_leadership.infrastructure.provider_validation import canonicalize_daily_history
 from market_leadership.infrastructure.snapshot_errors import SchemaMismatch, SourceUnavailable
 
-_ACCEPTANCE_MARKETS = Path(__file__).parents[3] / "tests/fixtures/acceptance/market_data.json"
+_ACCEPTANCE_MARKETS = Path(__file__).parents[1] / "fixtures/acceptance/market_data.json"
 
 
 def load_fundamental_fixture(symbol: str) -> FundamentalBundle:

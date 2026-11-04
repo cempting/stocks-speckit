@@ -1,4 +1,5 @@
 import json
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,15 @@ SCHEMA_PATH = (
 )
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
 VALIDATOR = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
+
+
+@pytest.mark.parametrize(
+    "name", ["snapshot-manifest.schema.json", "weekly-snapshot-manifest.schema.json"]
+)
+def test_packaged_snapshot_schemas_match_original_contracts(name: str) -> None:
+    assert files("market_data.schemas").joinpath(name).read_bytes() == (
+        SCHEMA_PATH.with_name(name).read_bytes()
+    )
 
 
 def valid_manifest() -> dict[str, Any]:

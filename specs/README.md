@@ -1,9 +1,9 @@
 ---
 id: SPEC-README
 title: Domain specification — Financial markets, trading & investing
-version: 0.2.0
+version: 0.3.0
 status: draft
-date: 2026-11-02
+date: 2026-11-03
 ---
 
 # Domain specification: Financial markets, trading & investing
@@ -17,7 +17,7 @@ distilled from 30 source documents (see the source index at the end). Their boil
 (disclosures, bios, promotions, exercises) was stripped first. The content is educational domain
 modelling, not financial advice.
 
-## Current Application Authority (2026-11-02)
+## Current Application Authority (2026-11-03)
 
 The numbered feature specifications define the implemented or accepted screener scope; the
 domain aspects describe broader educational concepts, not permission to add portfolio, coaching,
@@ -26,7 +26,7 @@ The [constitution](../.specify/memory/constitution.md) governs development.
 For overlapping application requirements, use the following explicit authority map rather than
 treating every historical plan as a simultaneous implementation instruction:
 
-There are **nine active application specifications**. Overlapping features 003, 005, and 007
+There are **ten active application/service specifications**. Overlapping features 003, 005, and 007
 have been merged into 004, 006, and 008 respectively; their original paths now redirect to the
 owning specification and map every original functional requirement. Distinct features remain
 separate. Educational aspects and their decisions have not been merged into application scope.
@@ -42,6 +42,7 @@ separate. Educational aspects and their decisions have not been merged into appl
 | [010: Manifest CSV catalogs](010-manifest-csv-catalogs/spec.md) | File/source authority, file-only review storage, release validation/publication and safe legacy cutover | Lifecycle/file foundation and runtime snapshot consumption exist; governed review, reconciliation and retirement are not claimed complete |
 | [011: Company-risk evidence](011-company-risk-evidence/spec.md) | Cash-flow risk warnings, structured issuer evidence, business/moat/orders, source permissions and safe acquisition | Preserves 001/002/006 calculations and layout; enrichment never approves or changes classification |
 | [012: Stock identity and memberships](012-stock-industry-memberships/spec.md) | Custom overlapping stock memberships, deeper single-parent hierarchy, identity ownership, deduplicated rollups, contextual peers and migration | Bounded versioned revision of 010 cardinality/hierarchy; reviewed migration remains required, not implied by documentation or partial code |
+| [013: Market structure service and observation cache](013-market-structure-service/spec.md) | Independent structure delivery, app-owned durable observation coverage, on-demand bootstrap, incremental reuse and offline cached browsing | Revises the runtime delivery boundary, not 010 publication integrity, 012 identity/membership, 011 source rights, or 004/006 UI and explicit-load behavior; specified, not implemented |
 
 ### Consolidation and precedence
 
@@ -68,6 +69,11 @@ separate. Educational aspects and their decisions have not been merged into appl
    evidence and IDs. Conflicting historical instructions are not current implementation authority;
    reconcile them against their active owner and 010/012 before execution. Preserve completed
    markers and test records; documentation consolidation is not implementation verification.
+7. 013 assigns reviewed structure delivery to a separately deployable `market-structure`
+   application in this repository and durable fetched observations to the stock app.
+   The app consumes validated revisions rather than service-owned storage. On-demand
+   caching and read-only offline replicas do not change identity, source permission, or
+   classification authority. This is the next delivery boundary, not a completed migration.
 
 Feature 012 is the active specification for the mapping revision. It requires a reviewed,
 versioned migration rather than silently changing existing releases. The unchanged issuer-evidence
@@ -79,8 +85,21 @@ company enrichment does not authorize classification changes. Feature 012 has an
 [test-first implementation tasks](012-stock-industry-memberships/tasks.md).
 The approved 2026-11-02 refinements define per-request evidence reuse, separately
 permitted stored business/moat sharing, and listing/issuer-bounded history observations.
-The [active feature pointer](../.specify/feature.json) remains 012. Run `/speckit-analyze` for that
-feature next; consolidation does not change the pointer or claim either migration is implemented.
+The [active feature pointer](../.specify/feature.json) now selects
+[013](013-market-structure-service/spec.md) for service/cache planning. Feature 012's
+unfinished tasks and migration obligations remain intact; moving the pointer neither completes
+them nor implements the service. Feature 013 now has an
+[implementation plan](013-market-structure-service/plan.md),
+[research decisions](013-market-structure-service/research.md),
+[data model](013-market-structure-service/data-model.md),
+[contracts](013-market-structure-service/contracts/),
+[validation guide](013-market-structure-service/quickstart.md), and
+[test-first implementation tasks](013-market-structure-service/tasks.md).
+The 2026-11-04 planning refinement resolves exact observation-policy grammar,
+unavailable-gap retries, shared-reader/exclusive-pruner locking and durable
+permission guards across rollback/restart. The refreshed backlog has 96 test-first
+tasks incorporating those decisions. Analysis passed; implementation is in progress,
+with completed task checkboxes representing verified work rather than feature completion.
 
 ### File-only catalog invariants
 

@@ -147,7 +147,13 @@ def _strings(value: object, field: str) -> tuple[str, ...]:
     return tuple(cast(list[str], values))
 
 
-def _association(data: object) -> CompanyAssociation:
+def association_to_record(association: CompanyAssociation) -> dict[str, object]:
+    return _object(
+        _jsonable(asdict(association)), "association", set(CompanyAssociation.__dataclass_fields__)
+    )
+
+
+def association_from_record(data: object) -> CompanyAssociation:
     keys = set(CompanyAssociation.__dataclass_fields__)
     value = _object(data, "association", keys)
     return CompanyAssociation(
@@ -182,7 +188,15 @@ def _association(data: object) -> CompanyAssociation:
     )
 
 
-def _assessment(data: object) -> SourceAssessment:
+def assessment_to_record(assessment: SourceAssessment) -> dict[str, object]:
+    return _object(
+        _jsonable(asdict(assessment)),
+        "source_assessment",
+        set(SourceAssessment.__dataclass_fields__),
+    )
+
+
+def assessment_from_record(data: object) -> SourceAssessment:
     keys = set(SourceAssessment.__dataclass_fields__)
     value = _object(data, "source_assessment", keys)
     return SourceAssessment(
@@ -306,7 +320,7 @@ def _request(data: object) -> CompanyEvidenceRequest:
     if type(history_window) is not int or type(refresh) is not bool:
         raise CompanyEvidenceStoreError("Invalid evidence request limits")
     return CompanyEvidenceRequest(
-        association=_association(value["association"]),
+        association=association_from_record(value["association"]),
         scope=cast(EvidenceScope, _string(value["scope"], "scope")),
         mode=cast(EvidenceMode, _string(value["mode"], "mode")),
         as_of=_date(value["as_of"], "as_of"),
@@ -351,7 +365,7 @@ def _outcome(data: object) -> CompanyEvidenceOutcome:
             value["association_reason"], "association_reason"
         ),
         verified_association=(
-            _association(value["verified_association"])
+            association_from_record(value["verified_association"])
             if value["verified_association"] is not None
             else None
         ),
@@ -370,13 +384,13 @@ class CompanyEvidenceFiles:
             identity=assessment.source_id,
             format_name=SOURCE_FORMAT,
             revision=assessment.fingerprint,
-            payload=asdict(assessment),
+            payload=assessment_to_record(assessment),
             expected_revision=expected_revision,
         )
 
     def load_source_assessment(self, source_id: str) -> SourceAssessment:
         record = self._load_record("sources", source_id, SOURCE_FORMAT)
-        return _assessment(record)
+        return assessment_from_record(record)
 
     def list_source_assessments(self) -> tuple[SourceAssessment, ...]:
         sources = self._contained("sources")
@@ -402,7 +416,7 @@ class CompanyEvidenceFiles:
     def save_association(
         self, association: CompanyAssociation, *, expected_revision: str | None
     ) -> str:
-        payload = asdict(association)
+        payload = association_to_record(association)
         return self._publish_record(
             category="bindings",
             identity=association.association_id,
@@ -414,7 +428,7 @@ class CompanyEvidenceFiles:
 
     def load_association(self, association_id: str) -> CompanyAssociation:
         record = self._load_record("bindings", association_id, BINDING_FORMAT)
-        return _association(record)
+        return association_from_record(record)
 
     def find_active_association(
         self,

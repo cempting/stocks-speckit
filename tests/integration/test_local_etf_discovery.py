@@ -3,8 +3,9 @@ from datetime import UTC, date, datetime
 
 import pytest
 
-from market_leadership.infrastructure import region_database as module
-from market_leadership.infrastructure.region_database import RegionDatabase
+from market_data_tools.legacy import region_database as module
+from market_data_tools.legacy.region_database import RegionDatabase
+from tests.support.local_etf_sources import CATALOGS
 
 AUDIT_TABLES = (
     "etf_collection_runs",
@@ -20,14 +21,14 @@ def test_collection_persistence_reuses_evidence_and_preserves_revision(
     local_etf_database,
     local_etf_roots,
 ):
-    from market_leadership.application.discover_etf_candidates import collect_etf_candidates
+    from market_data_tools.legacy.discover_etf_candidates import collect_etf_candidates
 
     database = local_etf_database
     with database.connect() as connection:
         before = connection.execute("SELECT * FROM database_metadata").fetchall()
     kwargs = dict(
         roots=local_etf_roots,
-        catalogs=("stockviewer=config.py:INDUSTRY_ETFS",),
+        catalogs=CATALOGS,
         observed_at=datetime(2026, 10, 31, tzinfo=UTC),
     )
     first = collect_etf_candidates(database, **kwargs)
@@ -46,7 +47,7 @@ def test_collection_persistence_reuses_evidence_and_preserves_revision(
 
 
 def test_collection_storage_failure_is_atomic(local_etf_database, local_etf_roots):
-    from market_leadership.application.discover_etf_candidates import collect_etf_candidates
+    from market_data_tools.legacy.discover_etf_candidates import collect_etf_candidates
 
     with local_etf_database.connect() as connection:
         connection.execute(
@@ -57,7 +58,7 @@ def test_collection_storage_failure_is_atomic(local_etf_database, local_etf_root
         collect_etf_candidates(
             local_etf_database,
             roots=local_etf_roots,
-            catalogs=("stockviewer=config.py:INDUSTRY_ETFS",),
+            catalogs=CATALOGS,
         )
     with local_etf_database.connect() as connection:
         assert connection.execute("SELECT count(*) FROM etf_collection_runs").fetchone()[0] == 0
@@ -69,7 +70,7 @@ def test_reconciliation_covers_hierarchy_and_retains_unbound_alternatives(
 ):
     from datetime import date
 
-    from market_leadership.application.discover_etf_candidates import (
+    from market_data_tools.legacy.discover_etf_candidates import (
         collect_etf_candidates,
         review_etf_candidates,
     )
@@ -77,7 +78,7 @@ def test_reconciliation_covers_hierarchy_and_retains_unbound_alternatives(
     inventory = collect_etf_candidates(
         local_etf_database,
         roots=local_etf_roots,
-        catalogs=("stockviewer=config.py:INDUSTRY_ETFS",),
+        catalogs=CATALOGS,
     )
     report = review_etf_candidates(
         local_etf_database,
@@ -102,19 +103,19 @@ def test_reconciliation_covers_hierarchy_and_retains_unbound_alternatives(
 
 
 def collect(database, roots):
-    from market_leadership.application.discover_etf_candidates import collect_etf_candidates
+    from market_data_tools.legacy.discover_etf_candidates import collect_etf_candidates
 
     return collect_etf_candidates(
         database,
         roots=roots,
-        catalogs=("stockviewer=config.py:INDUSTRY_ETFS",),
+        catalogs=CATALOGS,
         observed_at=datetime(2026, 10, 31, tzinfo=UTC),
     )
 
 
 def accepted(database, inventory, **overrides):
     from market_data.domain.local_etf_evidence import qualification_issues
-    from market_leadership.application.discover_etf_candidates import record_etf_candidate_review
+    from market_data_tools.legacy.discover_etf_candidates import record_etf_candidate_review
 
     evidence = next(
         e for e in inventory.evidence if e.resource == "analyzer" and e.label == "Semiconductors"
@@ -158,7 +159,7 @@ def approve(database, review, **overrides):
 
 
 def selection(database):
-    from market_leadership.application.discover_etf_candidates import review_etf_candidates
+    from market_data_tools.legacy.discover_etf_candidates import review_etf_candidates
 
     report = review_etf_candidates(
         database,
@@ -537,7 +538,7 @@ def test_every_explicitly_bound_relationship_requires_review_after_source_change
     local_etf_database,
     local_etf_roots,
 ):
-    from market_leadership.application.discover_etf_candidates import review_etf_candidates
+    from market_data_tools.legacy.discover_etf_candidates import review_etf_candidates
 
     database = local_etf_database
     inventory = collect(database, local_etf_roots)

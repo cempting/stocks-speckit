@@ -5,9 +5,9 @@ import pytest
 
 from market_data.catalog import CatalogReader, load_release
 from market_data.domain.catalog import CatalogError
-from market_leadership.infrastructure.region_database import RegionDatabase
+from market_data_tools.legacy.region_database import RegionDatabase
+from market_data_tools.legacy.universe_import import import_reviewed_file
 from market_leadership.infrastructure.stock_membership import load_region_membership
-from market_leadership.infrastructure.universe_import import import_reviewed_file
 from tests.integration.test_catalog_workflows import AS_OF, SCOPE, edit_rows
 
 

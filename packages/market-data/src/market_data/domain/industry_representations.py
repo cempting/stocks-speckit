@@ -80,6 +80,18 @@ class ReviewedRepresentation:
         return tuple(item.symbol for item in self.constituents)
 
 
+@dataclass(frozen=True, slots=True)
+class RepresentationReviewItem:
+    region_id: str
+    classification_id: str
+    node_id: str
+    name: str
+    node_type: str
+    sector_id: str
+    status: Literal["etf", "basket", "not_covered", "invalid"]
+    representation: ReviewedRepresentation | None
+
+
 def representation_performance(
     representation: ReviewedRepresentation,
     history: dict[str, pd.DataFrame],

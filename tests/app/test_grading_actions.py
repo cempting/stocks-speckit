@@ -2,7 +2,7 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
+from tests.support.fixture_provider import FixtureProvider
 
 ROOT = Path(__file__).parents[2]
 

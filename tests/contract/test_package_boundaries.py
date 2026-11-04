@@ -15,18 +15,34 @@ from tests.membership_helpers import build_v2_release, membership_fixture
 
 ROOT = Path(__file__).parents[2]
 SRC = ROOT / "src"
+DATA_SRC = ROOT / "packages/market-data/src"
+SERVICE_SRC = ROOT / "services/market-structure/src"
+PACKAGE_ROOTS = {
+    "market_data": DATA_SRC / "market_data",
+    "market_data_tools": SERVICE_SRC / "market_data_tools",
+    "market_structure": SERVICE_SRC / "market_structure",
+}
+SOURCE_PATH = os.pathsep.join(str(path) for path in (SRC, DATA_SRC, SERVICE_SRC))
 
 
 @pytest.mark.parametrize(
     ("package", "forbidden"),
     [
-        ("market_data", {"market_leadership", "market_data_tools", "streamlit", "yfinance"}),
-        ("market_data_tools", {"market_leadership", "streamlit", "yfinance", "sqlite3"}),
+        ("market_data", {
+            "market_leadership", "market_data_tools", "market_structure",
+            "streamlit", "yfinance", "massive", "starlette", "uvicorn", "httpx",
+        }),
+        ("market_data_tools", {"market_leadership", "streamlit", "yfinance", "massive", "sqlite3"}),
+        ("market_structure", {"market_leadership", "streamlit", "yfinance", "massive", "sqlite3"}),
     ],
 )
 def test_data_and_tools_do_not_depend_on_the_app(package: str, forbidden: set[str]) -> None:
     violations = []
-    for path in (SRC / package).rglob("*.py"):
+    source = PACKAGE_ROOTS[package]
+    assert source.is_dir()
+    paths = list(source.rglob("*.py"))
+    assert paths, f"Architecture guard scanned no source files in {source}"
+    for path in paths:
         for node in ast.walk(ast.parse(path.read_text())):
             modules = (
                 [alias.name for alias in node.names]
@@ -36,6 +52,11 @@ def test_data_and_tools_do_not_depend_on_the_app(package: str, forbidden: set[st
                 else []
             )
             for module in modules:
+                is_legacy = path.is_relative_to(PACKAGE_ROOTS["market_data_tools"] / "legacy")
+                if module == "sqlite3" and is_legacy:
+                    continue
+                if module.startswith("market_data_tools.legacy") and not is_legacy:
+                    violations.append(f"{path.relative_to(ROOT)}:{node.lineno}: {module}")
                 if module.split(".")[0] in forbidden:
                     violations.append(f"{path.relative_to(ROOT)}:{node.lineno}: {module}")
     assert not violations, "\n".join(violations)
@@ -61,8 +82,10 @@ def test_app_does_not_depend_on_maintenance_tools() -> None:
         ), str(path)
 
 
-@pytest.mark.parametrize("module", ["catalog_admin", "company_evidence_admin"])
-def test_tools_run_without_app_ui_provider_or_database_imports(
+@pytest.mark.parametrize(
+    "module", ["catalog_admin", "company_evidence_admin", "legacy.universe_admin"]
+)
+def test_tools_run_without_app_ui_or_provider_imports(
     module: str, tmp_path: Path
 ) -> None:
     script = """
@@ -70,28 +93,56 @@ import importlib.abc
 import runpy
 import sys
 
+module = sys.argv[1]
+forbidden = {"market_leadership", "streamlit", "yfinance"}
+if not module.startswith("market_data_tools.legacy."):
+    forbidden.add("sqlite3")
+
 class ForbidApp(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split(".")[0] in {
-            "market_leadership", "streamlit", "yfinance", "sqlite3"
-        }:
+        if fullname.split(".")[0] in forbidden:
             raise AssertionError(f"Forbidden dependency: {fullname}")
 
 sys.meta_path.insert(0, ForbidApp())
-module = sys.argv[1]
 sys.argv = [module, "--help"]
 runpy.run_module(module, run_name="__main__")
 """
     result = subprocess.run(
         [sys.executable, "-c", script, f"market_data_tools.{module}"],
         cwd=tmp_path,
-        env={**os.environ, "PYTHONPATH": str(SRC)},
+        env={**os.environ, "PYTHONPATH": SOURCE_PATH},
         capture_output=True,
         text=True,
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout
+
+
+def test_app_bootstrap_imports_without_maintenance_or_test_code(tmp_path: Path) -> None:
+    script = """
+import importlib.abc
+import sys
+
+class ForbidMaintenance(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split(".")[0] in {"market_data_tools", "tests"}:
+            raise AssertionError(f"Forbidden runtime dependency: {fullname}")
+
+sys.meta_path.insert(0, ForbidMaintenance())
+import market_leadership.bootstrap
+import market_leadership.application.industry_representations
+import market_leadership.application.load_stock_history
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": SOURCE_PATH},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.parametrize("version", [1, 2])

@@ -1,0 +1,205 @@
+{
+  "openapi": "3.1.0",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "Market Structure Read Contract",
+    "version": "1.0.0",
+    "description": "Planned read-only delivery contract. No authoring, article ingestion, or market-observation proxy. Normative payload and operational rules are in snapshot-format.md. Loopback development may omit authentication; remote deployments require HTTPS and bearer authentication."
+  },
+  "servers": [{"url": "http://127.0.0.1:8765", "description": "Loopback development only"}],
+  "security": [{"readToken": []}, {}],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "liveness",
+        "summary": "Process liveness; does not imply reviewed structure exists",
+        "responses": {
+          "200": {
+            "description": "Server process is live",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Health"}}}
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"}
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "readiness",
+        "summary": "Ready only when current reviewed snapshot is valid and readable",
+        "responses": {
+          "200": {
+            "description": "A valid current snapshot can be served",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Health"}}}
+          },
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      }
+    },
+    "/v1/current": {
+      "get": {
+        "operationId": "getCurrentStructure",
+        "summary": "Return one immutable snapshot identity or validate an unchanged pointer",
+        "parameters": [{"$ref": "#/components/parameters/IfNoneMatch"}],
+        "responses": {
+          "200": {
+            "description": "Current pointer; Cache-Control: no-cache",
+            "headers": {
+              "ETag": {"$ref": "#/components/headers/ETag"},
+              "Cache-Control": {"$ref": "#/components/headers/CacheControl"}
+            },
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrentEntry"}}}
+          },
+          "304": {"$ref": "#/components/responses/NotModified"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      }
+    },
+    "/v1/snapshots/{snapshot_id}/manifest": {
+      "get": {
+        "operationId": "getSnapshotManifest",
+        "summary": "Get exact immutable manifest bytes whose SHA-256 is snapshot_id",
+        "parameters": [
+          {"name": "snapshot_id", "in": "path", "required": true, "schema": {"$ref": "#/components/schemas/Digest"}},
+          {"$ref": "#/components/parameters/IfNoneMatch"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Published manifest; private, max-age=31536000, immutable",
+            "headers": {
+              "ETag": {"$ref": "#/components/headers/ETag"},
+              "Cache-Control": {"$ref": "#/components/headers/CacheControl"}
+            },
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SnapshotManifest"}}}
+          },
+          "304": {"$ref": "#/components/responses/NotModified"},
+          "400": {"$ref": "#/components/responses/InvalidRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      }
+    },
+    "/v1/objects/{sha256}": {
+      "get": {
+        "operationId": "getPublishedObject",
+        "summary": "Get exact published object bytes; digest must be allowlisted by a published snapshot",
+        "parameters": [
+          {"name": "sha256", "in": "path", "required": true, "schema": {"$ref": "#/components/schemas/Digest"}},
+          {"$ref": "#/components/parameters/IfNoneMatch"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Raw immutable bytes; not an archive, path lookup, or arbitrary file server",
+            "headers": {
+              "ETag": {"$ref": "#/components/headers/ETag"},
+              "Cache-Control": {"$ref": "#/components/headers/CacheControl"},
+              "Content-Length": {"schema": {"type": "integer", "minimum": 0, "maximum": 67108864}}
+            },
+            "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}
+          },
+          "304": {"$ref": "#/components/responses/NotModified"},
+          "400": {"$ref": "#/components/responses/InvalidRequest"},
+          "401": {"$ref": "#/components/responses/Unauthorized"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "503": {"$ref": "#/components/responses/Unavailable"}
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {"readToken": {"type": "http", "scheme": "bearer"}},
+    "parameters": {
+      "IfNoneMatch": {
+        "name": "If-None-Match",
+        "in": "header",
+        "description": "RFC 9110 entity-tag list or wildcard; weak comparison applies for conditional GET.",
+        "schema": {"type": "string", "maxLength": 4096}
+      }
+    },
+    "headers": {
+      "ETag": {"description": "Quoted strong SHA-256 representation validator, not a filesystem mtime tag", "schema": {"type": "string"}},
+      "CacheControl": {"description": "no-cache for current; private, max-age=31536000, immutable for versioned objects", "schema": {"type": "string"}}
+    },
+    "responses": {
+      "NotModified": {
+        "description": "No body. Same ETag and applicable Cache-Control as 200; local validated bytes must already exist.",
+        "headers": {
+          "ETag": {"$ref": "#/components/headers/ETag"},
+          "Cache-Control": {"$ref": "#/components/headers/CacheControl"}
+        }
+      },
+      "InvalidRequest": {"description": "Invalid identifier or unsupported request shape", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Unauthorized": {"description": "Missing or invalid read credentials; not an offline permission grant", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Forbidden": {"description": "Read access denied", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "NotFound": {"description": "Unknown published snapshot or object; never reveals arbitrary storage paths", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}},
+      "Unavailable": {"description": "No valid current snapshot, unreadable/corrupt object, or bounded server overload; no stale-success response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}}
+    },
+    "schemas": {
+      "Digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "CurrentEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["format", "snapshot_id"],
+        "properties": {
+          "format": {"const": "market-structure-entry-1"},
+          "snapshot_id": {"$ref": "#/components/schemas/Digest"}
+        }
+      },
+      "CatalogReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "format", "release_id", "catalog_revision"],
+        "properties": {
+          "path": {"const": "catalog/manifest.json"},
+          "format": {"enum": ["market-catalog-release-1", "market-catalog-release-2"]},
+          "release_id": {"type": "string", "minLength": 1},
+          "catalog_revision": {"$ref": "#/components/schemas/Digest"}
+        }
+      },
+      "ObjectReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind", "sha256", "size_bytes"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1, "description": "Safe portable logical path; shared validator rejects traversal, absolute paths and URI syntax."},
+          "kind": {"enum": ["catalog_manifest", "catalog_artifact", "source_registry", "issuer_bindings", "observation_policies", "index_registry"]},
+          "sha256": {"$ref": "#/components/schemas/Digest"},
+          "size_bytes": {"type": "integer", "minimum": 0, "maximum": 67108864}
+        }
+      },
+      "SnapshotManifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["format", "created_at", "catalog", "objects"],
+        "properties": {
+          "format": {"const": "market-structure-snapshot-1"},
+          "created_at": {"type": "string", "format": "date-time", "description": "UTC timestamp only; enforced by shared validation"},
+          "catalog": {"$ref": "#/components/schemas/CatalogReference"},
+          "objects": {"type": "array", "minItems": 5, "maxItems": 256, "items": {"$ref": "#/components/schemas/ObjectReference"}}
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status"],
+        "properties": {"status": {"enum": ["live", "ready"]}, "snapshot_id": {"$ref": "#/components/schemas/Digest"}}
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["format", "code", "message", "retryable"],
+        "properties": {
+          "format": {"const": "market-structure-error-1"},
+          "code": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1, "description": "Actionable, sanitized; no credentials or private paths"},
+          "retryable": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

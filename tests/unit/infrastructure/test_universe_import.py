@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from market_leadership.infrastructure.region_database import RegionDatabase
-from market_leadership.infrastructure.universe_import import (
+from market_data_tools.legacy.region_database import RegionDatabase
+from market_data_tools.legacy.universe_import import (
     ImportReport,
     import_reviewed_file,
     validate_import,

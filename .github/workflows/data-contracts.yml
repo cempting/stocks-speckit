@@ -17,22 +17,9 @@ jobs:
         with:
           python-version: "3.12"
           enable-cache: true
-      - run: uv sync --locked
-      - run: uv run ruff check src tests
+      - run: uv sync --locked --all-packages
+      - run: uv run ruff check src packages services tests
       - run: uv run pyright
       - name: Verify producers, contracts, and app consumption without live services
-        run: >-
-          uv run pytest -m "not live"
-          tests/contract/test_package_boundaries.py
-          tests/contract/test_catalog_cli.py
-          tests/contract/test_catalog_files.py
-          tests/contract/test_catalog_v2.py
-          tests/contract/test_market_context.py
-          tests/contract/test_market_data_provider.py
-          tests/contract/test_runtime_market_data_providers.py
-          tests/contract/test_snapshot_manifest.py
-          tests/integration/test_catalog_publication.py
-          tests/integration/test_company_evidence_admin.py
-          tests/app/test_progressive_tabs.py
-          tests/app/test_stock_lookup.py -q
-      - run: uv build --wheel
+        run: uv run pytest -m "not live" -q
+      - run: uv build --all-packages --wheel

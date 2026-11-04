@@ -1,13 +1,16 @@
 import json
 
 from market_leadership.universe_admin import main
+from tests.support.local_etf_sources import CATALOGS
 
 
 def roots_args(roots):
     result = []
     for alias, root in roots.items():
         result += ["--root", f"{alias}={root}"]
-    return result + ["--catalog", "stockviewer=config.py:INDUSTRY_ETFS"]
+    for descriptor in CATALOGS:
+        result += ["--catalog", descriptor]
+    return result
 
 
 def test_collection_json_complete_partial_errors(local_etf_database, local_etf_roots, capsys):
@@ -23,7 +26,7 @@ def test_collection_json_complete_partial_errors(local_etf_database, local_etf_r
     assert json.loads(output.out)["status"] == "partial"
     assert "stockviewer" in output.err
     assert main(args + ["--root", "unknown=/tmp"]) == 2
-    assert "unknown" in capsys.readouterr().err
+    assert "explicit --root and --catalog" in capsys.readouterr().err
 
 
 def test_collection_requires_initialized_database(tmp_path, local_etf_roots, capsys):

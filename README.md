@@ -1,25 +1,65 @@
 # stocks-speckit
 SDD + Python = Awesome App for Stock Screening
 
+## Next architecture: market-structure service
+
+[Feature 013](specs/013-market-structure-service/spec.md) specifies the next boundary:
+a separately runnable/deployable `market-structure` application in this repository,
+and an app-owned persistent cache of fetched observations. **This service boundary
+is specified, not yet implemented**; the package-based runtime below remains current.
+
+| Owner | Responsibility |
+|---|---|
+| `market-structure` service | Reviewed sectors, nested industries, stock identities/listings and dated memberships, ETF/index mappings, benchmarks, and news-source/permission metadata |
+| Stock app | Live acquisition from its selected approved provider, persistent stock/ETF/index observation coverage, calculations, navigation, and UI |
+| App's local structure snapshot | Last validated service revision for coherent reads and explicitly marked read-only offline browsing; not another editable structure authority |
+
+On an empty observation cache, the app will create it and fetch the active view's
+necessary coverage first, growing on demand rather than downloading the whole universe.
+Observations will be reusable by stable instrument/listing identity and covered period,
+not copied into sector/industry folders. Reclassification changes navigation, not
+observation ownership; overlapping memberships reuse the same eligible history.
+
+Warm reads and incremental updates must reuse unaffected coverage across navigation
+and restarts. If the structure service is unavailable, an existing validated structure
+snapshot permits read-only cached browsing with visible revision/freshness warnings;
+without one, bootstrap is blocked. Known expired permissions remain enforced.
+News-source registration does not itself fetch articles or grant collection/display rights.
+
+The [quality checklist](specs/013-market-structure-service/checklists/requirements.md)
+and [implementation plan](specs/013-market-structure-service/plan.md) are complete.
+The plan defines the [delivery contracts](specs/013-market-structure-service/contracts/),
+identity-keyed observation storage, migration, and
+[acceptance guide](specs/013-market-structure-service/quickstart.md).
+The [test-first implementation tasks](specs/013-market-structure-service/tasks.md)
+were refreshed against the 2026-11-04 analysis refinements: 96 tasks cover
+exact policy grammar, no-data retries, reader/pruner locking and rollback-safe permissions.
+Analysis passed and implementation is in progress; checkboxes record verified work.
+Existing release and identity safeguards remain authoritative.
+
 ## App, shared data, and maintenance tools
 
-Three Python packages have separate responsibilities within this repository:
+Three uv workspace distributions separate the following namespace responsibilities:
 
 | Package | Responsibility |
 |---|---|
 | [`market_leadership`](src/market_leadership/) | Streamlit UI, application use cases, live-provider acquisition and application caches |
-| [`market_data`](src/market_data/) | Shared immutable domain records/calculations, versioned schemas, validation, catalog and issuer-evidence file stores |
-| [`market_data_tools`](src/market_data_tools/) | Offline catalog publication/recovery and reviewed source/issuer maintenance |
+| [`market_data`](packages/market-data/src/market_data/) | Shared immutable domain records/calculations, versioned schemas, validation, catalog and issuer-evidence file stores |
+| [`market_data_tools`](services/market-structure/src/market_data_tools/) | Offline catalog publication/recovery, reviewed source/issuer maintenance, and opt-in legacy administration |
+| [`market_structure`](services/market-structure/src/market_structure/) | Independent structure-service distribution; HTTP/publication implementation remains pending |
 
 Dependency direction is app -> shared data and tools -> shared data. Neither the
 shared package nor the maintenance tools import the app, Streamlit, or live
-providers. The packages are currently shipped together in one wheel; this is not
-a multi-service deployment or three independently versioned distributions.
+providers. The app, shared library and service/tools now build separate wheels.
+Use `uv sync --all-packages` for development and tests. Ordinary app installation
+excludes the service/tools; install `market-leadership[maintenance]` for explicit
+legacy admin delegates. Streamlit may bring its own Starlette/Uvicorn dependencies,
+but the app does not import the independent service implementation.
 Legacy domain/store imports and admin module entry points remain compatibility
 aliases. New code should use the owning packages above.
 
-The [v2 manifest](src/market_data/schemas/catalog-manifest-v2.schema.json)
-and [v1 manifest](src/market_data/schemas/catalog-manifest.schema.json) are packaged
+The [v2 manifest](packages/market-data/src/market_data/schemas/catalog-manifest-v2.schema.json)
+and [v1 manifest](packages/market-data/src/market_data/schemas/catalog-manifest.schema.json) are packaged
 with their shared reader/validator. There is no separate, weaker tool-only schema:
 the tooling validates the same bytes and references that the app reads. Unsupported
 versions and invalid candidates fail before publication. Schema versions and CSV
@@ -39,21 +79,28 @@ source-permission metadata needed to make those requests; it does not collect
 prices, fabricate market observations, or authorize unreviewed sources.
 
 [Package-boundary tests](tests/contract/test_package_boundaries.py) enforce import
-direction, run tools without app/UI/provider/database imports, publish v1/v2
+direction, run modern tools without app/UI/provider/database imports, publish v1/v2
 releases for the app reader without network access, and reject incompatible
 candidates without replacing CURRENT. Existing market-provider contract tests
 continue to validate live adapter output shapes. The
 [compatibility workflow](.github/workflows/data-contracts.yml) runs these checks,
 publication regressions, lint, type checking and wheel builds on pushes and PRs.
 
-Validation after extraction: the compatibility workflow's selector passed **180
-tests**; the full source-free suite passed **849**, with **3 existing failures**
-in the legacy-retirement checks (embedded local research defaults, the runtime
-fixture import, and legacy SQLite administration). Those retirement requirements
-remain tracked separately; they are not waived by the new package-boundary tests.
-Ruff, strict Pyright, the wheel build/resource check and both installed CLI entry
-points passed. The existing 10,000-instrument benchmark also passed its cold
-<=5 s, warm <=1 s and no-warm-reparse checks.
+The app contains no synthetic provider or SQLite administration. Synthetic
+providers and their acceptance data are test-owned and excluded from the wheel.
+Runtime provider factories and the snapshot CLI reject `fixture` explicitly;
+weekly calculation tests inject their test provider directly instead of using
+a synthetic production CLI mode. Live daily acquisition remains unchanged.
+
+SQLite is confined to the explicit
+[`market_data_tools.legacy`](services/market-structure/src/market_data_tools/legacy/) maintenance namespace,
+which also runs without the app, UI, or live providers. Modern tooling cannot
+import that namespace. Local research extraction requires caller-supplied roots
+and catalog descriptors; there are no personal-directory or catalog defaults.
+Boundary checks also import the app bootstrap with maintenance and test imports
+blocked and forbid SQLite imports in app source. The live yfinance dependency
+still uses SQLite internally for its own cookie cache, not for the catalog.
+Production data has not been migrated or modified by this separation.
 
 ## Catalog direction and implementation status
 
@@ -81,14 +128,17 @@ retain redirects and historical requirement mappings. The five-column stock tabl
 interface, and separate company-evidence and versioned membership requirements remain unchanged.
 Remaining work is tracked in [feature 010 tasks](specs/010-manifest-csv-catalogs/tasks.md).
 
-The legacy regional database/research commands remain available, but are not the
-file-release publication path below. The package separation does not complete
+The legacy regional database/research commands remain available through
+`market-universe-legacy` or `python -m market_data_tools.legacy.universe_admin`.
+Every legacy database operation requires an explicit `--database PATH`.
+The old `python -m market_leadership.universe_admin` command delegates for compatibility.
+These commands are not the file-release publication path below. The separation does not complete
 the remaining review/migration cutover work or migrate production data.
 
 ### Isolated file-release administration
 
 The catalog-maintenance CLI is separate from the legacy SQLite-oriented
-`market-universe` workflow. It validates and publishes complete, versioned file
+`market-universe-legacy` workflow. It validates and publishes complete, versioned file
 releases using the same manifest, parser, and integrity checks as the app; it does
 not initialize or mutate the legacy database. Use the module form below during
 development or the installed `market-catalog` command in deployments:
@@ -198,7 +248,7 @@ representation evidence stays visible; the app never substitutes sector data or 
 
 ### Reviewing industry coverage (current pre-cutover workflow)
 
-Run `uv run python -m market_leadership.universe_admin init` to initialize or upgrade the
+Run `uv run market-universe-legacy init --database /path/to/legacy.sqlite` to initialize or upgrade the
 regional database to schema 3. The atomic additive migration supports schema 1/2 and preserves
 existing memberships, ETF mappings, baskets, approval references, and universe revision.
 Back up the database before upgrading. Older application versions cannot read schema 3.
@@ -208,20 +258,20 @@ memberships. It does not infer or bundle a complete GICS hierarchy. Import/regis
 classification evidence before assessing completeness.
 
 ```bash
-uv run python -m market_leadership.universe_admin review-representations \
+uv run market-universe-legacy review-representations --database /path/to/legacy.sqlite \
   --region US --classification YOUR_CLASSIFICATION --as-of 2026-10-30
 # Add --uncovered-only to show only missing or invalid representations.
 
-uv run python -m market_leadership.universe_admin review-listings \
+uv run market-universe-legacy review-listings --database /path/to/legacy.sqlite \
   --region US --as-of 2026-10-30
 # Use these reviewed listing IDs when defining basket constituents.
 
-uv run python -m market_leadership.universe_admin approve-etf \
+uv run market-universe-legacy approve-etf --database /path/to/legacy.sqlite \
   --region US --classification YOUR_CLASSIFICATION --entity-id YOUR_NODE \
   --exchange NASDAQ --symbol YOUR_REVIEWED_ETF --source-id YOUR_SOURCE \
   --approval-reference YOUR_REVIEW --effective-from 2026-10-30
 
-uv run python -m market_leadership.universe_admin approve-basket \
+uv run market-universe-legacy approve-basket --database /path/to/legacy.sqlite \
   --region US --classification YOUR_CLASSIFICATION --entity-id YOUR_NODE \
   --name "Reviewed specialist basket" --source-id YOUR_SOURCE \
   --approval-reference YOUR_REVIEW --effective-from 2026-10-30 \
@@ -247,12 +297,11 @@ fabricated: the table labels the basket and shows unavailable charts.
 
 ### Discovering ETF candidates from local projects (current pre-cutover workflow)
 
-Local discovery reads selected literal industry catalogs in these four roots:
-
-- `~/Documents/learn/invest_screener/sector_rotation`
-- `~/Claude/Projects/SectorStockScreener/Analyzer`
-- `~/Claude/Projects/SectorStockScreener/stockviewer`
-- `~/Claude/Projects/SectorStockScreener/stockfinder`
+Local discovery reads only explicitly selected literal industry catalogs. Supply
+arbitrary resource aliases using `--root RESOURCE=PATH`, and at least one
+`--catalog RESOURCE=RELATIVE_PATH:CATALOG` for every root. No roots or file paths
+are inferred. Supported catalog-name semantics identify industry, sector, index,
+and commodity context; they do not supply holdings or approvals.
 
 It never imports/executes those projects, searches recursively, requests market data, or collects
 unrelated configuration, credentials, portfolios, or watchlists. Duplicate declarations retain
@@ -260,12 +309,14 @@ their locations and source evidence. Collection requires an initialized schema 3
 does not require an imported hierarchy.
 
 ```bash
-uv run python -m market_leadership.universe_admin collect-etf-candidates
+uv run market-universe-legacy collect-etf-candidates --database /path/to/legacy.sqlite \
+  --root research=/path/to/research-project \
+  --catalog research=config.py:INDUSTRY_ETFS
 
-uv run python -m market_leadership.universe_admin review-etf-candidates \
+uv run market-universe-legacy review-etf-candidates --database /path/to/legacy.sqlite \
   --region US --classification YOUR_CLASSIFICATION --as-of 2026-10-30
 
-uv run python -m market_leadership.universe_admin review-etf-candidate \
+uv run market-universe-legacy review-etf-candidate --database /path/to/legacy.sqlite \
   --candidate-id RETURNED_CANDIDATE --collection-run RETURNED_RUN \
   --region US --classification YOUR_CLASSIFICATION --entity-id YOUR_NODE \
   --as-of 2026-10-30 --decision accept --reason "Actual scope and suitability assessment" \
@@ -282,11 +333,11 @@ existing `approve-etf` command only after its normal source/listing/date prerequ
 The representation and retained local provenance are linked in the same transaction, including
 when the mapping already exists.
 
-Commands return versioned JSON for research, with diagnostics on stderr. A missing stockviewer
-root makes default collection **partial (exit 2)**, not complete success; readable evidence is
-retained. Correct a root with `--root stockviewer=/actual/project` and explicitly select its
-supported catalog with `--catalog stockviewer=config.py:INDUSTRY_ETFS`, using the actual path.
-No substitute directory or catalog is invented.
+Commands return versioned JSON for research, with diagnostics on stderr. Missing configured
+inputs make collection partial or failed (**exit 2**), not complete success; readable evidence
+is retained. Correct the explicit root or catalog descriptor and collect again.
+Omitted configuration fails before inspecting any source. No substitute directory or catalog
+is invented.
 
 Candidates, unresolved labels, conflicting tickers, and proxy warnings do not increase approved
 coverage. Every active reviewed industry/sub-industry stays visible, including gaps. Recollection
@@ -394,10 +445,9 @@ uv run pytest -q tests/app tests/integration tests/contract tests/unit -m "not l
 4. Deploy. Community Cloud detects `uv.lock` and installs the project and its dependencies with
 	`uv`.
 
-The yfinance market-data provider needs no secret. For the current pre-cutover app, provision
-the reviewed regional database at a readable deployment path; set `MARKET_UNIVERSE_DATABASE_PATH`
-when it differs from `.data/market-universe.sqlite`. Ignored local data is not provisioned by
-pushing code, and a clean deployment must not silently seed it. Feature 010 will replace this
-catalog setup with the reviewed file release and manifest after implementation; its exact
-configuration/migration contract remains to be planned. Do not commit `.streamlit/secrets.toml`
-or any credentials.
+The yfinance market-data provider needs no secret. Provision a reviewed file release and set
+`MARKET_CATALOG_MANIFEST_PATH` to its published CURRENT entry; the app does not read a legacy
+SQLite database. Keep catalog files read-only for the app, and provision separate writable
+cache/evidence directories. Ignored local data is not provisioned by pushing code, and a clean
+deployment must not silently seed it. Migrating existing legacy records remains an explicit
+reviewed maintenance operation. Do not commit `.streamlit/secrets.toml` or any credentials.

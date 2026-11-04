@@ -738,7 +738,7 @@ def test_disjoint_listing_period_is_retained_without_price_eligibility() -> None
 
 
 def test_domain_import_succeeds_with_sql_unavailable(tmp_path: Path) -> None:
-    source = Path(__file__).parents[2] / "src"
+    source = Path(__file__).parents[2] / "packages/market-data/src"
     script = (
         "import sys; sys.path.insert(0, sys.argv[1]); sys.modules['sqlite3'] = None; "
         "from market_data.domain import catalog; "

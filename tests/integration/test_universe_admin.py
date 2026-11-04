@@ -167,6 +167,8 @@ def test_cli_rejects_missing_exchange_and_bad_input_with_nonzero_status(
             "TEST",
             "--source-id",
             "source-a",
+            "--database",
+            str(tmp_path / "universe.sqlite"),
             str(source),
         ]
     )

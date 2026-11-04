@@ -2,14 +2,51 @@ from datetime import UTC, datetime
 
 import pytest
 
-from market_leadership.infrastructure.local_etf_sources import inspect_sources
+from market_data_tools.local_etf_sources import inspect_sources
+from tests.support.local_etf_sources import CATALOGS
 
 NOW = datetime(2026, 10, 31, tzinfo=UTC)
-VIEWER = ("stockviewer=config.py:INDUSTRY_ETFS",)
 
 
-def inspect(roots, catalogs=VIEWER):
-    return inspect_sources(roots=roots, catalogs=catalogs, observed_at=NOW)
+def inspect(roots, catalogs=()):
+    return inspect_sources(roots=roots, catalogs=CATALOGS + catalogs, observed_at=NOW)
+
+
+@pytest.mark.parametrize(
+    "roots,catalogs",
+    [(None, ()), ({}, ("custom=config.py:INDUSTRY_ETFS",)), ({"custom": "."}, ())],
+)
+def test_missing_explicit_inputs_fail_without_reading_sources(roots, catalogs, monkeypatch):
+    from pathlib import Path
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Invalid configuration must not inspect local sources")
+
+    monkeypatch.setattr(Path, "read_bytes", forbidden)
+    with pytest.raises(ValueError, match="explicit"):
+        inspect_sources(roots=roots, catalogs=catalogs)
+
+
+def test_custom_alias_reads_only_explicitly_selected_file(tmp_path):
+    (tmp_path / "chosen.py").write_text("INDUSTRY_ETFS = {'Test': 'TEST_ETF'}\n")
+    (tmp_path / "config.py").write_text("INDUSTRY_ETFS = {'Unselected': 'OTHER_ETF'}\n")
+    inventory = inspect_sources(
+        roots={"custom": tmp_path},
+        catalogs=("custom=chosen.py:INDUSTRY_ETFS",),
+        observed_at=NOW,
+    )
+    assert inventory.run.status == "complete"
+    assert [resource.alias for resource in inventory.run.resources] == ["custom"]
+    assert [(item.label, item.ticker) for item in inventory.evidence] == [("Test", "TEST_ETF")]
+
+
+def test_descriptors_must_reference_configured_roots(local_etf_roots):
+    with pytest.raises(ValueError, match="known RESOURCE"):
+        inspect_sources(roots=local_etf_roots, catalogs=("unknown=config.py:INDUSTRY_ETFS",))
+    with pytest.raises(ValueError, match="Every configured root"):
+        inspect_sources(
+            roots=local_etf_roots, catalogs=("stockviewer=config.py:INDUSTRY_ETFS",)
+        )
 
 
 def test_literal_duplicates_scope_unicode_context_and_no_execution(local_etf_roots):

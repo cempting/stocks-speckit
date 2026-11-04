@@ -17,6 +17,15 @@ def _args(database):
     ]
 
 
+def test_legacy_administration_requires_explicit_database(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as error:
+        main(["init"])
+    assert error.value.code == 2
+    assert "--database" in capsys.readouterr().err
+    assert not list(tmp_path.iterdir())
+
+
 def test_review_worklist_cli_lists_all_nodes_and_can_filter_uncovered(
     representation_database,
     capsys,

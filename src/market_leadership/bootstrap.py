@@ -1,7 +1,6 @@
 from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 
@@ -36,11 +35,6 @@ from market_leadership.application.request_market_data import (
     RequestMarketData,
 )
 from market_leadership.config import Settings, load_settings
-from market_leadership.infrastructure.fixture_provider import (
-    FixtureProvider,
-    load_acceptance_market_context,
-    load_fundamental_fixture,
-)
 from market_leadership.infrastructure.market_data_cache import CachedMarketDataProvider
 from market_leadership.infrastructure.massive_provider import MassiveProvider
 from market_leadership.infrastructure.parquet_repository import ParquetSnapshotRepository
@@ -70,11 +64,10 @@ _DAILY_HISTORY_CAPABILITY = ProviderCapability(
 def load_selected_fundamentals(
     request: FundamentalRequest, *, refresh: bool = False
 ) -> FundamentalBundle:
-    if request.provider_id == "fixture":
-        bundle = load_fundamental_fixture(request.symbol)
-        if request.cutoff != bundle.fetched_at.date():
-            raise ValueError("Synthetic financial evidence does not match the membership cutoff")
-        return bundle
+    if request.provider_id != "yfinance":
+        raise ValueError(
+            "Runtime fundamentals require yfinance; synthetic evidence is test-only"
+        )
     if refresh:
         return refresh_fundamental_bundle(request)
     return load_fundamental_bundle(request)
@@ -106,13 +99,10 @@ def load_selected_company_evidence(
         def load_financial_bundle(
             fundamental_request: FundamentalRequest,
         ) -> FundamentalBundle:
-            if fundamental_request.provider_id == "fixture":
-                bundle = load_fundamental_fixture(fundamental_request.symbol)
-                if request.as_of != bundle.fetched_at.date():
-                    raise ValueError(
-                        "Synthetic financial evidence does not match the evidence cutoff"
-                    )
-                return bundle
+            if fundamental_request.provider_id != "yfinance":
+                raise ValueError(
+                    "Runtime fundamentals require yfinance; synthetic evidence is test-only"
+                )
             return load_company_financial_bundle(
                 fundamental_request,
                 binding_fingerprint=request.binding_fingerprint,
@@ -292,8 +282,6 @@ def _build_provider_adapter(provider_id: str, retry_limit: int) -> MarketDataPro
         return MassiveProvider(retry_limit=retry_limit)
     if provider_id == "yfinance":
         return YFinanceProvider(retry_limit=retry_limit)
-    if provider_id == "fixture":
-        return FixtureProvider()
     raise ValueError(f"Unknown market data provider: {provider_id}")
 
 
@@ -304,14 +292,10 @@ def build_provider(
     retry_limit: int = 2,
 ) -> MarketDataProvider:
     provider = _build_provider_adapter(provider_id, retry_limit)
-    if provider_id == "fixture":
-        return provider
     return CachedMarketDataProvider(provider, cache_path)
 
 
 def _provider_capabilities(provider: MarketDataProvider) -> tuple[ProviderCapability, ...]:
-    if provider.provider_id == "fixture" and isinstance(provider, FixtureProvider):
-        return provider.capabilities()
     if isinstance(provider, YFinanceProvider):
         return provider.capabilities()
     return (_DAILY_HISTORY_CAPABILITY,)
@@ -341,10 +325,6 @@ def build_market_data_request(settings: Settings) -> RequestMarketData:
 
 def build_snapshot_repository(settings: Settings) -> ParquetSnapshotRepository:
     return ParquetSnapshotRepository(settings.snapshot_dir)
-
-
-def build_fixture_market_context() -> dict[str, Any]:
-    return load_acceptance_market_context()
 
 
 def build_request_provider(

@@ -10,7 +10,8 @@ from market_data.catalog import load_release
 from market_leadership.application.discover_sectors import discover_sectors
 
 SOURCE = Path(__file__).parents[2] / "src/market_leadership"
-DATA_SOURCE = Path(__file__).parents[2] / "src/market_data"
+DATA_SOURCE = Path(__file__).parents[2] / "packages/market-data/src/market_data"
+TOOLS_SOURCE = Path(__file__).parents[2] / "services/market-structure/src/market_data_tools"
 
 
 @pytest.mark.parametrize(
@@ -19,11 +20,15 @@ DATA_SOURCE = Path(__file__).parents[2] / "src/market_data"
         ("application/discover_sectors.py", {"BENCHMARK", "SECTOR_PROXIES"}),
         ("domain/industry_momentum.py", {"INDUSTRY_PROXIES", "INDUSTRY_REPRESENTATIONS"}),
         ("infrastructure/stock_membership.py", {"FIXTURE_CATALOG"}),
-        ("infrastructure/local_etf_sources.py", {"DEFAULT_ROOTS", "DEFAULT_CATALOGS"}),
+        ("local_etf_sources.py", {"DEFAULT_ROOTS", "DEFAULT_CATALOGS"}),
     ],
 )
 def test_no_embedded_runtime_catalog(relative: str, names: set[str]) -> None:
-    root = DATA_SOURCE if relative.startswith("domain/") else SOURCE
+    root = (
+        DATA_SOURCE if relative.startswith("domain/")
+        else TOOLS_SOURCE if relative == "local_etf_sources.py"
+        else SOURCE
+    )
     tree = ast.parse((root / relative).read_text())
     assignments = {
         node.id
@@ -45,8 +50,15 @@ def test_no_production_fixture_provider() -> None:
             if isinstance(node, ast.ClassDef):
                 assert node.name != "FixtureProvider", f"Runtime fixture catalog in {path.name}"
             if isinstance(node, ast.ImportFrom):
-                assert node.module != "market_leadership.infrastructure.fixture_provider", (
+                assert node.module != "tests.support.fixture_provider", (
                     f"Runtime fixture import in {path.name}"
+                )
+                assert node.module is None or node.module.split(".")[0] != "tests", (
+                    f"Runtime test dependency in {path.name}"
+                )
+            if isinstance(node, ast.Import):
+                assert all(alias.name.split(".")[0] != "tests" for alias in node.names), (
+                    f"Runtime test dependency in {path.name}"
                 )
 
 

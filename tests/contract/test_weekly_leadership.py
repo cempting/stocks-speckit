@@ -3,7 +3,7 @@ from datetime import date
 
 import pytest
 
-from market_leadership.infrastructure.fixture_provider import FixtureProvider
+from tests.support.fixture_provider import FixtureProvider
 
 
 @pytest.mark.parametrize(
@@ -79,12 +79,12 @@ def test_weekly_inputs_are_not_advertised_as_live_price_provider_capability() ->
 def test_weekly_fixture_rejects_unqualified_or_future_proxy(
     monkeypatch, field: str, value: str, expected: str
 ) -> None:
-    from market_leadership.infrastructure.fixture_provider import load_acceptance_market_context
+    from tests.support.fixture_provider import load_acceptance_market_context
 
     fixture = copy.deepcopy(load_acceptance_market_context())
     fixture["weekly"]["representations"][0][field] = value
     monkeypatch.setattr(
-        "market_leadership.infrastructure.fixture_provider.load_acceptance_market_context",
+        "tests.support.fixture_provider.load_acceptance_market_context",
         lambda: fixture,
     )
 
@@ -93,12 +93,12 @@ def test_weekly_fixture_rejects_unqualified_or_future_proxy(
 
 
 def test_future_dated_representation_is_not_applied_retrospectively(monkeypatch) -> None:
-    from market_leadership.infrastructure.fixture_provider import load_acceptance_market_context
+    from tests.support.fixture_provider import load_acceptance_market_context
 
     fixture = copy.deepcopy(load_acceptance_market_context())
     fixture["weekly"]["representations"][0]["effective_from"] = "2026-10-24"
     monkeypatch.setattr(
-        "market_leadership.infrastructure.fixture_provider.load_acceptance_market_context",
+        "tests.support.fixture_provider.load_acceptance_market_context",
         lambda: fixture,
     )
 
@@ -108,12 +108,12 @@ def test_future_dated_representation_is_not_applied_retrospectively(monkeypatch)
 
 
 def test_weekly_fixture_rejects_dangling_industry_parent(monkeypatch) -> None:
-    from market_leadership.infrastructure.fixture_provider import load_acceptance_market_context
+    from tests.support.fixture_provider import load_acceptance_market_context
 
     fixture = copy.deepcopy(load_acceptance_market_context())
     fixture["weekly"]["nodes"][2]["parent_node_id"] = "missing"
     monkeypatch.setattr(
-        "market_leadership.infrastructure.fixture_provider.load_acceptance_market_context",
+        "tests.support.fixture_provider.load_acceptance_market_context",
         lambda: fixture,
     )
 
