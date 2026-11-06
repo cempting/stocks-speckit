@@ -1,5 +1,6 @@
 """Row-specific chart previews and stock evidence projections for Discovery tapes."""
 
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
@@ -16,6 +17,37 @@ from market_leadership.ui.dataframe import render_dataframe
 from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS, performance_column_styles
 
 _ChartSeries = Sequence[Mapping[str, object]]
+
+_ENTITY_BUTTON_STYLE = """
+<style>
+[class*="st-key-tape_entity_"] button {
+    height: auto;
+    white-space: normal;
+}
+[class*="st-key-tape_entity_"] button [data-testid="stMarkdownContainer"] {
+    min-width: 0;
+    overflow: visible;
+    white-space: normal;
+}
+[class*="st-key-tape_entity_"] button p {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+}
+[class*="st-key-tape_entity_"] button p strong {
+    font-size: 1.5rem;
+    line-height: 1.2;
+}
+</style>
+"""
+
+
+def _entity_button_label(ticker: str, name: str) -> str:
+    escaped = [re.sub(r"([\\`*_{}\[\]()#+.!|<>$~-])", r"\\\1", text) for text in (ticker, name)]
+    return f"**{escaped[0]}**  \n{escaped[1]}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,12 +299,16 @@ def _render_visual_tape(
     if price_column not in frame.columns or volume_column not in frame.columns:
         render_dataframe(frame, hide_index=True, key=key)
         return ()
+    if selectable or on_entity_select is not None:
+        st.html(_ENTITY_BUTTON_STYLE)
     st.caption(str(frame.attrs.get("volume_legend", "")))
     hidden_columns = ("Instrument ID", "Resolution", "Node ID")
     if "Sector" in frame.columns or "Industry" in frame.columns:
         hidden_columns += ("Status",)
+    if "Sector" in frame.columns:
+        hidden_columns += ("Ticker",)
     if "Industry" in frame.columns:
-        hidden_columns += ("Representation", "Representation type")
+        hidden_columns += ("ETF", "Representation", "Representation type")
     content_columns = [
         column
         for column in frame.columns
@@ -326,22 +362,33 @@ def _render_visual_tape(
                     if column == "Industry":
                         help_text += f"\nRepresentation: {row['Representation']}"
                         help_text += f"\nRepresentation type: {row['Representation type']}"
-                    st.button(
-                        str(value),
-                        key=f"{key}_select_{row['Node ID']}",
-                        help=help_text,
-                        on_click=on_entity_select,
-                        args=(str(row["Node ID"]),),
-                        use_container_width=True,
-                    )
-                elif selectable and column == "Ticker":
-                    button_label = f"{value} · {row['Name']}"
-                    if st.button(
-                        button_label,
-                        key=f"{key}_select_{row['Instrument ID']}",
-                        use_container_width=True,
+                    ticker = row.get("ETF" if column == "Industry" else "Ticker")
+                    if not isinstance(ticker, str) or ticker.strip() in (
+                        "",
+                        "Unavailable",
+                        "Not covered",
+                        "Not an ETF",
                     ):
-                        selected_rows.append(row_index)
+                        ticker = "No ticker"
+                    button_key = f"{key}_select_{row['Node ID']}"
+                    with st.container(key=f"tape_entity_{button_key}"):
+                        st.button(
+                            _entity_button_label(ticker, str(value)),
+                            key=button_key,
+                            help=help_text,
+                            on_click=on_entity_select,
+                            args=(str(row["Node ID"]),),
+                            use_container_width=True,
+                        )
+                elif selectable and column == "Ticker":
+                    button_key = f"{key}_select_{row['Instrument ID']}"
+                    with st.container(key=f"tape_entity_{button_key}"):
+                        if st.button(
+                            _entity_button_label(str(value), str(row["Name"])),
+                            key=button_key,
+                            use_container_width=True,
+                        ):
+                            selected_rows.append(row_index)
                 elif column in performance_styles:
                     text = f"{float(value):.2f}%" if pd.notna(value) else "Unavailable"
                     style = performance_styles[column][row_index]

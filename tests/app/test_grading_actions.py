@@ -16,7 +16,12 @@ def test_root_does_not_render_legacy_fundamental_grading_actions(monkeypatch) ->
     app = AppTest.from_file(ROOT / "streamlit_app.py").run(timeout=20)
 
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == ["Discovery", "Industry Deep-Dive"]
+    assert [tab.label for tab in app.tabs] == [
+        "Discovery",
+        "Industry Deep-Dive",
+        "Yahoo Classification Preview",
+        "Find a stock",
+    ]
     assert not any(
         button.label in {"Load fundamentals", "Refresh displayed stocks"} for button in app.button
     )

@@ -1,5 +1,14 @@
 # Implementation Plan: Manifest-Managed CSV Catalogs
 
+> **2026-11-06 execution/path reconciliation:** New shared catalog/domain/schema changes
+> target `packages/market-data/src/market_data/`; offline governance/export commands target
+> `services/market-structure/src/market_data_tools/`. The app's old catalog module is a
+> compatibility alias, not a second implementation. Source trees below retain original
+> design paths; current pending tasks name the actual owners. Preserve all four root
+> workflows under 004/015 and one shared snapshot; 013's service context supersedes
+> direct local runtime authority on adoption, not publication integrity or reviewed rights.
+> This documentation change neither completes cutover nor checks off pending work.
+
 **Branch**: `main` (unchanged; feature key `010-manifest-csv-catalogs`)
 **Date**: 2026-10-31
 **Spec**: [spec.md](spec.md)

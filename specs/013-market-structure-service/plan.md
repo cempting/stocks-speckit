@@ -107,11 +107,13 @@ not speculative optimization.
 | IV. Avoid waste | Conditional revision checks, changed-object reuse, indexed series paths, gap-only fetch and touched-month updates | PASS |
 | V. Separation | Service owns reviewed structure; app owns observations; UI owns session-local selection | PASS |
 | VI. Low coupling | App imports shared contracts, not server/tools; neither service nor shared data imports UI/providers | PASS |
-| Existing app constraints | Two tabs, one selected provider, permission/issuer guards, explicit loading and `st.cache_data` preserved | PASS |
+| Existing app constraints | All four current tabs under 004/015, one selected provider, permission/issuer guards, explicit loading and `st.cache_data` preserved; 015's tracked tab exception is not extended by this work | PASS within existing exception |
 | Observable failures | Typed service/acquisition states; no success-shaped stale fallback; injected clocks and faults | PASS |
 | Compatibility | Versioned delivery and cache formats, v1/v2 payload validation, migration gates and import aliases | PASS |
 
-No constitution exception or amendment is required. File-only catalog authority is
+No additional constitution exception or amendment is introduced. The existing fourth-tab
+exception is owned by 015 and [issue #2](https://github.com/cempting/stocks-speckit/issues/2),
+with its original pre-merge expiry/remediation gate unchanged. File-only catalog authority is
 preserved inside the service; replica/observation files are not new catalog authorities.
 Post-design review covers the contracts and data model below.
 Refinement recheck: **PASS**. Shared/exclusive locks use the already selected POSIX
@@ -180,7 +182,7 @@ src/market_leadership/
 │   └── yfinance_provider.py        # raw adapter; explicit index-volume handling
 └── ui/
     ├── cache.py                    # st.cache_data includes identity/generation context
-    └── workflows/                  # Discovery, Deep-Dive and other live entry points
+    └── workflows/                  # Discovery, Deep-Dive, Yahoo preview and Find a stock
 tests/
 ├── contract/                       # HTTP, payload, imports, cache semantics
 ├── integration/                    # delivery/bootstrap/reuse/recovery/benchmarks
@@ -227,9 +229,14 @@ maintenance/operations in T087-T092. These are execution gates, not completion c
 
 ### Every production entry point must be wired
 
-- Replace local-authority reads in `app.py`, Discovery and Industry Deep-Dive with
+- Replace local-authority reads in `app.py`, Discovery, Industry Deep-Dive,
+  Yahoo Classification Preview and Find a stock with
   the same injected read context. A replica's local catalog path is an implementation
   detail of validation, not a configurable alternate production authority.
+- Preserve all four tabs and separate lookup state under 015; apply 012's exact
+  identity/listing rules to lookup before any history or evidence action. Preview
+  source checks must use the same service-registry permissions and remain explicit;
+  preview output never becomes reviewed membership or another catalog authority.
 - Resolve stock/ETF targets from reviewed listing identities and true index targets
   from the index registry before provider dispatch. Ambiguous symbols require IDs.
 - Refactor `RequestMarketData`, `build_request_provider`, member/selected-listing history

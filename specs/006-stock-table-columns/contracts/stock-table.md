@@ -20,6 +20,10 @@ The table renders exactly these visible columns, in order:
 
 The Ticker button contains both ticker and company name. Name, Instrument ID and Resolution
 remain internal metadata, not separate visible columns; stock-detail names remain unchanged.
+Under the approved [015 presentation amendment](../../015-dedicated-stock-lookup/spec.md),
+the native Ticker button shows ticker above the full wrapping company name, with
+ticker font size at least twice the name's. This does not add a visible column or
+change stock identity, selection, chart geometry, score loading or detail rendering.
 
 ## CAP Type
 

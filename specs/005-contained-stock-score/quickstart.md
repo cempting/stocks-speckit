@@ -1,5 +1,10 @@
 # Quickstart: Contained Stock Score Summary
 
+> **Superseded validation workflow (2026-11-06):** Retained as historical evidence.
+> Use [006's validation guide](../006-stock-table-columns/quickstart.md) for the
+> current five-column table and Total Score label. The old assertions below must
+> not restore removed columns. Completion evidence is in the [ledger](../task-history.md).
+
 ## Prerequisites
 
 - Python 3.12 and the repository's `uv` environment.

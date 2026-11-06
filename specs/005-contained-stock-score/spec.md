@@ -4,8 +4,8 @@
 
 The active specification is [feature 006](../006-stock-table-columns/spec.md).
 It owns both the complete three-component Total Score and the current five-column presentation.
-The [historical specification](historical-spec.md) preserves original stories, requirement IDs,
-success criteria, and status; consolidation does not claim implementation or new test results.
+The traceability table below and [task-history ledger](../task-history.md) preserve requirement
+ownership and historical completion evidence; consolidation claims no new implementation or tests.
 
 ## Requirement traceability
 
@@ -23,7 +23,9 @@ success criteria, and status; consolidation does not claim implementation or new
 
 Historical SC-001 and SC-003 map to 006 SC-001; SC-002 maps to SC-006;
 SC-004 maps to SC-004; SC-005 maps to SC-005.
-Existing [plans](plan.md), [tasks](tasks.md), research, data models, checklists, and contracts
-remain historical evidence, not an independent backlog. Earlier column names/order MUST NOT
+The obsolete independent plan, backlog and full historical specification were removed.
+Research, data models, checklists and older contracts remain historical evidence,
+not an independent backlog. Use [006's plan](../006-stock-table-columns/plan.md) and
+[tasks](../006-stock-table-columns/tasks.md). Earlier column names/order MUST NOT
 override 006 or its [stock-table contract](../006-stock-table-columns/contracts/stock-table.md).
 Reconcile older artifacts before execution; retain task completion markers and prior test evidence.

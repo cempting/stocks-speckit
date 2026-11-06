@@ -1,18 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: 2.0.0 -> 3.0.0
-- Modified principles:
-  - I. Deliberate Design Before Code -> I. Keep It Simple
-  - II. Small, Cohesive Units -> II. Lean Delivery
-  - III. Tests Are Required Evidence -> retained as a workflow quality gate
-  - IV. Simple Streamlit-First Architecture -> retained as an application constraint
-  - V. Maintainability Is a Feature -> V. Separation of Concerns
-- Added principles:
-  - III. YAGNI
-  - IV. Avoid Waste
-  - VI. High Cohesion, Low Coupling
+- Version change: 4.0.0 -> 4.0.1
+- Modified principles: none; all six core principles are preserved
+- Modified constraints: none; feature-defined native tabs have no fixed numerical limit
+- Clarified governance: amendment history now states the accepted navigation rule directly
+- Added sections: none
 - Removed sections: none
 - Follow-up TODO placeholders: none
+- Approval: the user explicitly approved the wording-only 4.0.1 update on 2026-11-06
+- Migration impact: none; existing obligations and architecture approvals remain unchanged
+- Scope: no application, test, feature artifact, or template changes
 - Review note: remove this temporary Sync Impact Report before committing the amendment
 -->
 # stocks-speckit Constitution
@@ -61,8 +58,12 @@ why no simpler boundary is viable.
 ## Application and Data Constraints
 
 - The application MUST use Python and Streamlit for Market Leadership Screening. UI work MUST
-  follow the single-file or three-step `st.tabs` architecture; tab labels and feature scope are
-  specified in feature requirements, not inferred from this constitution.
+  use the single-file or native `st.tabs` architecture. Accepted feature specifications MUST
+  define the required workflows, tab labels, and tab count; this constitution imposes no fixed
+  numerical tab limit. Each new tab MUST serve an approved current requirement, not anticipated
+  functionality. Tab-count changes MUST preserve unrelated workflows, namespaced session-local
+  state, shared data context, and explicit data-loading safeguards. This keeps navigation aligned
+  with verified user needs without introducing another routing framework or speculative scope.
 - Market data MUST be fetched on the fly using `yfinance` or a single free financial API selected
   for the application. A deployment MUST use only that selected source for runtime market-data
   requests; silent provider switching, multi-provider pooling, and unapproved paid data sources
@@ -121,4 +122,14 @@ unjustified complexity, waste, oversized units, coupling, test gaps, and expired
 Violations MUST be corrected before merge unless an exception meeting the workflow requirements
 above is approved.
 
-**Version**: 3.0.0 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-10-29
+The 4.0.0 UI architecture amendment, explicitly approved on 2026-11-06, permits feature-defined
+native tab navigation without a fixed numerical tab limit. All six core principles and other
+application/data constraints remain unchanged. The existing four-tab navigation is permitted
+without a tab-count exception. Feature plans and exception records MUST be reconciled with this
+amendment before merge; the amendment alone does not close tracking issues, complete tasks,
+change application behavior, or provide new validation evidence.
+
+The 4.0.1 wording clarification was explicitly approved on 2026-11-06. It restates the accepted
+UI architecture rule without changing governance obligations, application behavior, or evidence.
+
+**Version**: 4.0.1 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-11-06

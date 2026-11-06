@@ -8,10 +8,17 @@ over older fixed-depth wording below.
 
 ## Root Interface
 
-The root application exposes exactly two tabs:
+The root retains the following tabs under 004 and
+[015](../../015-dedicated-stock-lookup/spec.md), which supersedes the original two-tab limit:
 
 1. **Discovery**
 2. **Industry Deep-Dive**
+3. **Yahoo Classification Preview**
+4. **Find a stock**
+
+015 owns lookup placement, while 012 retains identity and listing safeguards.
+Discovery does not contain lookup controls. On 013 adoption all four workflows
+consume the same pinned validated context and enforce its acquisition/permission gates.
 
 Fundamental Grading is not rendered. The root does not expose a synthetic-fixture, snapshot,
 weekly-leadership, acceptance, or provider-selection control.
@@ -19,6 +26,11 @@ weekly-leadership, acceptance, or provider-selection control.
 ## Discovery
 
 Discovery has one live yfinance data path.
+
+The current progressive contract shows no separate sector Ticker or industry ETF
+column: the Sector/Industry buttons contain the ticker and full name. Both tapes
+have eight visible columns, retaining ticker evidence internally. Stock Ticker
+remains in the five-column stock table under 006.
 
 The Discovery heading, **As of** date input, and **Refresh data** button share one
 bottom-aligned row, in that order, with three equal-width columns.

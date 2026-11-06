@@ -1,5 +1,10 @@
 # Quickstart: Validate Industry ETF Momentum
 
+> **Superseded validation workflow (2026-11-06):** Retained as historical evidence.
+> Use [008's validation guide](../008-industry-representation-tools/quickstart.md)
+> for current reviewed ETF/basket scope and 004's presentation contracts.
+> Original T001-T011 are superseded, not completed, in the [ledger](../task-history.md).
+
 ## Prerequisites
 
 - Use the repository virtual environment.

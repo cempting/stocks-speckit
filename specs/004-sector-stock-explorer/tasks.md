@@ -11,6 +11,12 @@ preserved controls.
 The historical tasks below retain their original completion evidence; the current spec and
 contract supersede the earlier entity-column presentation.
 
+**2026-11-06 column amendment**: Sector Ticker and industry ETF are now internal
+fields, displayed in their entity buttons rather than separate columns. Each
+entity tape has eight visible columns; stock tapes retain five. Current execution
+and regression evidence are tracked by [015 T023-T025](../015-dedicated-stock-lookup/tasks.md).
+Historical completed tasks below are not instructions to restore the removed columns.
+
 **Input**: Design documents from `/specs/004-sector-stock-explorer/`
 
 **Prerequisites**: `plan.md`, `spec.md`, `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`

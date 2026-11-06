@@ -1,9 +1,9 @@
 ---
 id: SPEC-README
 title: Domain specification — Financial markets, trading & investing
-version: 0.3.0
+version: 0.3.1
 status: draft
-date: 2026-11-03
+date: 2026-11-06
 ---
 
 # Domain specification: Financial markets, trading & investing
@@ -17,7 +17,7 @@ distilled from 30 source documents (see the source index at the end). Their boil
 (disclosures, bios, promotions, exercises) was stripped first. The content is educational domain
 modelling, not financial advice.
 
-## Current Application Authority (2026-11-03)
+## Current Application Authority (2026-11-06)
 
 The numbered feature specifications define the implemented or accepted screener scope; the
 domain aspects describe broader educational concepts, not permission to add portfolio, coaching,
@@ -26,38 +26,43 @@ The [constitution](../.specify/memory/constitution.md) governs development.
 For overlapping application requirements, use the following explicit authority map rather than
 treating every historical plan as a simultaneous implementation instruction:
 
-There are **ten active application/service specifications**. Overlapping features 003, 005, and 007
+There are **thirteen active application/service specifications**. Overlapping features 003, 005, and 007
 have been merged into 004, 006, and 008 respectively; their original paths now redirect to the
 owning specification and map every original functional requirement. Distinct features remain
 separate. Educational aspects and their decisions have not been merged into application scope.
 
 | Active feature | Sole ownership | Dependencies and boundaries |
 |---|---|---|
-| [001: Technical analysis and component scores](001-market-leadership-screener/spec.md) | Technical criteria, adaptive consolidation heuristic, financial metric definitions and peer percentiles | No root navigation, index controls, table layout, or aggregate-score authority; cohort context follows 012 on adoption |
-| [002: Fundamental matrix](002-fundamental-grading-layout/spec.md) | Three-column/eight-metric layout, commentary, EPS consistency and quarterly history | Rendered on current stock surfaces, not a third root tab; does not redefine 001 scores or 011 risk warnings |
-| [004: Live Discovery and explorer](004-sector-stock-explorer/spec.md) | Two root tabs, yfinance-only live path, progressive tapes, industry momentum, chart/control baseline and stable navigation; absorbs 003 | Consumes 006 table, 008 representations and 010 releases; 012 adds versioned nested membership and within-Discovery stock lookup |
-| [006: Stock comparison table](006-stock-table-columns/spec.md) | Exactly five columns, CAP Type thresholds, complete equal-weight Total Score, explicit loading and evidence states; absorbs 005 | Component formulas remain 001; peer membership/context follows 012, without hidden loads or changed aggregate weights |
+| [001: Technical analysis and component scores](001-market-leadership-screener/spec.md) | Technical criteria, adaptive consolidation heuristic, financial metric definitions and peer percentiles | No root navigation, index controls, or table layout; score-methodology evaluation follows 014 and cohort context follows 012 on adoption |
+| [002: Fundamental matrix](002-fundamental-grading-layout/spec.md) | Three-column/eight-metric layout, commentary, EPS consistency and quarterly history | Rendered on current stock surfaces, not an additional root tab; does not redefine 001 scores or 011 risk warnings |
+| [004: Live Discovery and explorer](004-sector-stock-explorer/spec.md) | Discovery and Industry Deep-Dive workflows, yfinance-only live path, progressive tapes, industry momentum, chart/control baseline and stable navigation; absorbs 003 | Consumes 006 table, 008 representations and 010 releases; 012 defines identity lookup safeguards and 015 owns the dedicated lookup workflow |
+| [006: Stock comparison table](006-stock-table-columns/spec.md) | Exactly five columns, CAP Type thresholds, Total Score presentation, explicit loading and evidence states; absorbs 005 | Component formulas remain 001; aggregate calculation is subject to evaluation and approved changes under 014; peer membership/context follows 012, without hidden loads |
 | [008: Industry representations and momentum](008-industry-representation-tools/spec.md) | Exact approved ETF/basket momentum, all active-node statuses, review worklists, weights, dates and approval provenance; absorbs 007 | 004 owns display controls, 009 collects candidates, 010 publishes files; new custom scopes need reviewed applicability |
 | [009: Local ETF research](009-local-etf-discovery/spec.md) | Safe literal collection, immutable occurrences/decisions, conflicts/currentness and provenance | Candidate research is not representation approval; optional failures do not remove unrelated approved coverage |
 | [010: Manifest CSV catalogs](010-manifest-csv-catalogs/spec.md) | File/source authority, file-only review storage, release validation/publication and safe legacy cutover | Lifecycle/file foundation and runtime snapshot consumption exist; governed review, reconciliation and retirement are not claimed complete |
-| [011: Company-risk evidence](011-company-risk-evidence/spec.md) | Cash-flow risk warnings, structured issuer evidence, business/moat/orders, source permissions and safe acquisition | Preserves 001/002/006 calculations and layout; enrichment never approves or changes classification |
+| [011: Company-risk evidence](011-company-risk-evidence/spec.md) | Cash-flow risk warnings, structured issuer evidence, business/moat/orders, source permissions and safe acquisition | Preserves raw evidence, identity and source permissions; cash-flow warnings coordinate with 014; enrichment never approves or changes classification |
 | [012: Stock identity and memberships](012-stock-industry-memberships/spec.md) | Custom overlapping stock memberships, deeper single-parent hierarchy, identity ownership, deduplicated rollups, contextual peers and migration | Bounded versioned revision of 010 cardinality/hierarchy; reviewed migration remains required, not implied by documentation or partial code |
-| [013: Market structure service and observation cache](013-market-structure-service/spec.md) | Independent structure delivery, app-owned durable observation coverage, on-demand bootstrap, incremental reuse and offline cached browsing | Revises the runtime delivery boundary, not 010 publication integrity, 012 identity/membership, 011 source rights, or 004/006 UI and explicit-load behavior; specified, not implemented |
+| [013: Market structure service and observation cache](013-market-structure-service/spec.md) | Independent structure delivery, app-owned durable observation coverage, on-demand bootstrap, incremental reuse and offline cached browsing | Revises the runtime delivery boundary across all four current tabs, not 010 publication integrity, 012 identity/membership, 011 source rights, or 004/006/015 UI and explicit-load behavior; workspace/foundation implemented, service/cache integration pending |
+| [014: Fundamental score evaluation](014-fundamental-score-evaluation/spec.md) | Evaluation of Quality, Growth, Cash Flow, and stock-list Total Score methodology; score consistency, interpretation, and risk disclosures | Evaluates 001 component definitions and 006 aggregate semantics; changes require documented findings, explicit approval, and versioning; 011 retains issuer evidence and cash-flow warning ownership |
+| [015: Dedicated stock lookup](015-dedicated-stock-lookup/spec.md) | Placement of retained-stock lookup and its existing detail/history workflow in the dedicated Find a stock tab | Preserves 012 identity and listing verification rules; supersedes 004's exact two-tab limit for this tab and relocates 012's former within-Discovery lookup |
+| [016: Daily sector/industry performance](016-add-daily-performance/spec.md) | Add `1d` immediately before the weekly return in Sector performance and Industry momentum | Narrowly supersedes 004's five-visible-period baseline; preserves 008 approved ETF/basket evidence, 015 buttons/hidden ticker fields, thumbnail options, ranking defaults, and 006 stock columns; planning complete, implementation pending |
 
 ### Consolidation and precedence
 
-| Replaced feature | Active owner | Preserved baseline |
+| Replaced feature | Active owner | Preserved traceability |
 |---|---|---|
-| [003: Industry momentum](003-industry-momentum-table/spec.md) | [004](004-sector-stock-explorer/spec.md) | [Original stories, FR/SC IDs and assumptions](003-industry-momentum-table/historical-spec.md) |
-| [005: Contained stock score](005-contained-stock-score/spec.md) | [006](006-stock-table-columns/spec.md) | [Original stories, FR/SC IDs and assumptions](005-contained-stock-score/historical-spec.md) |
-| [007: Industry ETF momentum](007-industry-etf-momentum/spec.md) | [008](008-industry-representation-tools/spec.md) | [Original stories, FR/SC IDs and assumptions](007-industry-etf-momentum/historical-spec.md) |
+| [003: Industry momentum](003-industry-momentum-table/spec.md) | [004](004-sector-stock-explorer/spec.md) | FR/SC mappings in redirect; completed T001-T011 in [ledger](task-history.md) |
+| [005: Contained stock score](005-contained-stock-score/spec.md) | [006](006-stock-table-columns/spec.md) | FR/SC mappings in redirect; completed T001-T006 in [ledger](task-history.md) |
+| [007: Industry ETF momentum](007-industry-etf-momentum/spec.md) | [008](008-industry-representation-tools/spec.md) | FR/SC mappings in redirect; superseded, not completed, T001-T011 in [ledger](task-history.md) |
 
 1. The constitution governs development; this map assigns requirement ownership, not new scope.
 2. Read the active owner for overlapping behavior. Replaced feature IDs remain historical
    references, not additional backlogs. Qualify repeated IDs by feature (for example `006 FR-006`).
-3. 004 owns current navigation: exactly Discovery and Industry Deep-Dive, one progressive tape
-   at a time, no provider/fixture modes, no restored index or obsolete multi-sector controls.
-   The one-day calculation remains defined without requiring a removed one-day selector.
+3. 004 owns the Discovery and Industry Deep-Dive workflows, one progressive tape at a time,
+   no provider/fixture modes, no restored index or obsolete multi-sector controls. 015 owns the
+   separate Find a stock tab and supersedes 004's exact two-tab limit for that workflow.
+   016 adds the one-day return column to both entity tapes without restoring a removed one-day
+   selector or changing the thumbnail options.
 4. 006 owns the latest stock-table amendment: **Price chart + 50 MA, Volume chart, Ticker
    (including company name), CAP Type, Total Score**. No separate Name/price/component-score/
    status/date columns. Sector/industry metadata uses 004's existing tooltips and context.
@@ -65,10 +70,12 @@ separate. Educational aspects and their decisions have not been merged into appl
    only its explicitly revised identity, cardinality, hierarchy, rollup, peer-context and lookup
    behavior through a reviewed version boundary. Neither ordinary enrichment nor this merge
    migrates releases or transfers approvals to a new classification.
-6. Plans, research, data models, contracts, quickstarts, checklists and tasks retain original
-   evidence and IDs. Conflicting historical instructions are not current implementation authority;
-   reconcile them against their active owner and 010/012 before execution. Preserve completed
-   markers and test records; documentation consolidation is not implementation verification.
+6. Obsolete independent plans/backlogs and full historical specifications for 003/005/007
+   were removed. The [compact ledger](task-history.md) preserves completed/retired IDs and
+   immutable Git evidence; redirects preserve FR/SC mappings. Retained research, models,
+   quickstarts and checklists are historical, not a second execution workflow. Referenced
+   supporting contracts remain, subject to the active owner and 010/012. Documentation
+   consolidation is not implementation verification.
 7. 013 assigns reviewed structure delivery to a separately deployable `market-structure`
    application in this repository and durable fetched observations to the stock app.
    The app consumes validated revisions rather than service-owned storage. On-demand
@@ -86,7 +93,7 @@ company enrichment does not authorize classification changes. Feature 012 has an
 The approved 2026-11-02 refinements define per-request evidence reuse, separately
 permitted stored business/moat sharing, and listing/issuer-bounded history observations.
 The [active feature pointer](../.specify/feature.json) now selects
-[013](013-market-structure-service/spec.md) for service/cache planning. Feature 012's
+[015](015-dedicated-stock-lookup/spec.md). Feature 012's
 unfinished tasks and migration obligations remain intact; moving the pointer neither completes
 them nor implements the service. Feature 013 now has an
 [implementation plan](013-market-structure-service/plan.md),
@@ -100,6 +107,33 @@ unavailable-gap retries, shared-reader/exclusive-pruner locking and durable
 permission guards across rollback/restart. The refreshed backlog has 96 test-first
 tasks incorporating those decisions. Analysis passed; implementation is in progress,
 with completed task checkboxes representing verified work rather than feature completion.
+
+The 2026-11-06 execution reconciliation preserves completed feature-001 IDs in
+[the consolidated ledger](task-history.md) and
+starts [its current backlog](001-market-leadership-screener/tasks.md) at T099.
+Unbuilt weekly/multi-market/flow scope and 002's multi-sector T005-T008 are explicitly
+superseded, not completed. Pending tasks use current shared-package/tools owners.
+013's remaining integration tasks include Discovery, Industry Deep-Dive, Yahoo
+Classification Preview and Find a stock under one pinned context and permission gate.
+Lookup placement remains 015's; identity/listing safeguards remain 012's.
+The fourth-tab exception and issue #2 remain unchanged; documentation is not migration,
+source approval, new test results or implementation completion.
+
+The documentation-only cleanup removes obsolete historical bodies from active 001/002/004/008
+plans without deleting their current scope or backlogs. Application code and appearance remain
+unchanged: four root tabs, one progressive tape at a time, the five-column stock table, existing
+chart geometry, light/dark palettes, control periods, explicit loading and independent widget
+state. Future shared-context adoption stays in 013; unfinished accepted work is not obsolete.
+
+The subsequent user-approved 015 button amendment intentionally changes only entity-button
+text presentation in sector performance, industry momentum and stock lists: ticker above full
+wrapping name at >=2:1 font size, or `No ticker` for missing sector/industry ETF evidence.
+All other protected presentation, selection behavior and explicit-load boundaries remain.
+
+The subsequent approved 015 FR-014 amendment removes the redundant sector Ticker
+and industry ETF columns. Both entity tapes have eight visible columns: two charts,
+Sector/Industry with ticker and full name, and five return periods. Their backing
+ticker evidence remains intact; stock tapes retain all five columns including Ticker.
 
 ### File-only catalog invariants
 

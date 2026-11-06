@@ -14,10 +14,11 @@ claims are not implementation evidence.
 
 ## Authoritative Scope and Contracts
 
-- Build the missing three-tab and dated stock-selection foundation, not a
-  standalone preview as the final deliverable. Keep the Cloud root entrypoint.
-- Use one yfinance live source and an explicitly offline fixture mode. Live
-  membership/display rights remain fail-closed until reviewed and documented.
+- The completed T001-T004 below preserve the original foundation's evidence, not
+  current instructions to restore three tabs, fixture modes or removed grading routes.
+  Current navigation follows 004 and 015; catalog authority follows 010/012.
+- Use the single selected yfinance source; synthetic fixtures remain automated-test
+  inputs only. Live membership/display rights remain fail-closed until reviewed.
 - Bundle `.info`, `.quarterly_financials`, `.quarterly_cashflow`, and the approved
   `.quarterly_balance_sheet` through one injected Ticker reader and keyed cache.
 - Use the exact formulas and source/period rules in
@@ -79,20 +80,20 @@ reviewed rights and catalog coverage, not by success of fixture tests.
 
 ## Follow-up - Multi-Sector Discovery Detail
 
-**Goal**: Let users select one or more sectors, restrict the sector tape to that
-selection, and show each selected sector's contained industries in the existing
-performance-table style without fabricating live industry evidence.
+**Superseded, not completed (2026-11-06)**: 004 FR-036 owns single-path Discovery
+and retires the earlier multi-sector/weekly controls. T005-T008 are historical
+proposals, not executable tasks or dependencies. Their IDs must not be reused;
+any future multi-sector requirement needs separate explicit approval.
 
-- [ ] T005 [US6] Add failing multi-sector AppTest coverage in `tests/app/test_discovery.py` and `tests/app/test_scoreboard.py` for ordered multi-selection, tape filtering, one industry-performance table per selected weekly sector, selection changes, and empty/no-valid-selection states.
-- [ ] T006 [US6] Replace single-sector selection with namespaced ordered multi-sector selection in `src/market_leadership/ui/workflows/discovery_page.py` and `src/market_leadership/ui/workflows/scoreboard.py`; preserve all-sector tape behavior until a selection is made, filter the tape to selected sectors thereafter, and pass every selected stable sector node ID in the industry handoff.
-- [ ] T007 [US6] Render the contained industries for every selected sector through `src/market_leadership/application/inspect_industry.py` and `src/market_leadership/ui/workflows/industry_detail.py`, reusing `src/market_leadership/ui/components/ranking_table.py` and `src/market_leadership/ui/performance_table.py` where their performance-table contracts apply; retain weekly snapshot provenance and display an actionable limitation rather than inventing a live industry table without verified dated coverage.
-- [ ] T008 [US6] Update the multi-sector discovery guidance in `README.md` and validate `tests/app/test_discovery.py`, `tests/app/test_scoreboard.py`, `tests/app/test_industry_discovery.py`, `tests/unit/ui/test_sector_chart.py`, `uv run ruff check src tests`, and `uv run pyright`.
+- T005 **Superseded (not completed)**: Multi-sector AppTests and weekly-sector tables.
+- T006 **Superseded (not completed)**: Ordered multi-sector selection and handoff.
+- T007 **Superseded (not completed)**: Weekly contained-industry table integration.
+- T008 **Superseded (not completed)**: Multi-sector documentation and validation.
 
 ## Dependencies and Execution Order
 
 ```text
 T001 financial contract -> T002 selection foundation -> T003 renderer -> T004 integration
-T005 multi-sector acceptance tests -> T006 selection/tape synchronization -> T007 industry tables -> T008 documentation and validation
 ```
 
 Keep the four existing task IDs sequential; there are no parallel markers because
@@ -106,21 +107,17 @@ fail-first validation, not an additional hidden test phase.
 | US3: missing evidence | T001, T003, T004 | Exact fallbacks and unaffected valid slots |
 | US4: three-step journey | T002, T004 | Dated stock selection and production grading handoff |
 | US5: quarterly history | T001, T003, T004 | Four-to-eight real bars or separate short-history status |
-| US6: multi-sector discovery detail | T005, T006, T007, T008 | Selected sectors filter the tape and expose their verified industry performance tables |
 
 ## Parallel Execution
 
-The follow-up tasks intentionally have no `[P]` markers: their selection state,
-tape filtering, industry rendering, and acceptance tests share the same discovery
-workflow and must be completed in dependency order.
+There is no pending multi-sector execution wave. The completed foundation retains
+its original sequential evidence; current matrix changes need their own test-first tasks.
 
 ## Implementation Strategy
 
-1. Complete T005 first to establish red acceptance cases for both discovery modes.
-2. Deliver T006 as the MVP: multi-select sectors and filter the sector tape.
-3. Complete T007 only with verified weekly industry evidence; retain the explicit
-   live-data limitation where that evidence is unavailable.
-4. Finish T008 with focused and static validation, then run the non-live regression.
+Preserve the eight-slot matrix and existing quarterly histories on current stock
+surfaces. Defer navigation to 004/015, membership to 010/012 and score evaluation
+to 014. Do not execute superseded T005-T008 or revive historical runtime modes.
 
 ## Required Completion Evidence
 

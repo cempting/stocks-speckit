@@ -22,6 +22,7 @@ class Settings:
     fundamental_display_approval: str = ""
     experimental_universe_catalog: str = ".data/experimental-us-industry-catalog.json"
     catalog_manifest_path: str = ".data/catalog/CURRENT.json"
+    yahoo_classification_cache_path: str = ".cache/yahoo-classifications.json"
     company_evidence_root: str = ".data/company-evidence"
     sec_edgar_user_agent: str = field(default="", repr=False)
 
@@ -51,6 +52,9 @@ def load_settings() -> Settings:
             "EXPERIMENTAL_UNIVERSE_CATALOG", ".data/experimental-us-industry-catalog.json"
         ),
         catalog_manifest_path=str(resolve_catalog_manifest()),
+        yahoo_classification_cache_path=os.getenv(
+            "YAHOO_CLASSIFICATION_CACHE_PATH", ".cache/yahoo-classifications.json"
+        ),
         company_evidence_root=str(resolve_company_evidence_root()),
         sec_edgar_user_agent=os.getenv("SEC_EDGAR_USER_AGENT", "").strip(),
     )

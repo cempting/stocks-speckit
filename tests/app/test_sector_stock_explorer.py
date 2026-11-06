@@ -39,6 +39,8 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
     app.segmented_control(PREFIX + "thumbnail_period").set_value("1w").run()
     app.segmented_control(PREFIX + "performance_basis").set_value("vs S&P 500").run()
     as_of = app.date_input[0].value
+    sector_label = app.button(PREFIX + "sector_tape_select_test-sector").label
+    assert sector_label.startswith("**") and "**  \n" in sector_label
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert not app.exception
     assert app.session_state[PREFIX + "sector"] == "test-sector"
@@ -48,6 +50,8 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
     assert not any(item.value == "Representation type" for item in app.caption)
     button = app.button(PREFIX + "industry_tape_select_" + industry)
     assert button.help
+    assert button.label.startswith("**") and "**  \n" in button.label
+    assert not any(item.value == "ETF" for item in app.caption)
     button.click().run()
     assert not app.exception
     assert app.selectbox(PREFIX + "industry").value == industry
@@ -55,7 +59,7 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
     if industry == "test-empty":
         assert any("no active stock memberships" in item.value for item in app.info)
     else:
-        assert any(item.label == "TEST_STOCK_1 · Test stock 1" for item in app.button)
+        assert any(item.label == "**TEST\\_STOCK\\_1**  \nTest stock 1" for item in app.button)
         assert any(item.value == "Not loaded" for item in app.markdown)
     assert app.segmented_control(PREFIX + "thumbnail_period").value == "1w"
     assert app.segmented_control(PREFIX + "performance_basis").value == "vs S&P 500"
@@ -129,7 +133,7 @@ def test_discovery_shows_only_sector_tape_until_sector_is_selected(monkeypatch, 
     assert not any(widget.key == PREFIX + "sector" for widget in app.selectbox)
     assert any("Price + 50 MA" in item.value for item in app.caption)
     assert any("Volume by price direction" in item.value for item in app.caption)
-    assert any(item.value == "Ticker" for item in app.caption)
+    assert not any(item.value == "Ticker" for item in app.caption)
     assert not any(item.value == "Status" for item in app.caption)
     assert app.button(PREFIX + "sector_tape_select_test-sector").help
     assert not any(item.value == "Representation" for item in app.caption)
@@ -147,7 +151,7 @@ def test_sector_and_industry_selection_replaces_tape_and_shows_all_members(
     _select_industry(app, PREFIX, "test-cloud").run(timeout=20)
     assert not app.exception
     assert any(item.value == "Contained stocks" for item in app.subheader)
-    assert any(item.label == "TEST_STOCK_1 · Test stock 1" for item in app.button)
+    assert any(item.label == "**TEST\\_STOCK\\_1**  \nTest stock 1" for item in app.button)
     assert any("Unresolved placeholder" in item.label for item in app.button)
     assert any(item.value == "CAP Type" for item in app.caption)
     assert any(item.value == "Total Score" for item in app.caption)
@@ -330,7 +334,7 @@ def test_changing_sector_clears_selected_industry_and_members(monkeypatch, catal
     app.button(PREFIX + "breadcrumb_sectors").click().run()
     assert not app.exception
     assert PREFIX + "industry" not in app.session_state
-    assert not any(item.label == "TEST_STOCK_1 · Test stock 1" for item in app.button)
+    assert not any(item.label == "**TEST\\_STOCK\\_1**  \nTest stock 1" for item in app.button)
 
 
 def test_industry_deep_dive_uses_same_file_memberships_and_preserves_missing_company_id(
@@ -371,13 +375,15 @@ def test_discovery_distinguishes_etf_basket_and_not_covered_and_batches_active_s
         "Representation type: Stock basket alternative" in text for text in representation_help
     )
     assert any("Representation type: ETF" in text for text in representation_help)
-    assert any(item.value == "Not covered" for item in app.markdown)
+    assert any("Not covered" in text for text in representation_help)
+    assert any(button.label.startswith("**No ticker**  \n") for button in app.button)
     assert set(calls[-1]) == {"TEST_ETF", "TEST_INVENTORY"}
     edit_csv(catalog_release, "industry_etfs", lambda rows: rows.clear())
     publish_entry(catalog_release)
     app.run()
     assert not app.exception
-    assert any(item.value == "Not covered" for item in app.markdown)
+    assert any(button.help and "Not covered" in button.help for button in app.button)
+    assert any(button.label.startswith("**No ticker**  \n") for button in app.button)
 
 
 def test_expired_unverified_and_nonprimary_listings_never_request_prices(
@@ -580,12 +586,13 @@ def test_reviewed_subindustry_remains_a_gap_row_with_exact_members(monkeypatch, 
         for option in app.selectbox(PREFIX + "industry").options
     )
     specialist_label = app.button(PREFIX + "industry_tape_select_test-specialist").label
-    assert specialist_label.endswith("[test-specialist]")
-    assert "test-cloud" in specialist_label
+    assert specialist_label.startswith("**No ticker**  \n")
+    assert specialist_label.endswith(r"\[test\-specialist\]")
+    assert r"test\-cloud" in specialist_label
     assert "Not covered" in app.button(PREFIX + "industry_tape_select_test-specialist").help
     _select_industry(app, PREFIX, "test-specialist").run()
     assert not app.exception
-    assert any(item.label == "TEST_STOCK_1 · Test stock 1" for item in app.button)
+    assert any(item.label == "**TEST\\_STOCK\\_1**  \nTest stock 1" for item in app.button)
     assert not any("Unresolved placeholder" in item.label for item in app.button)
     deep = AppTest.from_file(DEEP).run()
     deep.selectbox("market_leadership.screening.sector").select("test-sector").run()

@@ -17,7 +17,7 @@ def _select_industry(app, key, node_id):
     return selectbox.select(option)
 
 
-def test_entrypoint_has_two_tabs_and_resolves_catalog_once(monkeypatch, catalog_release):
+def test_entrypoint_has_four_tabs_and_resolves_catalog_once(monkeypatch, catalog_release):
     from market_data.catalog import CatalogReader
 
     calls = configure_ui(monkeypatch, catalog_release)
@@ -32,7 +32,12 @@ def test_entrypoint_has_two_tabs_and_resolves_catalog_once(monkeypatch, catalog_
     monkeypatch.setattr(CatalogReader, "read", read)
     app = AppTest.from_file(ROOT / "streamlit_app.py").run(timeout=20)
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == ["Discovery", "Industry Deep-Dive"]
+    assert [tab.label for tab in app.tabs] == [
+        "Discovery",
+        "Industry Deep-Dive",
+        "Yahoo Classification Preview",
+        "Find a stock",
+    ]
     assert len(reads) == 1
     assert calls == [("TEST_ETF",)]
     app.run()
@@ -46,7 +51,10 @@ def test_invalid_catalog_clears_both_tabs_without_provider_calls(
 ):
     calls = configure_ui(monkeypatch, catalog_release)
     app = AppTest.from_file(ROOT / "streamlit_app.py").run(timeout=20)
-    for prefix in ("market_leadership.progressive_discovery.", "market_leadership.screening."):
+    for prefix in (
+        "market_leadership.progressive_discovery.",
+        "market_leadership.screening.",
+    ):
         for suffix in (
             "sector",
             "industry",
@@ -58,6 +66,9 @@ def test_invalid_catalog_clears_both_tabs_without_provider_calls(
         ):
             app.session_state[prefix + suffix] = "test-sector" if suffix == "sector" else "stale"
     app.session_state["market_leadership.progressive_discovery.thumbnail_period"] = "1w"
+    lookup_prefix = "market_leadership.stock_lookup."
+    app.session_state[lookup_prefix + "lookup_query"] = "stale"
+    app.session_state[lookup_prefix + "lookup_history"] = "stale"
     app.session_state["dark_mode"] = True
     calls.clear()
     if corrupt == "manifest":
@@ -79,6 +90,7 @@ def test_invalid_catalog_clears_both_tabs_without_provider_calls(
     for prefix in ("market_leadership.progressive_discovery.", "market_leadership.screening."):
         for suffix in ("sector", "industry", "stocks", "scores"):
             assert prefix + suffix not in app.session_state
+    assert not any(key.startswith(lookup_prefix) for key in app.session_state)
 
 
 def test_discovery_does_not_read_legacy_experimental_catalog(monkeypatch, catalog_release):

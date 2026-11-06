@@ -23,8 +23,9 @@ stock CSV with exact industry references and the reviewed hierarchy, not a separ
 JSON catalog or catalog database. Synthetic catalogs remain isolated automated-test inputs.
 
 The Tab 3/three-step foundation scenarios below are historical navigation context:
-[feature 004](../004-sector-stock-explorer/spec.md), incorporating 003, owns the current two-tab
-root interface and removes runtime evidence-mode controls. They do not authorize restoring either.
+[feature 004](../004-sector-stock-explorer/spec.md), incorporating 003, owns Discovery/Deep-Dive
+and removes runtime evidence-mode controls; [015](../015-dedicated-stock-lookup/spec.md) owns
+dedicated lookup placement. They do not authorize restoring historical tabs or modes.
 Financial scorecards consumed by current stock surfaces retain their layout/evidence semantics.
 The single-provider rule in constitution v3.0.0 remains binding; the earlier requested amendment
 below was not permission to switch providers. See the [authority map](../README.md).

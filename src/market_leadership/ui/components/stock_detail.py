@@ -39,6 +39,8 @@ def render_stock_detail(
     on_load_research: Callable[[], None] | None = None,
     comparison_context_label: str | None = None,
     direct_membership_paths: tuple[str, ...] = (),
+    widget_key_prefix: str = "market_leadership.stock_detail.",
+    back_button_label: str = "Back to Discovery",
 ) -> None:
     st.title(f"{member.symbol or 'Unlisted'} · {member.name}")
     if isinstance(member, MembershipEntry):
@@ -110,7 +112,7 @@ def render_stock_detail(
             if on_load_financial is not None:
                 st.button(
                     "Load financial evidence",
-                    key="market_leadership.stock_detail.load_financial",
+                    key=widget_key_prefix + "load_financial",
                     on_click=on_load_financial,
                 )
             if financial_evidence is not None:
@@ -121,7 +123,7 @@ def render_stock_detail(
             if on_load_research is not None:
                 st.button(
                     "Load stored business and moat claims",
-                    key="market_leadership.stock_detail.load_research",
+                    key=widget_key_prefix + "load_research",
                     on_click=on_load_research,
                 )
             if research_evidence is not None:
@@ -130,8 +132,8 @@ def render_stock_detail(
                 st.caption("Stored research: not loaded.")
 
     st.button(
-        "Back to Discovery",
-        key="market_leadership.stock_detail.back",
+        back_button_label,
+        key=widget_key_prefix + "back",
         on_click=on_return,
     )
 

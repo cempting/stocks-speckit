@@ -53,6 +53,7 @@ def test_app_starts_with_default_catalog_without_live_provider(
     monkeypatch.delenv("MARKET_CATALOG_MANIFEST_PATH", raising=False)
     monkeypatch.setattr(dotenv, "load_dotenv", lambda **kwargs: None)
     monkeypatch.setenv("MARKET_DATA_SOURCE_CACHE_PATH", str(tmp_path / "source-cache"))
+    monkeypatch.setenv("YAHOO_CLASSIFICATION_CACHE_PATH", str(tmp_path / "yahoo-cache.json"))
     monkeypatch.setattr(
         "market_leadership.bootstrap.build_request_provider",
         lambda *args, **kwargs: FixtureProvider(),
@@ -61,5 +62,9 @@ def test_app_starts_with_default_catalog_without_live_provider(
     app = AppTest.from_file(ROOT / "streamlit_app.py").run(timeout=30)
 
     assert not app.exception
-    assert [tab.label for tab in app.tabs] == ["Discovery", "Industry Deep-Dive"]
+    assert [tab.label for tab in app.tabs] == [
+        "Discovery",
+        "Industry Deep-Dive",
+        "Yahoo Classification Preview",
+    ]
     assert os.environ["MARKET_CATALOG_MANIFEST_PATH"] == str(DEFAULT_ENTRY)

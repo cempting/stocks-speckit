@@ -7,6 +7,11 @@ controls, and US2 overlap/deep-membership behavior are implemented on synthetic
 fixtures. US3/US4 and broad acceptance work remain incomplete. No production catalog
 activation, source collection, or rights approval has occurred.
 
+Lookup placement now follows 015's dedicated Find a stock tab, not inline Discovery.
+Current checks preserve all four root workflows and their independent state; on 013
+adoption they share one validated service context. Earlier results below remain historical
+evidence, not proof that the revised integration or migration tasks are complete.
+
 ## Prerequisites
 
 Python 3.12, existing development environment, synthetic reviewed fixture inputs in

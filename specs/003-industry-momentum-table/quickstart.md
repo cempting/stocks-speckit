@@ -1,5 +1,10 @@
 # Quickstart: Validate Simplified Live Discovery
 
+> **Superseded validation workflow (2026-11-06):** Retained as historical evidence,
+> not executable setup for the current app. Use [004's validation guide](../004-sector-stock-explorer/quickstart.md)
+> and current four-tab contracts. Completion evidence is in the [ledger](../task-history.md);
+> do not restore old catalogs, modes or selectors.
+
 > **2026-10-31 alignment:** Independent JSON/environment catalog setup below is historical.
 > Feature 004's current pre-cutover runtime uses reviewed database membership;
 > [feature 010](../010-manifest-csv-catalogs/spec.md) targets one validated manifest-backed

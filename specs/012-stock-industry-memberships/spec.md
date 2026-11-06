@@ -41,7 +41,8 @@ This remains the active, distinct identity/membership revision after the 2026-11
 consolidation; the active feature pointer and existing design/task artifacts remain unchanged.
 [010](../010-manifest-csv-catalogs/spec.md) owns manifest publication and file-only lifecycle;
 this feature owns the reviewed version boundary, issuer/instrument/listing identity, custom
-membership/hierarchy, descendant deduplication, peer context and within-Discovery lookup.
+membership/hierarchy, descendant deduplication, peer context and lookup identity/listing
+safeguards. [015](../015-dedicated-stock-lookup/spec.md) owns the dedicated lookup workflow.
 
 The merged owners are [004](../004-sector-stock-explorer/spec.md) for Discovery/navigation
 (including former 003), [006](../006-stock-table-columns/spec.md) for the five-column stock
@@ -58,7 +59,7 @@ See the [authority map](../README.md).
 
 ### Session 2026-11-01
 
-- Q: How should users open a stock that has no active industry membership? → A: Stock lookup within existing Discovery, including retained identified unassigned stocks; listing and issuer-evidence verification rules still apply.
+- Q: How should users open a stock that has no active industry membership? → A: Use the dedicated Find a stock workflow in [015](../015-dedicated-stock-lookup/spec.md), including for retained identified unassigned stocks; listing and issuer-evidence verification rules still apply.
 - Q: Should migration keep existing reviewed industry assignments when their meaning is unchanged, or require every assignment to be reviewed again? → A: Preserve compatible existing assignments and original approval provenance through an explicitly reviewed migration; separately review changed or new assignments.
 
 ### Session 2026-11-02
@@ -115,12 +116,12 @@ volume observations spanning a reused ticker's issuer transition.
    association and provenance remain visible, and a name or ticker alone does not
    establish an issuer match.
 4. **Given** a retained identified instrument without an active industry membership,
-   **When** I look it up within Discovery and open its details, **Then** the correct
+   **When** I find it in the dedicated stock lookup and open its details, **Then** the correct
    instrument is accessible, membership and industry comparisons are explicitly
    unassigned/unavailable, and eligible listing history and company evidence remain
    available independently of classification.
 5. **Given** a retained identified instrument without a usable reviewed listing,
-   **When** I look it up within Discovery, **Then** its details remain accessible,
+   **When** I find it in the dedicated stock lookup, **Then** its details remain accessible,
    price unavailability is explained, and no unverified listing is requested.
 
 ---
@@ -404,18 +405,20 @@ restore the prior release. Check stock identity, history, and selection outcomes
   explicit reviewed applicability before using a representation in its new scope.
   Membership overlap or nesting MUST NOT authorize parent substitution, an ETF,
   a basket, or a direct index automatically.
-- **FR-023**: Existing Discovery and stock-detail navigation MUST use stable scoped
+- **FR-023**: Existing stock-detail navigation and the dedicated Find a stock lookup in
+  [feature 015](../015-dedicated-stock-lookup/spec.md) MUST use stable scoped
   identities. Ordinary reruns and compatible release changes MUST preserve valid
   selections and clear only dependent invalid selections, explaining the reason.
   Industry names or file order MUST NOT select replacement stocks or classifications.
-  Discovery MUST allow lookup and detail access for retained identified instruments
-  in the selected release and region, including those without active memberships.
+  The lookup MUST allow detail access for retained identified instruments in the
+  selected release and region, including those without active memberships.
   Lookup MUST resolve the instrument explicitly and MUST NOT invent memberships,
   establish issuer ownership, or authorize an unverified listing request.
 - **FR-024**: The revision MUST preserve existing root workflows, mandatory stock
   table columns, market-data source choices, chart behavior, and approved calculation
   rules except for the explicitly specified membership, hierarchy, rollup,
-  peer-context, and within-Discovery stock-lookup changes.
+  peer-context changes and the relocation of stock lookup to the dedicated tab in
+  feature 015.
 
 ### Key Entities *(include if feature involves data)*
 

@@ -1,57 +1,59 @@
 # Implementation Plan: Industry Representation Tools
 
-> Consolidation notice (2026-11-02): [008](spec.md) now owns former 007's exact-ETF momentum
-> and evidence states as well as reviewed basket/ETF tooling. Reconcile this plan and retained 007
-> evidence before execution; preserve task completion/test history and 010/012 version boundaries.
+**Reconciled**: 2026-11-06 | **Spec**: [spec.md](spec.md)
 
-> **2026-10-31 alignment:** The database boundary below describes implemented pre-cutover work.
-> [Feature 010](../010-manifest-csv-catalogs/spec.md) replaces it with manifest-managed file
-> sources and durable review/audit records. Exact ETF/basket approval, verified constituents,
-> effective dates, 100% weights, no reweighting, and explicit chart gaps remain required.
-> Preserve completed tasks/history; migrate records and refactor all consumers during 010.
+## Scope and Current Authority
 
-**Branch**: `008-industry-representation-tools` | **Date**: 2026-10-31 | **Spec**: [spec.md](./spec.md)
+Provide reviewed worklists and maintenance for industry/sub-industry representations:
+exact approved ETFs where suitable, otherwise explicitly reviewed weighted stock baskets.
+008 also owns former 007's exact-ETF momentum and distinct mapping/evidence states.
+Original 007 T001-T011 are superseded, not completed, in the
+[ledger](../task-history.md); retirement does not certify current 008 implementation.
 
-## Summary
+010 owns manifest-managed file sources, publication and durable review/audit records.
+012 revises membership/hierarchy only through a reviewed version boundary.
+The obsolete SQLite/region-database plan has been removed; do not restore database
+storage or recreate app-local domain/catalog modules.
+[Tasks](tasks.md) retain active work and historical completion evidence.
 
-Provide reviewed worklist and administration tooling for industry/sub-industry representations:
-approved ETFs where suitable, otherwise explicitly reviewed weighted stock baskets. The discovery
-table identifies ETF, stock-basket alternative, or no coverage and calculates only active approved
-evidence.
+## Technical Context and Flow
 
-## Technical Context
+- Reuse the existing Python/Streamlit/pandas workspace, pytest, Ruff and strict Pyright.
+- Shared pure representation/calculation rules belong in
+  `packages/market-data/src/market_data/domain/`; catalog/schema authority stays in
+  that shared package. Publication and reviewed maintenance belong to
+  `services/market-structure/`. App acquisition, cache and UI stay in
+  `src/market_leadership/`.
+- Resolve only active approved exact region/classification/node/listing mappings
+  from the validated release, or 013's pinned context on adoption. Preserve source
+  provenance, effective dates, review status and independent source permissions.
+- Validate verified constituents and effective-dated basket weights summing to 100%.
+  Missing constituents/history cause explicit gaps, not reweighting, substitution
+  or invented returns. Parent, sector, broad-market and arbitrary proxies are forbidden.
+- Batch only distinct eligible symbols in the displayed scope after existing
+  explicit load actions. Separate unmapped, invalid, unavailable and insufficient
+  evidence; keep all active reviewed nodes visible.
+- Follow [representation-workflow](contracts/representation-workflow.md) for review,
+  approval, worklists and evidence. Research under 009 does not approve coverage;
+  publishing under 010 does not transfer approvals to another classification.
 
-**Language/Version**: Python 3.12  
-**Primary Dependencies**: Streamlit, pandas, pytest  
-**Storage**: Existing reviewed regional SQLite database  
-**Testing**: pytest, Ruff, strict Pyright  
-**Target Platform**: Local Streamlit application and administration CLI  
-**Project Type**: Single Python application  
-**Performance Goals**: Batch only distinct active ETF/basket symbols in the displayed scope  
-**Constraints**: Reviewed sources, verified listings, effective dates; no automatic inference  
-**Scale/Scope**: Active GICS industries and sub-industries
+## Protected Presentation and Validation
 
-## Constitution Check
+004 owns progressive Discovery style/controls, 006 owns the five-column stock tape,
+and 015 owns dedicated lookup placement. Keep all four root tabs, chart geometry,
+palettes, tooltips, period/basis controls and independent state unchanged.
+Hidden representation/status columns retain their tooltip evidence; do not make
+new visible columns to satisfy the historical ETF-only wording.
 
-PASS. Reuse existing reviewed-source, representation, and market-data boundaries. Baskets are a
-current required fallback, not a generalized portfolio system. No hidden provider requests or
-substitutions are introduced.
+Add failing mapping, approval, weight/date, no-substitution and gap tests before
+corresponding changes. Use controlled catalogs and injected history, then run
+focused unit/integration/AppTests and existing quality gates.
+See [quickstart](quickstart.md). Historical test completion does not establish
+live coverage, display rights, migrated approvals or remaining task acceptance.
 
-## Project Structure
+## Constitution and Complexity
 
-```text
-src/market_leadership/
-├── infrastructure/region_database.py
-├── domain/industry_representations.py
-├── application/discover_sectors.py
-├── universe_admin.py
-└── ui/workflows/discovery_page.py
-tests/{unit,integration,app}/
-```
-
-**Structure Decision**: Extend existing reviewed database, administration CLI, discovery workflow,
-and table rendering.
-
-## Complexity Tracking
-
-No constitution violations or exceptions.
+Reuse existing reviewed-source, representation and market-data boundaries; baskets
+are governed representations, not a generalized portfolio system. No hidden provider
+requests, new store or new exception is authorized. The existing fourth-tab exception
+remains owned by 015 under [issue #2](https://github.com/cempting/stocks-speckit/issues/2).

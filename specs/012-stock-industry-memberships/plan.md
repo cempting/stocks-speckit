@@ -18,8 +18,8 @@ Permit reviewed overlapping memberships and deeper single-parent industry trees.
 Retained v1 data keeps its original operational validation and classification meaning.
 
 Reuse MembershipId, reviewed listing gates, immutable publication, stable scoped
-identities, existing charts, and unchanged calculation functions. Add stock lookup
-inside Discovery and separate instrument selection from industry comparison selection.
+identities, existing charts, and unchanged calculation functions. Use the dedicated
+Find a stock workflow owned by 015 and separate instrument selection from industry comparison.
 Share eligible issuer-owned facts through the feature 011 acquisition boundary,
 never by substituting an entire listing-bound financial bundle.
 
@@ -51,8 +51,8 @@ with overlapping assertions and deeper branches; record phase timings and memory
 on the same reference environment.
 
 **Constraints**: Retain 64 MiB artifact and 1 MiB manifest/record limits, observable
-failures, identity-aware cache hits, explicit financial/research loading, exactly
-two root tabs, and existing mandatory stock-table columns.
+failures, identity-aware cache hits, explicit financial/research loading, all current
+root workflows under 004/015, and existing mandatory stock-table columns.
 
 **Scale/Scope**: Existing US catalog and retained records; existing 10,000-instrument
 benchmark plus membership/listing copies. No new regional coverage, configurable
@@ -99,21 +99,26 @@ specs/012-stock-industry-memberships/
 ### Source Code (repository root)
 
 ```text
-src/market_leadership/
+packages/market-data/src/market_data/
+  catalog.py
   domain/catalog.py
   domain/stock_selection.py
   domain/peer_scores.py                   # unchanged formulas/eligibility
+  schemas/catalog-manifest-v2.schema.json
+  schemas/membership-migration.schema.json # planned packaged resource
+services/market-structure/src/market_data_tools/
+  membership_migration.py                 # planned bounded converter/reconciler
+  catalog_admin.py
+src/market_leadership/
   application/score_industry.py
   application/industry_representations.py
-  infrastructure/catalog_files.py
+  infrastructure/catalog_files.py         # compatibility alias, not implementation owner
   infrastructure/stock_membership.py
-  infrastructure/membership_migration.py   # planned bounded converter/reconciler
-  infrastructure/catalog-manifest-v2.schema.json  # planned packaged resource
   ui/cache.py
   ui/navigation.py
   ui/workflows/discovery_page.py
   ui/workflows/industry_deep_dive.py
-  universe_admin.py
+  ui/workflows/stock_lookup.py
 tests/
   unit/
   contract/
@@ -122,9 +127,13 @@ tests/
 ```
 
 **Structure Decision**: Extend existing layers and stock-detail components.
-One new runtime migration module isolates preparation from reading/publication.
-Reuse the 011 acquisition/store boundary; no new workflow, provider, evidence
+The tools-owned migration module isolates preparation from shared catalog reading/publication.
+Reuse the 011 acquisition/store boundary and 015 placement; no new provider, evidence
 store, generic graph engine, or parallel scoring service.
+
+On 013 adoption, the current four root workflows consume one pinned validated service
+context, including retained-stock lookup. This reconciliation does not complete US3/US4,
+change identity/listing rules, or relax the tracked fourth-tab exception.
 
 ## Phase 0 - Research
 

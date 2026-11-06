@@ -12,7 +12,11 @@ def preserve_catalog_controls() -> None:
     # Keep controls through Streamlit's cleanup when invalid input hides their widgets.
     if "dark_mode" in st.session_state:
         st.session_state["dark_mode"] = st.session_state["dark_mode"]
-    for prefix in ("market_leadership.progressive_discovery.", "market_leadership.screening."):
+    for prefix in (
+        "market_leadership.progressive_discovery.",
+        "market_leadership.screening.",
+        "market_leadership.stock_lookup.",
+    ):
         for suffix in ("thumbnail_period", "performance_basis", "as_of"):
             key = prefix + suffix
             if key in st.session_state:
@@ -32,6 +36,10 @@ def clear_catalog_selections() -> None:
             "context",
         ):
             st.session_state.pop(prefix + suffix, None)
+    lookup_prefix = "market_leadership.stock_lookup."
+    for key in tuple(st.session_state):
+        if isinstance(key, str) and key.startswith(lookup_prefix):
+            st.session_state.pop(key, None)
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,11 +1,12 @@
-# Contract: Discovery Lookup, Membership Paths and Peer Context
+# Contract: Stock Lookup, Membership Paths and Peer Context
 
-**Status**: Target behavior for existing root workflows; no new root tab.
+**Status**: Target behavior for existing root workflows; lookup placement follows
+[015](../../015-dedicated-stock-lookup/spec.md), identity safeguards remain owned by 012.
 
 ## Lookup and navigation
 
-Discovery provides local retained-identified-instrument lookup in the selected
-release/region, before classification/empty-sector early returns. Labels/reviewed
+Find a stock provides retained-identified-instrument lookup in the selected
+release/region, independently of Discovery classification/empty-sector early returns. Labels/reviewed
 symbols may filter candidates, but selection resolves an exact InstrumentId.
 Ambiguous matches require explicit choice; do not create records or request an
 arbitrary user-entered remote ticker.
@@ -20,13 +21,17 @@ duplicate labels by path/stable ID. Keep empty nodes and distinguish direct cove
 from rollup inclusion. Details list every effective direct membership and its path.
 Opening through a parent rollup establishes that parent as explicit peer context.
 
-Preserve root tabs, mandatory stock columns, chart periods/bases, metric formulas,
-three-component aggregate rules and source selection.
+Preserve Discovery, Industry Deep-Dive, Yahoo Classification Preview and Find a stock,
+mandatory stock columns, chart periods/bases, metric formulas, three-component aggregate
+rules and source selection. Discovery must not render lookup controls.
+On 013 adoption, every workflow consumes the same pinned validated service context;
+retained local replica reads are not a separate lookup authority.
 
 ## Session state
 
-Reuse market_leadership.progressive_discovery.* and market_leadership.screening.*
-namespaces. Separate instrument/listing selection from comparison scope/node/date
+Use market_leadership.stock_lookup.* for the dedicated lookup, keeping Discovery's
+market_leadership.progressive_discovery.* and existing market_leadership.screening.*
+namespaces distinct. Separate instrument/listing selection from comparison scope/node/date
 and context-keyed explicitly loaded peer results.
 
 Ordinary reruns and compatible cutovers retain valid identities. Deep-Dive selections

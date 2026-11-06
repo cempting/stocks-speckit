@@ -43,17 +43,52 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
                 entity_column: ["Same name", "Same name"],
                 "Node ID": ["first", "second"],
                 "Status": ["Not covered", "Invalid evidence: expired mapping"],
-                "Representation": ["Not covered", "Reviewed basket"],
+                "ETF" if entity_column == "Industry" else "Ticker": ["ETF", None],
+                "1 week": [None, None],
+                "1 month": [None, None],
+                "3 months": [None, None],
+                "6 months": [None, None],
+                "12 months": [None, None],
             }
         )
         if entity_column == "Industry":
+            frame["Representation"] = ["Not covered", "Reviewed basket"]
             frame["Representation type"] = ["Not covered", "Stock basket alternative"]
         render_chart_tape(frame, key="entities", on_select=select)
+        assert frame["ETF" if entity_column == "Industry" else "Ticker"].tolist() == [
+            "ETF",
+            None,
+        ]
         st.write(f"Selected: {st.session_state.get('selected_node')}")
 
     app = AppTest.from_function(app_script, args=(entity_column,)).run()
     assert not app.exception
-    assert [item.label for item in app.button] == ["Same name", "Same name"]
+    assert [item.label for item in app.button] == [
+        "**ETF**  \nSame name",
+        "**No ticker**  \nSame name",
+    ]
+    headings = {
+        "Price + 50 MA",
+        "Volume by price direction",
+        entity_column,
+        "Ticker",
+        "ETF",
+        "1 week",
+        "1 month",
+        "3 months",
+        "6 months",
+        "12 months",
+    }
+    assert [item.value for item in app.caption if item.value in headings] == [
+        "Price + 50 MA",
+        "Volume by price direction",
+        entity_column,
+        "1 week",
+        "1 month",
+        "3 months",
+        "6 months",
+        "12 months",
+    ]
     assert not any(item.value == "Node ID" for item in app.caption)
     assert not any(item.value == "Status" for item in app.caption)
     if entity_column == "Industry":
@@ -69,6 +104,65 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
     app.button("entities_select_second").click().run()
     assert not app.exception
     assert any(item.value == "Selected: second" for item in app.markdown)
+
+
+@pytest.mark.parametrize("entity_column", ["Sector", "Industry"])
+@pytest.mark.parametrize("ticker", [None, "", "Unavailable", "Not covered", "Not an ETF"])
+def test_entity_buttons_without_etf_ticker_use_explicit_label(
+    entity_column: str, ticker: str | None
+) -> None:
+    def app_script(entity_column: str, ticker: str | None) -> None:
+        import pandas as pd
+
+        from market_leadership.ui.components.progressive_tape import render_chart_tape
+
+        frame = pd.DataFrame(
+            {
+                "Price chart": ["Unavailable"],
+                "Volume chart": ["Unavailable"],
+                entity_column: ["Full unabbreviated name"],
+                "ETF" if entity_column == "Industry" else "Ticker": [ticker],
+                "Node ID": ["not-a-ticker"],
+                "Status": ["Not covered"],
+                "Representation": ["Reviewed basket"],
+                "Representation type": ["Stock basket alternative"],
+            }
+        )
+        render_chart_tape(frame, key="missing", on_select=lambda _: None)
+
+    app = AppTest.from_function(app_script, args=(entity_column, ticker)).run()
+    assert not app.exception
+    assert app.button("missing_select_not-a-ticker").label == (
+        "**No ticker**  \nFull unabbreviated name"
+    )
+
+
+def test_stock_button_preserves_literal_markdown_characters_in_full_name() -> None:
+    def app_script() -> None:
+        import pandas as pd
+
+        from market_leadership.ui.components.progressive_tape import (
+            StockTapeRow,
+            build_stock_tape_frame,
+            render_selectable_stock_tape,
+        )
+
+        rows = (
+            StockTapeRow(
+                instrument_id="literal",
+                ticker="A_B",
+                name="Full [unabbreviated] *name*",
+                history=pd.DataFrame(),
+                price_state="unavailable",
+            ),
+        )
+        render_selectable_stock_tape(build_stock_tape_frame(rows), key="literal")
+
+    app = AppTest.from_function(app_script).run()
+    assert not app.exception
+    assert app.button("literal_select_literal").label == (
+        "**A\\_B**  \nFull \\[unabbreviated\\] \\*name\\*"
+    )
 
 
 def test_stock_list_shows_name_only_in_ticker_button_and_preserves_selection() -> None:
@@ -120,8 +214,8 @@ def test_stock_list_shows_name_only_in_ticker_button_and_preserves_selection() -
         "Total Score",
     ]
     assert [item.label for item in app.button] == [
-        "AAA · Alpha",
-        "Unresolved placeholder · Unresolved company",
+        "**AAA**  \nAlpha",
+        "**Unresolved placeholder**  \nUnresolved company",
     ]
     assert not any(item.value in {"Alpha", "Unresolved company"} for item in app.markdown)
     app.button[0].click().run()

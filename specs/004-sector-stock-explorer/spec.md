@@ -44,11 +44,17 @@ enrichment. Those features do not add root tabs, table columns, or runtime data 
 
 [Feature 012](../012-stock-industry-memberships/spec.md) separately defines the versioned custom
 multi-industry revision, nested descendant rollups, contextual peers, listing/issuer continuity,
-and lookup of retained unassigned stocks within Discovery. It supersedes earlier single-assignment
-and fixed-depth assumptions only through its reviewed migration; it does not make old GICS approvals
-applicable to a custom scheme automatically. This consolidation does not activate that migration.
+and identity/listing safeguards for lookup of retained unassigned stocks. Feature
+[015](../015-dedicated-stock-lookup/spec.md) owns the dedicated lookup and detail/history
+workflow. Feature 012 supersedes earlier single-assignment and fixed-depth assumptions only
+through its reviewed migration; it does not make old GICS approvals applicable to a custom
+scheme automatically. This consolidation does not activate that migration.
 
-The current path selects one sector and one industry, with five visible return periods. Earlier
+The implemented baseline selects one sector and one industry, with five visible return periods.
+The approved [016 amendment](../016-add-daily-performance/spec.md) adds `1d` before the weekly
+column in both entity tapes, superseding only the five-period count/order constraints in
+FR-029, FR-031, and FR-035. Implementation and new validation follow 016; existing completed
+tasks remain historical evidence. Thumbnail options and ranking defaults are unchanged. Earlier
 003 multi-sector and one-day/direction-selector narratives do not authorize restoring removed
 controls. One-day return semantics remain defined for consumers that use them. Sector and industry
 evidence remain accessible at their respective progressive stages, not as simultaneous tapes.
@@ -269,8 +275,9 @@ simple moving averages, and scorecard information.
   open their industry momentum tape; industry/sub-industry names MUST be clickable to open
   their contained-stock tape, including uncovered or empty cohorts. Use stable catalog node IDs,
   not names or ETF symbols. Preserve date, thumbnail period, and performance basis.
-  The industry momentum tape MUST omit separate Status, Representation, and Representation type
-  columns, retaining ETF. Status, representation, and ETF/basket type evidence remain in name-button
+  The industry momentum tape MUST omit separate ETF, Status, Representation, and Representation type
+  columns; ETF identity remains in the Industry button. Status, representation,
+  and ETF/basket type evidence remain in name-button
   tooltips; unavailable chart and return evidence remains explicit.
 - **FR-005**: The first column of every sector performance row MUST contain a price-chart
   thumbnail for that sector, including its 50-session simple moving average when sufficient price
@@ -355,11 +362,12 @@ simple moving averages, and scorecard information.
   entity's return, not calculate a return ratio. Both choices MUST persist across hierarchy
   navigation; cleared selections MUST use their default behavior.
 - **FR-029**: Sector tape columns MUST remain ordered: "Price + 50-session SMA", "Volume by
-  price direction", "Sector", "Ticker", "1 week", "1 month", "3 months", "6 months",
+  price direction", "Sector", "1 week", "1 month", "3 months", "6 months",
   "12 months". Sector status belongs in the sector-name tooltip, not a separate column.
-  Industry rows replace "Sector" with "Industry" and identify their mapped fund in "ETF";
+  Industry rows replace "Sector" with "Industry"; both entity buttons identify their mapped fund.
   industry status, representation, and representation type belong in name-button tooltips
-  under FR-004. The sector "Ticker" MUST NOT revert to "Representation".
+  under FR-004. Sector Ticker and industry ETF remain internal evidence, not separate
+  visible columns, under [015 FR-014](../015-dedicated-stock-lookup/spec.md).
 - **FR-030**: Both thumbnail plot heights MUST remain 84 pixels across all tapes and period
   choices. Price and supported SMA overlay MUST remain in the first chart; directional volume
   MUST remain in the separate adjacent chart with its existing explanatory legend.
@@ -374,7 +382,14 @@ simple moving averages, and scorecard information.
   Mappings MUST NOT create ETF industry memberships, be silently inferred from names, or
   replace an unavailable industry chart with its parent sector chart.
 
-- **FR-033**: The root interface MUST expose exactly Discovery and Industry Deep-Dive.
+The approved 2026-11-06 amendment in [015 FR-011-FR-013](../015-dedicated-stock-lookup/spec.md)
+changes only entity-button labels: ticker (or `No ticker`) above the full wrapping name,
+at least twice the name's font size. Native selection/navigation and all other
+FR-025-FR-032 presentation invariants remain unchanged.
+
+- **FR-033**: The root interface MUST retain Discovery and Industry Deep-Dive. Feature
+  [015](../015-dedicated-stock-lookup/spec.md) adds a separate Find a stock tab and supersedes
+  this requirement's exact two-tab limit for that tab.
   Fundamental Grading, provider selection, synthetic-fixture, published-snapshot, acceptance,
   and weekly-leadership modes MUST NOT be selectable at runtime. Synthetic evidence MAY remain
   isolated in automated tests.
@@ -513,8 +528,9 @@ simple moving averages, and scorecard information.
 - **SC-023**: Controlled release changes with the database unavailable match 100% of effective
   hierarchy/member sets, affect only relevant requests/results without code edits, and use zero
   invalid/unapproved fallback representations.
-- **SC-024**: Controlled root and live-failure cases expose exactly two tabs, zero runtime
-  fixture/provider modes, and zero alternate-provider, fixture, snapshot, or stale-success fallbacks.
+- **SC-024**: Controlled root and live-failure cases expose Discovery and Industry Deep-Dive,
+  plus separately specified root tabs, with zero runtime fixture/provider modes and zero
+  alternate-provider, fixture, snapshot, or stale-success fallbacks.
 
 ## Assumptions
 

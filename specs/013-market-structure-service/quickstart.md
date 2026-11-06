@@ -8,6 +8,14 @@ incorporates those decisions. Cross-artifact analysis completed without actionab
 findings before implementation. Task checkboxes track verified progress; commands
 below remain planned until their corresponding implementation gates pass.
 
+The 2026-11-06 reconciliation extends T033/T045/T075/T078/T082/T083 to all four
+current tabs. Controlled online, offline, rejected-update and blocked scenarios
+must verify one pinned context across Discovery, Industry Deep-Dive, Yahoo
+Classification Preview and Find a stock, independent widget state, retained/unassigned
+lookup, exact eligible listings and zero hidden or offline external acquisitions.
+Preview output must not approve classification; lookup has no separate local authority.
+These revised tests remain planned, not newly passing implementation evidence.
+
 ## Recorded implementation evidence
 
 ### T001: pre-move baseline (2026-11-04)

@@ -1,8 +1,9 @@
 # Quickstart and Validation: Progressive Stock Screener
 
 **Status**: Post-implementation validation guide for [plan.md](plan.md).
-The repository still contains the prior routed application. Writing this guide does
-not implement the tabs, new detector, source coverage or financial scorecards.
+Current execution follows the reconciled [tasks](tasks.md). The root already has
+Discovery, Industry Deep-Dive, Yahoo Classification Preview and Find a stock.
+This guide does not certify the adaptive detector, source coverage or acceptance.
 
 ## Prerequisites and Setup
 
@@ -15,13 +16,13 @@ not implement the tabs, new detector, source coverage or financial scorecards.
 From the repository root:
 
 ```bash
-uv sync --locked --all-groups
-uv run streamlit run src/market_leadership/app.py
+uv run streamlit run streamlit_app.py
 ```
 
-The new path requires no database, Massive key, snapshot build, persistent Parquet
-cache or MCP server. Do not treat legacy provider/snapshot environment settings as
-new-path source selection. Avoid public deployment until rights are verified.
+Supply a reviewed manifest through `MARKET_CATALOG_MANIFEST_PATH` using the current
+application setup. 001 adds no database, provider or store; 013's service/cache
+configuration applies on adoption. Restore dependencies only after a missing-package
+failure. Avoid public deployment until rights are verified.
 
 ## Automated Evidence
 
@@ -29,9 +30,9 @@ Write the relevant tests failing-first, implement, then run the smallest affecte
 test selection before the full applicable suite:
 
 ```bash
-uv run pytest tests/unit/domain tests/contract tests/integration tests/app
-uv run ruff format --check src tests
-uv run ruff check src tests
+uv run pytest tests/unit/domain tests/contract tests/integration tests/app -m "not live"
+uv run ruff format --check src packages services tests
+uv run ruff check src packages services tests
 uv run pyright
 ```
 
@@ -49,11 +50,11 @@ missing/invalid cases and a known full available membership list.
 
 | Scenario | Actions and required result |
 |---|---|
-| Three-stage entry | Exactly Sectors and Industries, Industry Stocks, Stock Detail; later stages explain prerequisites; rendering/tab switches make no unsolicited remote call |
-| Industry returns | Load industries; default five-session interval; change to one. Exact adjusted endpoints, gaining/declining/neutral labels and shared competition ranks agree with fixtures |
-| Universe coverage | Test index union, exchange/cap intersection and sector union; 300M/2B/10B boundaries; unknown caps; unsupported index never becomes an unrestricted universe |
-| Representation | Qualified ETF before verified largest member; stable-ID cap ties; no broad ETF or incomplete-cap largest claim; missing qualification leaves a visible unranked industry |
-| Stocks and selection | Choose industry, load stocks; all available members accessible, including beyond a full page; sorting precedes paging; only checkbox cells editable |
+| Root navigation | Preserve all four current tabs and one shared validated catalog/context; Find a stock is absent from Discovery; lookup/detail opening performs no unsolicited history or issuer-evidence load |
+| Industry returns | Reuse 004's five visible periods and exact adjusted completed-session endpoints; retain the one-session calculation without restoring its removed selector |
+| Membership coverage | Reuse 010/012 reviewed regional identities, dates, deduplicated rollups and explicit invalid/unassigned states; do not restore index, exchange/cap or multi-sector selectors |
+| Representation | Reuse 008's exact approved ETF or explicit approved basket; missing representation cannot become a parent ETF, largest stock or inferred proxy |
+| Stocks and selection | Choose industry, explicitly load required data; all available members remain accessible beyond a full page; preserve 006's five columns and stable identity |
 | Technical AND | Independently enable each rule and combinations; SMA equality fails; volume exactly 2x preceding-20 mean passes; insufficient evidence does not pass |
 | Consolidation and spike | Prior-session quiet run plus current spike can both match; latest/previous versus older runs differ; compare 4/5-session, multi-month and multi-year cases |
 | Charts | Sector/industry/stock uses its own history; at most latest corridor by default, older inspectable; displayed dates, width and duration match detector output; no-interval differs from insufficient |
@@ -103,6 +104,7 @@ Record source scope, dates, coverage and rights before enabling affected live re
 Unavailable capabilities must stay visibly unavailable; mocked green tests do not
 certify them. See [research.md](research.md) for feasibility limits.
 
-Next generate revised tasks specifically for feature 001 while preserving historical
-IDs. The active-feature pointer currently targets 002; do not run an unqualified
-task-generation command and accidentally replace feature 002's work.
+The current [backlog](tasks.md) starts at T099; the [ledger](../task-history.md)
+preserves T001-T098 and links their original evidence.
+The active pointer selects 015; use an explicit feature-001 context before analyzing
+or implementing this backlog. Documentation reconciliation does not mark new work complete.

@@ -78,12 +78,36 @@ Open the local URL printed by Streamlit. The runner defaults to
 ```bash
 MARKET_CATALOG_MANIFEST_PATH=/absolute/path/to/CURRENT.json \
   uv run streamlit run streamlit_app.py
+
+MARKET_CATALOG_MANIFEST_PATH=data/catalog-us-etf-clusters/CURRENT.json \
+  uv run streamlit run streamlit_app.py
+
 ```
 
-The app has **Discovery** and **Industry Deep-Dive** tabs. Discovery loads the
-selected catalog scope's daily market data from yfinance on page load and refresh;
+
+
+The app has **Discovery**, **Industry Deep-Dive**, and **Yahoo Classification
+Preview** tabs. Discovery loads the selected catalog scope's daily market data from
+yfinance on page load and refresh;
 the provider needs no API key. The first run may therefore require an internet
 connection. Stop the app with Ctrl-C in the terminal.
+
+The **Yahoo Classification Preview** tab is separate from the reviewed catalog and
+does not make network requests. To populate its local-only cache, run a bounded batch
+from the repository root:
+
+```bash
+uv run market-yahoo-classifications --limit 25
+```
+
+Each invocation requests at most 25 uncached symbols by default; `--limit` accepts
+1–100, and `--symbols A AA` can target specific active catalog symbols. Use
+`--force` with either option to refresh cached entries. Yahoo responses are saved
+under `.cache/yahoo-classifications.json` by default, outside Git. Missing provider
+labels remain `Unknown`; failed requests are reported and do not replace cached data.
+This is a current provider-label snapshot, not an official or historical taxonomy.
+The [yfinance project](https://github.com/ranaroussi/yfinance) states that its API is
+intended for personal use; keep the resulting cache local and do not commit it.
 
 For a UI-only smoke test, you may point the app at the synthetic test manifest:
 
@@ -104,7 +128,9 @@ local paths or retry behavior; the example already selects the repository catalo
 `MARKET_DATA_CACHE_PATH` sets the local market-data cache (default
 `.cache/market-data`), and `MARKET_DATA_SOURCE_CACHE_PATH` can set a separate source
 cache (defaults to the same location). `MARKET_DATA_RETRY_LIMIT` defaults to `2`.
-These paths are local runtime data, not catalog authority.
+`YAHOO_CLASSIFICATION_CACHE_PATH` sets the local Yahoo metadata cache (default
+`.cache/yahoo-classifications.json`). These paths are local runtime data, not catalog
+authority.
 
 Do not commit `.env`, credentials, published/private data, or caches. yfinance is
 the current runtime market-data provider and needs no key. The Massive adapter is

@@ -15,5 +15,10 @@ def test_cloud_entrypoint_renders_progressive_tabs_without_routing(
 
     assert not app.exception
     assert app.title[0].value == "Discovery"
-    assert [tab.label for tab in app.tabs] == ["Discovery", "Industry Deep-Dive"]
+    assert [tab.label for tab in app.tabs] == [
+        "Discovery",
+        "Industry Deep-Dive",
+        "Yahoo Classification Preview",
+        "Find a stock",
+    ]
     assert calls == [("TEST_ETF",)]

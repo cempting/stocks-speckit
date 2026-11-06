@@ -146,7 +146,9 @@ def test_selecting_stock_row_opens_its_stable_identity(
 ) -> None:
     app = _run_app(monkeypatch, catalog_release)
     app = _select_cloud_industry(app)
-    next(button for button in app.button if button.label == "BBB · Beta").click().run(timeout=20)
+    next(button for button in app.button if button.label == "**BBB**  \nBeta").click().run(
+        timeout=20
+    )
 
     assert not app.exception
     assert any(item.value == "BBB · Beta" for item in app.title)
@@ -174,17 +176,22 @@ def test_local_stock_lookup_opens_exact_listing_without_industry_prefetch(
 ) -> None:
     history_calls: list[tuple[str, ...]] = []
     monkeypatch.setattr(
-        "market_leadership.ui.workflows.discovery_page.load_member_history",
-        lambda _cache, symbols, *_args, **_kwargs: history_calls.append(symbols),
+        "market_leadership.bootstrap.load_selected_stock_history",
+        lambda *_args, **_kwargs: history_calls.append(("selected history",)),
     )
-    app = _run_app(monkeypatch, catalog_release)
-    app.text_input("market_leadership.progressive_discovery.lookup_query").set_value("AAA").run(
-        timeout=20
-    )
-    app.selectbox("market_leadership.progressive_discovery.lookup_instrument").select(
+    configure_ui(monkeypatch, detail_release(catalog_release))
+    app = AppTest.from_file(ROOT / "streamlit_app.py").run(timeout=20)
+    app = _select_cloud_industry(app)
+    app.selectbox("market_leadership.progressive_discovery.stock_picker").select(
         "instrument-aaa"
     ).run(timeout=20)
-    listing_picker = app.selectbox("market_leadership.progressive_discovery.lookup_listing")
+    app.text_input("market_leadership.stock_lookup.lookup_query").set_value("AAA").run(
+        timeout=20
+    )
+    app.selectbox("market_leadership.stock_lookup.lookup_instrument").select(
+        "instrument-aaa"
+    ).run(timeout=20)
+    listing_picker = app.selectbox("market_leadership.stock_lookup.lookup_listing")
     assert listing_picker.options
     listing_picker.select(listing_picker.options[0]).run(timeout=20)
     next(button for button in app.button if button.label == "Open stock detail").click().run(

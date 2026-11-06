@@ -10,11 +10,22 @@ and feature 008 governs labeled baskets. See the [authority map](../../README.md
 of a custom overlapping membership scheme, deeper single-parent hierarchy, descendant rollups,
 industry-specific cohorts, retained unassigned-stock lookup, and issuer/listing continuity.
 Those versioned changes override only the affected membership assumptions below; they do not
-change the two-tab baseline, five-column stock table, explicit load behavior, or ETF approvals.
+change the five-column stock table, explicit load behavior, or ETF approvals.
+Lookup placement follows [015](../../015-dedicated-stock-lookup/spec.md); identity/listing
+safeguards remain 012's. On 013 adoption every root workflow uses one validated service context.
 
 ## Root and stages
 
-- Keep the current two root tabs: `Discovery` and `Industry Deep-Dive`.
+**Approved 016 daily-column amendment (2026-11-06)**:
+[016's UI contract](../../016-add-daily-performance/contracts/daily-performance-ui.md) adds
+`1d` before `1 week` in both sector and industry tapes. It supersedes the five-return/eight-visible-
+column baseline below with six returns/nine visible columns only. Thumbnail options, stock columns,
+default ranking, charts, hidden metadata, and native controls remain unchanged. This is pending
+implementation and validation under 016, not a claim that historical tasks delivered the column.
+
+- Retain `Discovery`, `Industry Deep-Dive`, `Yahoo Classification Preview` and `Find a stock`.
+  015 supersedes the original two-tab limit and owns lookup placement; Discovery must
+  not render the lookup search, identity/listing selection or lookup-detail workflow.
 - Discovery shows exactly one progressive tape at a time:
   - selected region with no sector selection: that region's sector performance;
   - valid sector selection: that region/classification's industry momentum;
@@ -43,16 +54,26 @@ change the two-tab baseline, five-column stock table, explicit load behavior, or
 
 ### Preserved presentation (2026-10-30)
 
+- The user-approved 2026-11-06 amendment in [015](../../015-dedicated-stock-lookup/spec.md)
+  renders native entity buttons with ticker above full wrapping name, using ticker
+  font size at least twice the name's. Missing/unavailable/basket-only sector or
+  industry ETF evidence shows `No ticker`, never a node ID. Preserve stable keys,
+  callbacks, native keyboard activation, tooltips and navigation; all other
+  chart/control/table invariants below remain unchanged.
 - On wide screens, keep one row: active tape heading left, `Thumbnail period` middle,
   `Performance basis` right.
 - Period options/default: `1w`, `1m`, `3m`, `6m`, `1y` / `3m`. Basis options/default:
   `Absolute`, `vs S&P 500` / `Absolute`. Choices survive hierarchy navigation; empty choices
   use defaults. Relative performance subtracts the matching-period return of the manifest's
   reviewed S&P 500 benchmark listing; missing benchmark evidence is not silently substituted.
-- Column order: `Price + 50-session SMA`, `Volume by price direction`, `Sector`, `Ticker`,
+- Column order: `Price + 50-session SMA`, `Volume by price direction`, `Sector`,
   `1 week`, `1 month`, `3 months`, `6 months`, `12 months`.
   Under the user-approved 2026-11-01 amendment, industry columns are `Price + 50-session SMA`,
-  `Volume by price direction`, `Industry`, `ETF`, and the same five return periods.
+  `Volume by price direction`, `Industry`, and the same five return periods.
+  Under the subsequent 2026-11-06 amendment, sector `Ticker` and industry `ETF`
+  remain internal backing fields, not separate visible columns; their entity buttons
+  already display those values. Each tape has eight visible columns. Stock Ticker
+  remains visible in its unchanged five-column table.
   Status, Representation, and Representation type remain internal evidence, exposed in
   industry-name button tooltips rather than separate columns.
   Sector names are clickable to open that sector's industry momentum list; industry/sub-industry

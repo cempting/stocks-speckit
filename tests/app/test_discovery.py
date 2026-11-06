@@ -15,6 +15,7 @@ def test_discovery_uses_one_yfinance_path_and_discloses_dates(monkeypatch, catal
     assert "SOURCE YFINANCE" in text
     assert "REQUESTED" in text and "OBSERVED" in text
     assert not any(widget.label in {"Discovery mode", "Data provider"} for widget in app.selectbox)
+    assert not any(widget.label == "Search retained stock identities" for widget in app.text_input)
     assert calls == [("TEST_ETF",)]
 
 

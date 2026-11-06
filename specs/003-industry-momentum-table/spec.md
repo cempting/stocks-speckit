@@ -3,9 +3,10 @@
 **Status**: Superseded by consolidation on 2026-11-02; no independent implementation scope.
 
 The active specification is [feature 004](../004-sector-stock-explorer/spec.md).
-It owns the two-tab live interface, industry momentum, progressive navigation, and chart behavior.
-The [historical specification](historical-spec.md) preserves the original stories, requirement IDs,
-success criteria, and status; consolidation does not claim implementation or new test results.
+It owns Discovery/Industry Deep-Dive, industry momentum, progressive navigation, and chart behavior.
+Root-tab placement follows 015 and retains Yahoo Classification Preview.
+The traceability table below and [task-history ledger](../task-history.md) preserve requirement
+ownership and historical completion evidence; consolidation claims no new implementation or tests.
 
 ## Requirement traceability
 
@@ -27,14 +28,16 @@ IDs in this table are qualified by feature; historical IDs MUST NOT be reused as
 | FR-012 | FR-038 | Dated historical evidence, not forecasts |
 | FR-013 | FR-039 | Each entity uses its own observations |
 | FR-014 | FR-038 | Source, date, freshness, and failure disclosures |
-| FR-015 | FR-033 | Exactly two root tabs and no runtime evidence/provider modes |
+| FR-015 | FR-033 | Original two-tab limit superseded by 015; retained Discovery/Deep-Dive and no runtime evidence/provider modes |
 | FR-016 | FR-034 | yfinance only; explicit failure without fallback |
 | FR-017 | FR-014, FR-022, FR-040 | One reviewed release and dependent selection invalidation |
 | FR-018 | FR-014, FR-022, FR-032, FR-040 | Manifest authority and exact scoped identities |
 
 Historical SC-001-SC-007 are retained by current 004 SC-017-SC-023.
-Existing [plans](plan.md), [tasks](tasks.md), research, data models, checklists, and contracts
-remain traceable design/implementation evidence, not a second executable backlog.
+The obsolete independent plan, backlog and full historical specification were removed.
+Research, data models and checklists remain historical evidence, not execution authority.
+Use [004's plan](../004-sector-stock-explorer/plan.md) and
+[tasks](../004-sector-stock-explorer/tasks.md) for the active scope.
 The [live UI contract](contracts/live-discovery-ui.md) remains a supporting contract for 004.
 Reconcile any older artifact with 004 and the [authority map](../README.md) before further execution;
 do not reopen completed tasks or replay snapshot/database plans.

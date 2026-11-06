@@ -1,5 +1,14 @@
 # Implementation Plan: Company Risk Evidence Scoreboard
 
+> **2026-11-06 reconciliation:** 011 retains evidence/warning ownership, while 015 owns
+> dedicated lookup placement. Integrate shared evidence controls on Discovery and
+> Find a stock with independent state. Pure models/metrics are in
+> `packages/market-data/src/market_data/domain/`; administration is in
+> `services/market-structure/src/market_data_tools/company_evidence_admin.py`.
+> Original source-tree paths below are historical targets; pending tasks use current owners.
+> Preserve 012 issuer/listing safeguards and 013's shared service permissions on adoption.
+> No broader 011 task is completed by this reconciliation.
+
 **Branch**: `main` (unchanged) | **Date**: 2026-11-01 | **Spec**: [spec.md](./spec.md)
 
 **Input**: `specs/011-company-risk-evidence/spec.md`. Setup returned
@@ -8,7 +17,7 @@ returned `main`. No branch was created or switched.
 
 ## Summary
 
-Add explicit company-evidence loading to Discovery stock detail. Show cash-flow gaps and
+Add explicit company-evidence loading to Discovery and dedicated lookup stock detail. Show cash-flow gaps and
 cash-generation concerns before peer scores, then a cash overview, the existing eight-slot
 fundamental matrix, and cited business/competitive/order research. Reuse yfinance acquisition
 and caching; preserve peer-score formulas and existing point-in-time insufficiency safeguards.
@@ -64,7 +73,7 @@ most the latest eligible annual and quarterly disclosures.
 | IV. Avoid Waste | PASS: scoped loading and bundle reuse. | PASS: targeted caches/refresh; no qualitative cohort fetches. |
 | V. Separation of Concerns | PASS: transport/domain/UI separated. | PASS: explicit reader/store inputs; domain stays Streamlit-free. |
 | VI. Cohesion/Coupling | PASS: stable catalog identities. | PASS: evidence sidecar, no SQL/legacy-workflow dependency. |
-| Python/Streamlit architecture | PASS: existing two tabs. | PASS: grading inside stock detail; retired workflow remains retired. |
+| Python/Streamlit architecture | PASS within 015's tracked fourth-tab exception. | Shared evidence inside existing stock details; no new tab or revived grading workflow. |
 | Single-source/permissions | PASS: yfinance alone scores. | PASS: research attribution separate; unknown/denied uses disabled. |
 | Cache/freshness | PASS: existing financial TTL. | PASS: complete keys, explicit TTL/report age, uncached failures, scoped invalidation. |
 | Private stable state | PASS: current selection namespaces. | PASS: mode changes invalidate only assessment; public caches contain no selections. |

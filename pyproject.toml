@@ -18,6 +18,9 @@ dependencies = [
   "yfinance>=0.2.66,<1",
 ]
 
+[project.scripts]
+market-yahoo-classifications = "market_leadership.infrastructure.yahoo_classifications:main"
+
 [project.optional-dependencies]
 maintenance = ["market-structure>=0.1,<0.2"]
 

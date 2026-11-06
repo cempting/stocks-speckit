@@ -1,7 +1,9 @@
 # Quickstart and Validation: Fundamental Grading Layout
 
-This is a Phase 1 design guide. New test files, fixtures, and UI behavior described
-below are to be created during implementation; they do not exist or pass yet.
+The original foundation guide below is historical design context. Completed
+T001-T004 evidence is recorded in [tasks.md](tasks.md); T005-T008 are superseded,
+not completed. Current checks must retain 004/015 navigation, 010/012 catalog
+authority, automated-test-only fixtures and the existing eight-slot matrix.
 
 ## Prerequisites
 

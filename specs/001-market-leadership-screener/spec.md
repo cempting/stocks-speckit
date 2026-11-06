@@ -45,6 +45,11 @@ The original user stories, clarification record, and acceptance coverage below r
 Current UI tests follow 004/006; old three-stage/index/universe controls and displayed raw-metric
 lists are historical wherever superseded. Plans/tasks must be reconciled before further execution.
 
+The 2026-11-06 documentation reconciliation provides the active execution section in
+[plan.md](plan.md), the current requirement/task map in [tasks.md](tasks.md), and
+[the consolidated ledger](../task-history.md) for T001-T098. Unbuilt superseded scope is
+retired, not checked complete; preserved completed IDs do not certify revised acceptance.
+
 This specification replaces the previous active requirements for this feature, in alignment with
 constitution v3.0.0. The experience is one progressive screening journey, not separately routed
 sector and industry workflows. The initial market is US equities. Persistent weekly artifacts,
@@ -55,8 +60,8 @@ specified here.
 
 Existing implementation, prior task completion records, and data contracts are historical work,
 not evidence that the revised feature is implemented. Existing plan, research, data-model,
-quickstart, contracts, and tasks must be reconciled in subsequent planning/task-generation
-workflows before further implementation. This revision does not instruct deletion of old artifacts
+quickstart and contracts must still be checked against the active execution scope before
+further implementation. This revision does not instruct deletion of old artifacts
 or renumbering of completed tasks.
 
 ## Clarifications

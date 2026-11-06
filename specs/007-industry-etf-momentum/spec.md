@@ -4,8 +4,9 @@
 
 The active specification is [feature 008](../008-industry-representation-tools/spec.md).
 It owns reviewed ETF/basket approval and the momentum evidence consumed by Discovery.
-The [historical specification](historical-spec.md) preserves original stories, requirement IDs,
-success criteria, and status; consolidation does not claim implementation or new test results.
+The traceability table below and [task-history ledger](../task-history.md) preserve requirement
+ownership and retirement evidence. Original T001-T011 are superseded, not completed;
+consolidation claims no new implementation or tests.
 
 ## Requirement traceability
 
@@ -22,8 +23,10 @@ success criteria, and status; consolidation does not claim implementation or new
 | FR-009 | FR-001, FR-009, FR-016 | One file release, visible active nodes, no unchecked fallback |
 
 Historical SC-001-SC-005 are retained by 008 SC-006-SC-010, respectively.
-Existing [plans](plan.md), [tasks](tasks.md), research, data models, checklists, and contracts
-remain historical evidence, not an independent backlog.
+The obsolete independent plan, backlog and full historical specification were removed.
+Research, data models, checklists and older contracts remain historical evidence,
+not an independent backlog. Use [008's plan](../008-industry-representation-tools/plan.md)
+and [tasks](../008-industry-representation-tools/tasks.md) for the active scope.
 Reconcile them with 008 and its [representation contract](../008-industry-representation-tools/contracts/representation-workflow.md)
 before execution. Preserve task completion markers and prior test results; do not replay database
 plans or treat an old ETF-only description as a ban on explicitly approved basket alternatives.
