@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas.io.formats.style import Styler
 
-PERFORMANCE_COLUMNS = ("1d", "1 week", "1 month", "3 months", "6 months", "12 months")
+PERFORMANCE_COLUMNS = ("1 day", "1 week", "1 month", "3 months", "6 months", "12 months")
 
 
 def performance_table_height(row_count: int) -> int:

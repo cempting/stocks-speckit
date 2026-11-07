@@ -80,6 +80,27 @@ def test_representation_performance_longer_periods_are_independently_available()
         assert result[period].reason
 
 
+def test_representation_prepares_calendar_history_once_per_constituent(monkeypatch):
+    from market_data.domain import sector_performance
+
+    prepares = []
+    original = sector_performance._prepare_closes
+
+    def prepare(*args):
+        prepares.append(True)
+        return original(*args)
+
+    monkeypatch.setattr(sector_performance, "_prepare_closes", prepare)
+    index = pd.bdate_range(end=DAY, periods=400)
+    results = representation_performance(
+        _daily_representation(),
+        {symbol: pd.DataFrame({"close": 100.0}, index=index) for symbol in ("AAA", "BBB")},
+        as_of=DAY, start_session=date(2026, 10, 29), end_session=DAY,
+    )
+    assert all(result.value == 0 for result in results.values())
+    assert len(prepares) == 2
+
+
 @pytest.mark.parametrize(("kind", "expected"), [("etf", -0.01), ("basket", 0.005)])
 def test_daily_representation_preserves_approved_etf_and_exact_basket_weights(kind, expected):
     representation = _daily_representation(kind)

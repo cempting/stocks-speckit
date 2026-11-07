@@ -17,30 +17,94 @@ from market_leadership.ui.dataframe import render_dataframe
 from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS, performance_column_styles
 
 _ChartSeries = Sequence[Mapping[str, object]]
+_THUMBNAIL_HEIGHT = 84
 
-_ENTITY_BUTTON_STYLE = """
+_ENTITY_TAPE_STYLE = """
 <style>
-[class*="st-key-tape_entity_"] button {
+.tape-performance-label {
+    display: none;
+}
+@media (max-width: 640px) {
+    [class*="st-key-entity_tape_"] [class*="st-key-tape_headers_"] {
+        display: none;
+    }
+    [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
+        > [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap;
+        column-gap: 0.5rem;
+    }
+    [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
+        > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        min-width: 0;
+    }
+    [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
+        > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(-n+2) {
+        flex: 1 1 100%;
+    }
+    [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
+        > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) {
+        flex: 2.25 1 0%;
+    }
+    [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
+        > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(n+4) {
+        flex: 1 1 0%;
+    }
+    [class*="st-key-entity_tape_"] .tape-performance-cell {
+        padding: 0.25rem !important;
+        flex-direction: column;
+        align-items: flex-end !important;
+        justify-content: center !important;
+        font-size: 0.75rem;
+        overflow-wrap: anywhere;
+    }
+    [class*="st-key-entity_tape_"] .tape-performance-label {
+        display: block;
+        font-size: 0.75rem;
+    }
+}
+</style>
+"""
+
+_ENTITY_BUTTON_STYLE = f"""
+<style>
+[class*="st-key-tape_entity_"] button {{
+    min-height: {_THUMBNAIL_HEIGHT}px;
     height: auto;
     white-space: normal;
-}
-[class*="st-key-tape_entity_"] button [data-testid="stMarkdownContainer"] {
+}}
+[class*="st-key-tape_entity_"] button [data-testid="stMarkdownContainer"] {{
     min-width: 0;
     overflow: visible;
     white-space: normal;
-}
-[class*="st-key-tape_entity_"] button p {
+}}
+[class*="st-key-tape_entity_"] button p {{
     margin: 0;
     font-size: 0.75rem;
     line-height: 1.3;
     white-space: normal;
     overflow-wrap: anywhere;
     text-overflow: clip;
-}
-[class*="st-key-tape_entity_"] button p strong {
+}}
+[class*="st-key-tape_entity_"] button p strong {{
     font-size: 1.5rem;
     line-height: 1.2;
-}
+}}
+[class*="st-key-tape_entity_fixed_"] button {{
+    height: {_THUMBNAIL_HEIGHT}px;
+    max-height: {_THUMBNAIL_HEIGHT}px;
+    box-sizing: border-box;
+    overflow: hidden;
+}}
+[class*="st-key-tape_entity_fixed_"] button [data-testid="stMarkdownContainer"] {{
+    max-height: 100%;
+    overflow: hidden;
+}}
+[class*="st-key-tape_entity_fixed_"] button p {{
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+}}
 </style>
 """
 
@@ -228,7 +292,7 @@ def build_price_thumbnail(
     sma_frame = frame.dropna(subset=["sma50"])
     if sma_frame.empty:
         return price.properties(
-            width=135, height=84, background="#111820" if dark_mode else "#f7f8f6"
+            width=135, height=_THUMBNAIL_HEIGHT, background="#111820" if dark_mode else "#f7f8f6"
         ).configure_view(strokeWidth=0)  # pyright: ignore[reportUnknownMemberType]
     average = (
         alt.Chart(sma_frame)
@@ -237,7 +301,9 @@ def build_price_thumbnail(
     )
     return (
         alt.layer(price, average)
-        .properties(width=135, height=84, background="#111820" if dark_mode else "#f7f8f6")
+        .properties(
+            width=135, height=_THUMBNAIL_HEIGHT, background="#111820" if dark_mode else "#f7f8f6"
+        )
         .configure_view(strokeWidth=0)  # pyright: ignore[reportUnknownMemberType]
     )
 
@@ -269,7 +335,9 @@ def build_volume_thumbnail(series: object, *, dark_mode: bool = False) -> alt.Ch
                 alt.Tooltip("direction:N", title="Price direction"),
             ],
         )
-        .properties(width=135, height=84, background="#111820" if dark_mode else "#f7f8f6")
+        .properties(
+            width=135, height=_THUMBNAIL_HEIGHT, background="#111820" if dark_mode else "#f7f8f6"
+        )
         .configure_view(strokeWidth=0)
     )
 
@@ -315,12 +383,17 @@ def _render_visual_tape(
         if column not in (price_column, volume_column, *hidden_columns)
         and (not selectable or column != "Name")
     ]
-    weights = [1.3, 1.3, *([1.0] * len(content_columns))]
-    headings = st.columns(weights)
-    headings[0].caption("Price + 50 MA")
-    headings[1].caption("Volume by price direction")
-    for heading, label in zip(headings[2:], content_columns, strict=True):
-        heading.caption(label)
+    weights = [
+        1.3,
+        1.3,
+        *(2.5 if column in ("Sector", "Industry") else 1.0 for column in content_columns),
+    ]
+    with st.container(key=f"tape_headers_{key}"):
+        headings = st.columns(weights)
+        headings[0].caption("Price + 50 MA")
+        headings[1].caption("Volume by price direction")
+        for heading, label in zip(headings[2:], content_columns, strict=True):
+            heading.caption(label)
 
     performance_styles = {
         column: performance_column_styles(
@@ -372,8 +445,9 @@ def _render_visual_tape(
                         "Not an ETF",
                     ):
                         ticker = "No ticker"
+                    help_text = f"{ticker}\n{value}\n\n{help_text}"
                     button_key = f"{key}_select_{row['Node ID']}"
-                    with st.container(key=f"tape_entity_{button_key}"):
+                    with st.container(key=f"tape_entity_fixed_{button_key}"):
                         st.button(
                             _entity_button_label(ticker, str(value)),
                             key=button_key,
@@ -395,8 +469,13 @@ def _render_visual_tape(
                     text = f"{float(value):.2f}%" if pd.notna(value) else "Unavailable"
                     style = performance_styles[column][row_index]
                     st.html(
-                        f'<div style="{style}; padding: 0.5rem; border-radius: 0.25rem; '
-                        f'text-align: right; font-variant-numeric: tabular-nums">{text}</div>'
+                        f'<div class="tape-performance-cell" '
+                        f'style="{style}; padding: 0.5rem; border-radius: 0.25rem; '
+                        f'height: {_THUMBNAIL_HEIGHT}px; box-sizing: border-box; display: flex; '
+                        f'align-items: center; justify-content: flex-end; '
+                        f'text-align: right; font-variant-numeric: tabular-nums">'
+                        f'<span class="tape-performance-label">{column}</span>'
+                        f'<span class="tape-performance-value">{text}</span></div>'
                     )
                 else:
                     st.write(value)
@@ -409,7 +488,12 @@ def render_chart_tape(
     key: str,
     on_select: Callable[[str], None] | None = None,
 ) -> None:
-    _render_visual_tape(frame, key=key, selectable=False, on_entity_select=on_select)
+    if "Sector" in frame.columns or "Industry" in frame.columns:
+        st.html(_ENTITY_TAPE_STYLE)
+        with st.container(key=f"entity_tape_{key}"):
+            _render_visual_tape(frame, key=key, selectable=False, on_entity_select=on_select)
+    else:
+        _render_visual_tape(frame, key=key, selectable=False, on_entity_select=on_select)
 
 
 def render_selectable_stock_tape(frame: pd.DataFrame, *, key: str) -> tuple[int, ...]:

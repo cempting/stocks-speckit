@@ -10,11 +10,9 @@
 
 ## Clarifications
 
-**016 presentation precedence**: [Daily performance](../016-add-daily-performance/spec.md)
-supersedes only FR-014/SC-007's eight-column count with nine visible entity columns:
-two charts, the existing entity button, and six returns including `1d` before `1 week`.
-Hidden ticker evidence, button behavior, and the five-column stock table remain unchanged.
-Historical 015 task and validation records describe the earlier eight-column baseline.
+**Presentation owner**: [016](../016-add-daily-performance/spec.md) defines current entity-tape
+captions, daily evidence, responsive layout and complete non-hover details.
+Historical 015 validation remains recorded separately from that feature's pending acceptance.
 
 ### Session 2026-11-06
 
@@ -84,7 +82,7 @@ As a user looking for a retained stock that has no active industry membership, I
 
 ### Functional Requirements
 
-- **FR-001**: The application MUST expose exactly four root tabs: Discovery, Industry Deep-Dive, Yahoo Classification Preview, and Find a stock. Find a stock MUST remain separate from Discovery. This approved layout complies with constitution 4.0.0's feature-defined native-tab architecture.
+- **FR-001**: The application MUST expose exactly four root tabs: Discovery, Industry Deep-Dive, Yahoo Classification Preview, and Find a stock. Find a stock MUST remain separate from Discovery, using constitution 4.1.0's native-tab architecture.
 - **FR-002**: The Discovery page MUST NOT render the Find a stock search, identity-selection, listing-selection, or lookup-detail workflow.
 - **FR-003**: The Find a stock page MUST search retained stock identities in the selected region and for the selected date, and MUST provide an explicit no-match state.
 - **FR-004**: The page MUST require the user to select an exact stock identity when a query has multiple matches before opening its detail.
@@ -97,10 +95,10 @@ As a user looking for a retained stock that has no active industry membership, I
   Lookup placement is owned by this feature; identity and listing safeguards remain owned by 012.
   On adoption of 013, lookup MUST use the same validated context and permission gates as the other
   root workflows, not a separate local catalog authority.
-- **FR-011**: Clickable entity buttons in the sector performance table, industry momentum, and stock list view MUST show two vertically stacked text blocks: a ticker first at least twice the font size of the full unabbreviated name below it. The name MUST wrap when necessary rather than being truncated; wrapping may produce more than two physical lines.
+- **FR-011**: Clickable entity buttons in sector performance, industry momentum and stock lists MUST show ticker above the full unabbreviated name, at least twice its font size. Stock names MUST wrap without truncation. Compact sector/industry labels MUST provide complete wrapped touch/keyboard details under [016](../016-add-daily-performance/spec.md); hover alone is insufficient.
 - **FR-012**: The button presentation change MUST preserve existing selection and navigation behavior in all three views.
 - **FR-013**: Sector and industry buttons MUST use the associated ETF ticker on the first line when available, or the explicit label "No ticker" otherwise; they MUST NOT invent a ticker or substitute an internal identifier.
-- **FR-014**: The sector performance table MUST omit its separate Ticker column and the industry momentum table MUST omit its separate ETF column, since the Sector/Industry buttons already display the associated ticker. Both tapes MUST retain exactly eight visible columns: price/50-MA chart, volume chart, Sector or Industry, and the five existing return periods. Keep ticker/ETF fields as internal evidence for buttons, charts and source identity; preserve the stock table's five columns, including its Ticker button.
+- **FR-014**: Sector performance MUST omit its separate Ticker column and Industry momentum its separate ETF column. Both entity tapes MUST retain nine fields: two charts, Sector/Industry button and the six returns defined by [016](../016-add-daily-performance/contracts/daily-performance-ui.md). Keep ticker/ETF evidence internally for buttons/charts/source identity; preserve the five-column stock table including Ticker.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -117,8 +115,8 @@ As a user looking for a retained stock that has no active industry membership, I
 - **SC-003**: In all controlled cases without an active verified listing, no remote listing-history request occurs.
 - **SC-004**: Search results include retained stocks without active industry memberships and do not create or imply an industry membership.
 - **SC-005**: Existing Discovery workflows unrelated to stock lookup pass their current regression checks after the relocation.
-- **SC-006**: In each of the three named views, every clickable entity button shows its ticker (or "No ticker" where required) above its full name, with the first block's font size at least twice the name's font size; long names remain fully visible through wrapping, and selecting the button retains its existing result.
-- **SC-007**: Controlled sector/industry renderings show exactly eight columns with no separate Ticker/ETF column; buttons still display their existing ticker or "No ticker", selections retain exact node IDs, and the stock table retains all five columns.
+- **SC-006**: All three views show ticker (or "No ticker") above name at a font-size ratio of at least 2:1; full stock names wrap visibly and compact entity names are completely readable through touch/keyboard details. Selection retains its existing result.
+- **SC-007**: Controlled sector/industry renderings retain nine fields with no separate Ticker/ETF column; buttons show ticker or "No ticker", selections retain exact node IDs, and stock tables retain five columns.
 
 ## Assumptions
 

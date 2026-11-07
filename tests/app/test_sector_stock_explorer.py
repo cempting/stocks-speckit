@@ -213,7 +213,7 @@ def test_entity_tape_preserves_complete_column_and_row_order(label):
         "Volume chart",
         label,
         "ETF" if label == "Industry" else "Ticker",
-        "1d",
+        "1 day",
         "1 week",
         "1 month",
         "3 months",
@@ -246,7 +246,7 @@ def test_thumbnail_period_does_not_change_performance_returns():
     )
     short = _build_entity_tape(**arguments, preview_start=date(2026, 10, 23))
     long = _build_entity_tape(**arguments, preview_start=date(2025, 10, 30))
-    windows = ["1d", "1 week", "1 month", "3 months", "6 months", "12 months"]
+    windows = ["1 day", "1 week", "1 month", "3 months", "6 months", "12 months"]
     pd.testing.assert_frame_equal(short[windows], long[windows])
     assert len(short["Price chart"][0]) < len(long["Price chart"][0])
 
@@ -285,8 +285,8 @@ def test_sector_daily_return_is_independent_of_yearly_and_benchmark_history(
         observed_as_of=date(2026, 10, 30),
         performance_mode="Absolute",
     )
-    assert frame["1d"][0] == pytest.approx(expected)
-    assert pd.api.types.is_numeric_dtype(frame["1d"])
+    assert frame["1 day"][0] == pytest.approx(expected)
+    assert pd.api.types.is_numeric_dtype(frame["1 day"])
     assert frame[["1 week", "1 month", "3 months", "6 months", "12 months"]].isna().all().all()
     assert frame["1d reason"][0] == ""
 
@@ -336,9 +336,9 @@ def test_reviewed_industry_daily_return_uses_own_evidence(kind, expected):
         performance_mode="Absolute",
     )
     frame = _build_entity_tape(**arguments)
-    assert frame["1d"][0] == pytest.approx(expected)
-    assert frame["1d"][0] != 20.0
-    assert pd.isna(frame["1d"][1])
+    assert frame["1 day"][0] == pytest.approx(expected)
+    assert frame["1 day"][0] != 20.0
+    assert pd.isna(frame["1 day"][1])
     assert "approved representation" in frame["1d reason"][1]
     assert frame["Status"][1] == "Not covered"
     if kind == "basket":
@@ -347,8 +347,8 @@ def test_reviewed_industry_daily_return_uses_own_evidence(kind, expected):
     for preview_start in (date(2026, 10, 23), date(2026, 9, 30), date(2025, 10, 30)):
         cropped = _build_entity_tape(**arguments, preview_start=preview_start)
         pd.testing.assert_frame_equal(
-            frame[["1d", "1 week", "1 month", "3 months", "6 months", "12 months"]],
-            cropped[["1d", "1 week", "1 month", "3 months", "6 months", "12 months"]],
+            frame[["1 day", "1 week", "1 month", "3 months", "6 months", "12 months"]],
+            cropped[["1 day", "1 week", "1 month", "3 months", "6 months", "12 months"]],
         )
 
 
@@ -399,14 +399,14 @@ def test_daily_basis_uses_requested_sessions_while_preserving_legacy_crop(
     arguments = _stale_daily_arguments(label)
     arguments["performance_mode"] = mode
     interval = Mock(wraps=discovery_page.daily_session_interval)
-    benchmark_daily = Mock(wraps=discovery_page.calculate_daily_return)
+    benchmark_periods = Mock(wraps=discovery_page.calculate_performance_periods)
     monkeypatch.setattr(discovery_page, "daily_session_interval", interval)
-    monkeypatch.setattr(discovery_page, "calculate_daily_return", benchmark_daily)
+    monkeypatch.setattr(discovery_page, "calculate_performance_periods", benchmark_periods)
     frame = discovery_page._build_entity_tape(**arguments)
-    assert frame["1d"][0] == pytest.approx(expected)
+    assert frame["1 day"][0] == pytest.approx(expected)
     assert frame["Status"][0] == "Stale"
     assert interval.call_count == 1
-    assert benchmark_daily.call_count == (0 if mode == "Absolute" else 1)
+    assert benchmark_periods.call_count == (0 if mode == "Absolute" else 1)
     assert all(point["session"] <= "2026-10-28" for point in frame["Price chart"][0])
     legacy = representation_performance(
         arguments["reviewed_by_id"]["first"],
@@ -429,11 +429,11 @@ def test_daily_basis_uses_requested_sessions_while_preserving_legacy_crop(
     arguments["representation_by_id"]["second"] = "FIRST"
     arguments["reviewed_by_id"]["second"] = arguments["reviewed_by_id"]["first"]
     interval.reset_mock()
-    benchmark_daily.reset_mock()
+    benchmark_periods.reset_mock()
     multiple = discovery_page._build_entity_tape(**arguments)
-    assert multiple["1d"].tolist() == pytest.approx([expected, expected])
+    assert multiple["1 day"].tolist() == pytest.approx([expected, expected])
     assert interval.call_count == 1
-    assert benchmark_daily.call_count == (0 if mode == "Absolute" else 1)
+    assert benchmark_periods.call_count == (0 if mode == "Absolute" else 1)
 
 
 @pytest.mark.parametrize("label", ["Sector", "Industry"])
@@ -449,7 +449,7 @@ def test_shared_representation_tape_retains_available_shorter_periods(label, mod
     else:
         arguments["benchmark"] = arguments["benchmark"].iloc[-30:]
     frame = _build_entity_tape(**arguments)
-    assert frame["1d"][0] == pytest.approx(2.0 if mode == "Absolute" else 1.5)
+    assert frame["1 day"][0] == pytest.approx(2.0 if mode == "Absolute" else 1.5)
     assert frame["1 week"][0] == 0
     assert frame["1 month"][0] == 0
     if target == "benchmark" and mode == "Absolute":
@@ -478,10 +478,10 @@ def test_daily_missing_exact_endpoint_never_uses_older_valid_pair(label, mode, t
     assert frame["Status"][0] == "Stale"
     assert (frame[["1 week", "1 month", "3 months", "6 months", "12 months"]] == 0).all().all()
     if target == "benchmark" and mode == "Absolute":
-        assert frame["1d"][0] == pytest.approx(2.0)
+        assert frame["1 day"][0] == pytest.approx(2.0)
         assert frame["1d reason"][0] == ""
     else:
-        assert pd.isna(frame["1d"][0])
+        assert pd.isna(frame["1 day"][0])
         assert session in frame["1d reason"][0]
         assert ("FIRST" if target == "entity" else "S&P 500 benchmark") in frame["1d reason"][0]
 
@@ -501,7 +501,7 @@ def test_daily_invalid_endpoint_is_unavailable_without_losing_longer_returns(
     else:
         arguments["benchmark"].loc[pd.Timestamp("2026-10-30")] = invalid
     frame = _build_entity_tape(**arguments)
-    assert pd.isna(frame["1d"][0])
+    assert pd.isna(frame["1 day"][0])
     assert "Invalid close" in frame["1d reason"][0]
     assert "2026-10-30" in frame["1d reason"][0]
     assert frame["Status"][0] == "Stale"
@@ -516,11 +516,9 @@ def test_daily_representation_is_validated_at_requested_not_observed_date(label)
 
     arguments = _stale_daily_arguments(label)
     representation = arguments["reviewed_by_id"]["first"]
-    arguments["reviewed_by_id"]["first"] = replace(
-        representation, effective_to=date(2026, 10, 29)
-    )
+    arguments["reviewed_by_id"]["first"] = replace(representation, effective_to=date(2026, 10, 29))
     frame = _build_entity_tape(**arguments)
-    assert pd.isna(frame["1d"][0])
+    assert pd.isna(frame["1 day"][0])
     assert "effective period" in frame["1d reason"][0]
     assert frame["1 week"][0] == 0.0
     assert frame["Status"][0] == "Stale"
@@ -770,16 +768,16 @@ def test_peer_scores_keep_separate_contexts_and_reuse_a_b_a_results(
 
     monkeypatch.setattr("market_leadership.application.score_industry.score_industry", score)
     app = _stocks(AppTest.from_file(PAGE).run(timeout=20))
-    next(
-        button for button in app.button if button.label == "Load peer scores"
-    ).click().run(timeout=20)
+    next(button for button in app.button if button.label == "Load peer scores").click().run(
+        timeout=20
+    )
     assert calls[0][0] == "test-cloud"
 
     _select_industry(app, PREFIX, "test-hardware").run(timeout=20)
     assert len(calls) == 1
-    next(
-        button for button in app.button if button.label == "Load peer scores"
-    ).click().run(timeout=20)
+    next(button for button in app.button if button.label == "Load peer scores").click().run(
+        timeout=20
+    )
     assert calls[1][0] == "test-hardware"
 
     _select_industry(app, PREFIX, "test-cloud").run(timeout=20)

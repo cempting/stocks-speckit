@@ -44,7 +44,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
                 "Node ID": ["first", "second"],
                 "Status": ["Not covered", "Invalid evidence: expired mapping"],
                 "ETF" if entity_column == "Industry" else "Ticker": ["ETF", None],
-                "1d": [None, None],
+                "1 day": [None, None],
                 "1 week": [None, None],
                 "1 month": [None, None],
                 "3 months": [None, None],
@@ -68,13 +68,18 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
         "**ETF**  \nSame name",
         "**No ticker**  \nSame name",
     ]
+    button_style = next(
+        item.proto.body for item in app.get("html") if "st-key-tape_entity_" in item.proto.body
+    )
+    assert "min-height: 84px" in button_style
+    assert "height: auto" in button_style
     headings = {
         "Price + 50 MA",
         "Volume by price direction",
         entity_column,
         "Ticker",
         "ETF",
-        "1d",
+        "1 day",
         "1 week",
         "1 month",
         "3 months",
@@ -85,7 +90,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
         "Price + 50 MA",
         "Volume by price direction",
         entity_column,
-        "1d",
+        "1 day",
         "1 week",
         "1 month",
         "3 months",
@@ -138,6 +143,52 @@ def test_entity_buttons_without_etf_ticker_use_explicit_label(
     assert app.button("missing_select_not-a-ticker").label == (
         "**No ticker**  \nFull unabbreviated name"
     )
+
+
+@pytest.mark.parametrize("entity_column", ["Sector", "Industry"])
+def test_long_entity_names_use_fixed_height_and_wider_aligned_columns(entity_column: str) -> None:
+    name = "Communication Services / " + "Long industry name " * 12
+
+    def app_script(entity_column: str, name: str) -> None:
+        import pandas as pd
+
+        from market_leadership.ui.components.progressive_tape import render_chart_tape
+        from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS
+
+        frame = pd.DataFrame(
+            {
+                "Price chart": ["Unavailable"],
+                "Volume chart": ["Unavailable"],
+                entity_column: [name],
+                "ETF" if entity_column == "Industry" else "Ticker": ["ETF"],
+                "Node ID": ["long-name"],
+                "Status": ["Not covered"],
+                **{column: [None] for column in PERFORMANCE_COLUMNS},
+            }
+        )
+        if entity_column == "Industry":
+            frame["Representation"] = ["Reviewed basket"]
+            frame["Representation type"] = ["Stock basket alternative"]
+        render_chart_tape(frame, key="long", on_select=lambda _: None)
+
+    app = AppTest.from_function(app_script, args=(entity_column, name)).run()
+    assert not app.exception
+    button = app.button("long_select_long-name")
+    assert button.label == f"**ETF**  \n{name}"
+    assert f"ETF\n{name}" in button.help
+    style = next(
+        item.proto.body for item in app.get("html") if "st-key-tape_entity_" in item.proto.body
+    )
+    fixed_style = style[style.index('[class*="st-key-tape_entity_fixed_"]') :]
+    assert "height: 84px" in fixed_style
+    assert "max-height: 84px" in fixed_style
+    assert "overflow: hidden" in fixed_style
+    assert "-webkit-line-clamp: 3" in fixed_style
+    columns = app.get("column")
+    assert len(columns) == 18
+    for offset in (0, 9):
+        assert columns[offset + 2].proto.weight > columns[offset + 3].proto.weight
+    assert columns[2].proto.weight == columns[11].proto.weight
 
 
 def test_stock_button_preserves_literal_markdown_characters_in_full_name() -> None:
@@ -644,7 +695,21 @@ def test_visual_tape_preserves_performance_colors_and_formats_missing_values(
     app = AppTest.from_function(render, args=(dark_mode,)).run()
 
     assert not app.exception
-    cells = [element.proto.body for element in app.get("html")]
+    responsive_style = next(
+        (element.proto.body for element in app.get("html")
+         if "st-key-entity_tape_" in element.proto.body),
+        None,
+    )
+    assert responsive_style is not None
+    assert "@media (max-width: 640px)" in responsive_style
+    assert "nth-child(-n+2)" in responsive_style
+    assert "flex: 1 1 100%" in responsive_style
+    assert "nth-child(n+4)" in responsive_style
+    assert "flex: 1 1 0%" in responsive_style
+    cells = [
+        element.proto.body for element in app.get("html")
+        if '<div class="tape-performance-cell"' in element.proto.body
+    ]
     assert len(cells) == 24
     for row_index, (color, text) in enumerate(
         [(gain, "8.00%"), (loss, "-4.00%"), (neutral, "0.00%")]
@@ -657,6 +722,12 @@ def test_visual_tape_preserves_performance_colors_and_formats_missing_values(
         assert "Unavailable" in cell
         assert "background-color" not in cell
     assert all("text-align: right" in cell for cell in cells)
+    assert all("height: 84px" in cell for cell in cells)
+    assert all("box-sizing: border-box" in cell for cell in cells)
+    assert all("align-items: center" in cell for cell in cells)
+    assert all("justify-content: flex-end" in cell for cell in cells)
+    assert all('class="tape-performance-label"' in cell for cell in cells)
+    assert all('class="tape-performance-value"' in cell for cell in cells)
     assert sum(item.value == "Price unavailable" for item in app.caption) == 4
     assert sum(item.value == "Volume unavailable" for item in app.caption) == 4
 
@@ -685,7 +756,7 @@ def test_daily_unavailable_tooltip_retains_status_and_hides_backing_reason(entit
                 entity_column: ["Full unavailable name", "Full neutral name"],
                 "Node ID": ["missing", "neutral"],
                 "ETF" if entity_column == "Industry" else "Ticker": ["FIRST", "SECOND"],
-                "1d": [float("nan"), 0.0],
+                "1 day": [float("nan"), 0.0],
                 "Status": ["Stale: prior evidence reason", "Current"],
                 "1d reason": [reason, ""],
                 "Representation": ["Approved ETF"] * 2,

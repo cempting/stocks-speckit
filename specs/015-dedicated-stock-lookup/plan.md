@@ -13,48 +13,27 @@ the app; do not broaden lookup scope or add data requests.
 
 The implemented root has four tabs: Discovery, Industry Deep-Dive, Yahoo Classification
 Preview and Find a stock. Discovery no longer renders stock lookup.
-Constitution 4.0.0 permits this approved native-tab layout without a tab-count exception.
+Constitution 4.1.0 permits this approved native-tab layout without a tab-count exception.
 
 ## Technical Context
 
-### Approved button presentation increment (2026-11-06)
+### Entity Button and Column Contract
 
-The user approved extending this plan/tasks to implement spec FR-011-FR-013 and SC-006.
-This intentionally changes only entity-button text presentation in sector performance,
-industry momentum and stock lists; all other chart/table/control styling is preserved.
-The lookup relocation described above is already implemented, not new pending work.
+Reuse `ui/components/progressive_tape.py` for native buttons with stable keys/callbacks,
+literal escaped Markdown and scoped CSS: ticker 1.5rem above name 0.75rem (2:1).
+Missing/unavailable/basket-only sector/industry evidence shows `No ticker`, never an ID.
+Stock names wrap without a fixed cutoff; compact 84px sector/industry labels require complete
+touch/keyboard details under [016](../016-add-daily-performance/contracts/daily-performance-ui.md).
+Do not fetch tickers, change catalog contracts or weaken placeholder identity.
 
-Reuse `ui/components/progressive_tape.py` for all three views. Keep native Streamlit
-buttons, stable widget keys, callbacks, row identities, tooltips and selection results.
-Render a literal ticker above the full wrapping name using escaped Markdown and narrowly
-scoped CSS: ticker text 1.5rem, name text 0.75rem (2:1). No fixed height or truncation.
-Use the existing sector Ticker/industry ETF fields; missing, unavailable, uncovered and
-basket-only representations show `No ticker`, never an internal ID. Stock placeholder
-identity remains explicit. Do not fetch a ticker or change catalog/domain contracts.
+Hide separate sector Ticker/industry ETF columns, retaining their backing evidence.
+Entity tapes have nine fields: two charts, button and six returns. 016 owns display captions,
+daily arithmetic and responsive header/rows/details; its task ledger tracks pending acceptance.
+Preserve chart geometry/palettes, controls, return arithmetic and the five-column stock table.
 
-Add renderer and workflow regressions before implementation. Verify actual computed
-font sizes, full visible text, narrow-width wrapping, native focusability and selection
-in a local browser using synthetic data, for light and dark themes. Retain the five-column
-stock table, chart dimensions/palettes, return values, controls and zero hidden loads.
-T018-T022 extend, rather than renumber or reopen, completed T001-T017.
-
-### Redundant entity-column removal (2026-11-06)
-
-The approved [016 amendment](../016-add-daily-performance/spec.md) supersedes only this
-increment's eight-column count with nine entity columns by adding `1d` before `1 week`.
-The following implementation/evidence record remains historical; ticker metadata,
-native buttons and five-column stock tapes retain their existing behavior.
-
-FR-014/SC-007 remove only the separate sector Ticker and industry ETF columns,
-already represented in the Sector/Industry buttons. Extend the shared renderer's
-hidden-column projection; do not drop these fields from the backing frame or
-change ticker selection, chart inputs, callbacks, tooltips, return values or loading.
-Sector/industry tapes now show eight columns: two charts, the entity button and
-five return periods. Keep stock tapes at five columns, including Ticker.
-T023-T025 add exact visible-heading and retained-button/data regressions, implement
-the projection change, then reconcile owner documentation and run focused quality gates.
-The current task ledger marks the implementation increments complete; this reconciliation preserves those
-statuses and the previously recorded validation evidence, not a new implementation claim.
+Use test-first renderer/workflow regressions and real light/dark browser measurements for
+typography, full-text access, focus and selection. [Tasks](tasks.md) retain T001-T025 states;
+[quickstart](quickstart.md) records historical lookup/button/column evidence, not current 016 acceptance.
 
 **Language/Version**: Python 3.12
 

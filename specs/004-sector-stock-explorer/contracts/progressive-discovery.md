@@ -16,12 +16,11 @@ safeguards remain 012's. On 013 adoption every root workflow uses one validated 
 
 ## Root and stages
 
-**Approved 016 daily-column amendment (2026-11-06)**:
-[016's UI contract](../../016-add-daily-performance/contracts/daily-performance-ui.md) adds
-`1d` before `1 week` in both sector and industry tapes. It supersedes the five-return/eight-visible-
-column baseline below with six returns/nine visible columns only. Thumbnail options, stock columns,
-default ranking, charts, hidden metadata, and native controls remain unchanged. This is pending
-implementation and validation under 016, not a claim that historical tasks delivered the column.
+[016's UI contract](../../016-add-daily-performance/contracts/daily-performance-ui.md) defines
+the current nine-field/six-return entity interface, daily endpoints, display captions,
+responsive header/rows and complete non-hover evidence access.
+Its [tasks](../../016-add-daily-performance/tasks.md) track pending caption/phone acceptance;
+thumbnail options, stock columns, ranking, hidden metadata and loading remain protected.
 
 - Retain `Discovery`, `Industry Deep-Dive`, `Yahoo Classification Preview` and `Find a stock`.
   015 supersedes the original two-tab limit and owns lookup placement; Discovery must
@@ -52,7 +51,7 @@ implementation and validation under 016, not a claim that historical tasks deliv
 
 ## Row identity and contents
 
-### Preserved presentation (2026-10-30)
+### Entity presentation
 
 - The user-approved 2026-11-06 amendment in [015](../../015-dedicated-stock-lookup/spec.md)
   renders native entity buttons with ticker above full wrapping name, using ticker
@@ -66,21 +65,16 @@ implementation and validation under 016, not a claim that historical tasks deliv
   `Absolute`, `vs S&P 500` / `Absolute`. Choices survive hierarchy navigation; empty choices
   use defaults. Relative performance subtracts the matching-period return of the manifest's
   reviewed S&P 500 benchmark listing; missing benchmark evidence is not silently substituted.
-- Column order: `Price + 50-session SMA`, `Volume by price direction`, `Sector`,
-  `1 week`, `1 month`, `3 months`, `6 months`, `12 months`.
-  Under the user-approved 2026-11-01 amendment, industry columns are `Price + 50-session SMA`,
-  `Volume by price direction`, `Industry`, and the same five return periods.
-  Under the subsequent 2026-11-06 amendment, sector `Ticker` and industry `ETF`
-  remain internal backing fields, not separate visible columns; their entity buttons
-  already display those values. Each tape has eight visible columns. Stock Ticker
-  remains visible in its unchanged five-column table.
-  Status, Representation, and Representation type remain internal evidence, exposed in
-  industry-name button tooltips rather than separate columns.
+- Column order is two charts, Sector/Industry, then the six captions in
+  [016](../../016-add-daily-performance/contracts/daily-performance-ui.md#fields-and-captions).
+  Both entity tapes have nine fields. Sector `Ticker` and industry `ETF` remain internal
+  backing evidence displayed by their buttons; stock Ticker remains visible in the unchanged
+  five-column table. Status, Representation and Representation type remain internal evidence
+  available in button context and touch/keyboard details rather than separate columns.
   Sector names are clickable to open that sector's industry momentum list; industry/sub-industry
   names are clickable to open their stock list, even without ETF coverage or members.
   Buttons use stable catalog node IDs, not display names or ETF symbols, and preserve date,
-  thumbnail period, and performance basis. Sector Status is also hidden as a separate column
-  under the 2026-11-01 follow-up; its evidence remains in sector-name button tooltips.
+  thumbnail period, and performance basis. Sector Status follows the same evidence-access rule.
 - Both plots stay 84 pixels high. Their nominal width is 135, stretched to the containing
   cell. Price/SMA and volume remain separate adjacent charts.
 - Both previews use the inclusive calendar window anchored at the selected as-of date,
@@ -102,7 +96,8 @@ implementation and validation under 016, not a claim that historical tasks deliv
 - Volume bars are green when the close rose from the previous completed close, red when it fell,
   and neutral when unchanged or direction is unavailable. Label the colors as price-direction
   indications; they do not identify verified buyer/seller activity.
-- Price and volume charts remain separate columns for sector, industry, and stock tapes. Missing
+- Price and volume remain separate charts: adjacent at wide widths, stacked in narrow entity
+  tapes under 016. Stock chart presentation remains unchanged. Missing
   price, volume, or moving-average evidence is identified in the corresponding chart cell.
 - The stock tape contains exactly Price chart + 50 MA, Volume chart, Ticker, CAP Type,
   and Total Score under feature 006's 2026-11-01 amendment. The Ticker button includes the company

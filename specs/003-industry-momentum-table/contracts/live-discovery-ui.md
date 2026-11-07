@@ -29,11 +29,15 @@ Discovery has one live yfinance data path.
 
 The current progressive contract shows no separate sector Ticker or industry ETF
 column: the Sector/Industry buttons contain the ticker and full name. Both tapes
-have eight visible columns, retaining ticker evidence internally. Stock Ticker
-remains in the five-column stock table under 006.
+have nine fields and six returns under
+[016's UI contract](../../016-add-daily-performance/contracts/daily-performance-ui.md),
+retaining ticker evidence internally. Stock Ticker remains in the five-column table under 006.
 
-The Discovery heading, **As of** date input, and **Refresh data** button share one
-bottom-aligned row, in that order, with three equal-width columns.
+At wide widths, the Discovery heading, **As of** date input, **Refresh data** button,
+and session theme button share one bottom-aligned row, in that order, with column
+weights 4:3:3:2. At 640 CSS pixels and below, the title stays on the left beside
+two rows of controls: **As of** above, then **Refresh data** and the theme button
+side by side below. Native controls, keyboard order, state, and callbacks remain unchanged.
 
 | Input | Required behavior |
 |---|---|

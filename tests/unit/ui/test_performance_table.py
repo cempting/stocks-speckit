@@ -25,9 +25,7 @@ def test_performance_table_height_fits_all_rows() -> None:
 def test_daily_palette_is_recognized_and_scaled_independently(
     dark_mode: bool, gain: str, loss: str, neutral: str
 ) -> None:
-    frame = pd.DataFrame(
-        {"1d": [2.0, -1.0, 0.0, None], "1 week": [200.0, -300.0, 10.0, -20.0]}
-    )
+    frame = pd.DataFrame({"1 day": [2.0, -1.0, 0.0, None], "1 week": [200.0, -300.0, 10.0, -20.0]})
     html = style_performance_table(frame, dark_mode=dark_mode).set_uuid("daily").to_html()
     css = html.split("</style>", 1)[0]
     for row, color in enumerate((gain, loss, neutral)):
@@ -37,7 +35,7 @@ def test_daily_palette_is_recognized_and_scaled_independently(
             if f"#T_daily_row{row}_col0" in selectors
         )
         assert f"background-color: {color}" in block
-    styles = performance_column_styles(frame["1d"], dark_mode=dark_mode)
+    styles = performance_column_styles(frame["1 day"], dark_mode=dark_mode)
     assert styles[-1] == ""
     assert all(
         color in style for color, style in zip((gain, loss, neutral), styles[:3], strict=True)

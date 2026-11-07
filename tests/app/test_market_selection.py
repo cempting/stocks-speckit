@@ -22,7 +22,10 @@ def test_discovery_header_places_dark_mode_to_the_right_of_refresh(
     refresh = next(widget for widget in app.button if widget.label == "Refresh data")
     dark_mode = app.button("dark_mode_button")
     row = next(
-        block for block in app.get("flex_container") if any(item is heading for item in block.title)
+        block
+        for block in app.get("flex_container")
+        if any(child.type == "column" for child in block.children.values())
+        and any(item is heading for item in block.title)
     )
     columns = list(row.children.values())
     assert len(columns) == 4
@@ -40,6 +43,22 @@ def test_discovery_header_places_dark_mode_to_the_right_of_refresh(
         [4 / 12, 3 / 12, 3 / 12, 2 / 12]
     )
     assert all(column.proto.vertical_alignment == BlockProto.Column.BOTTOM for column in columns)
+    header_style = next(
+        item.proto.body
+        for item in app.get("html")
+        if ".st-key-discovery_header" in item.proto.body
+    )
+    assert "@media (max-width: 640px)" in header_style
+    assert (
+        "grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(2.5rem, auto);"
+        in header_style
+    )
+    assert "grid-row: 1 / span 2;" in header_style
+    assert "grid-column: 2 / 4;" in header_style
+    assert "grid-column: 3;" in header_style
+    assert "grid-row: 2;" in header_style
+    assert ".st-key-discovery_header .st-key-theme_action button" in header_style
+    assert "min-width: 2.5rem;" in header_style
 
 
 @pytest.mark.parametrize("app_path", [APP_PATH, APP_PATH.parents[4] / "streamlit_app.py"])

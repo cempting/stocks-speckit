@@ -1,14 +1,16 @@
 <!--
 Sync Impact Report
-- Version change: 4.0.0 -> 4.0.1
+- Version change: 4.0.1 -> 4.1.0
 - Modified principles: none; all six core principles are preserved
-- Modified constraints: none; feature-defined native tabs have no fixed numerical limit
-- Clarified governance: amendment history now states the accepted navigation rule directly
+- Modified constraints: app-wide desktop and phone usability is now required
+- Modified quality gates: UI changes require desktop and phone browser validation
+- Governance: recorded approval and migration impact of the responsive usability amendment
 - Added sections: none
 - Removed sections: none
 - Follow-up TODO placeholders: none
-- Approval: the user explicitly approved the wording-only 4.0.1 update on 2026-11-06
-- Migration impact: none; existing obligations and architecture approvals remain unchanged
+- Approval: the user requested this constitution update on 2026-11-07
+- Migration impact: reconcile affected UI specifications and plans before implementation;
+  this amendment does not establish that existing views meet the new requirements
 - Scope: no application, test, feature artifact, or template changes
 - Review note: remove this temporary Sync Impact Report before committing the amendment
 -->
@@ -64,6 +66,13 @@ why no simpler boundary is viable.
   functionality. Tab-count changes MUST preserve unrelated workflows, namespaced session-local
   state, shared data context, and explicit data-loading safeguards. This keeps navigation aligned
   with verified user needs without introducing another routing framework or speculative scope.
+- The application MUST remain usable on desktop and phone screens. Navigation, controls, charts,
+  data, and evidence explanations MUST remain accessible without clipping or overlapping.
+  Layouts MUST adapt to available width through reflow, stacking, or wrapping. Wide tables MAY
+  use clearly discoverable scrolling within their own container; ordinary page content MUST NOT
+  require horizontal scrolling. Essential actions and evidence explanations MUST be operable
+  with touch on phones and MUST NOT depend solely on hover. Feature specifications and UI
+  contracts MUST define responsive behavior and testable acceptance criteria for affected views.
 - Market data MUST be fetched on the fly using `yfinance` or a single free financial API selected
   for the application. A deployment MUST use only that selected source for runtime market-data
   requests; silent provider switching, multi-provider pooling, and unapproved paid data sources
@@ -101,6 +110,11 @@ why no simpler boundary is viable.
 5. Run the relevant unit and integration suites, then run the full test suite when practical.
 6. Review the diff for unnecessary complexity, undocumented behavior, dead code, duplication, and
    scope creep.
+7. For UI changes, validate affected workflows in a browser at representative desktop and phone
+   viewport widths, including 1440px and 390px. Verify navigation, touch-operable controls,
+   readable charts and values, access to evidence explanations, and any table-local scrolling.
+   Record viewport dimensions, exercised workflows, results, and unresolved gaps. Automated
+   rendering tests alone MUST NOT be claimed as proof of responsive browser usability.
 
 Every review MUST verify constitution compliance. Reviewers MUST reject changes whose behavior
 cannot be explained, whose tests do not demonstrate the claimed result, whose scope exceeds the
@@ -132,4 +146,10 @@ change application behavior, or provide new validation evidence.
 The 4.0.1 wording clarification was explicitly approved on 2026-11-06. It restates the accepted
 UI architecture rule without changing governance obligations, application behavior, or evidence.
 
-**Version**: 4.0.1 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-11-06
+The 4.1.0 responsive usability amendment was explicitly requested on 2026-11-07. It adds app-wide
+desktop and phone usability requirements and browser validation gates without changing the six
+core principles or approved UI architecture. Affected feature specifications, contracts, and plans
+MUST be reconciled before further UI implementation. This amendment alone does not change layouts
+or establish responsive compliance for existing views.
+
+**Version**: 4.1.0 | **Ratified**: 2026-10-26 | **Last Amended**: 2026-11-07

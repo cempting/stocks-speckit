@@ -10,10 +10,11 @@ from typing import Literal
 import pandas as pd
 
 from market_data.domain.sector_performance import (
+    PERFORMANCE_PERIODS,
     InsufficientHistoryError,
     PerformancePeriod,
-    calculate_absolute_performance,
-    calculate_daily_return,
+    PerformancePeriodResult,
+    calculate_performance_periods,
 )
 
 
@@ -93,13 +94,8 @@ class RepresentationReviewItem:
     representation: ReviewedRepresentation | None
 
 
-RepresentationPeriod = Literal["1d"] | PerformancePeriod
-
-
-@dataclass(frozen=True, slots=True)
-class RepresentationPeriodResult:
-    value: float | None
-    reason: str | None = None
+RepresentationPeriod = PerformancePeriod
+RepresentationPeriodResult = PerformancePeriodResult
 
 
 def representation_performance(
@@ -119,9 +115,47 @@ def representation_performance(
         raise ValueError("Representation is outside its effective period")
     if representation.invalid_reason:
         raise ValueError(representation.invalid_reason)
-    periods: tuple[RepresentationPeriod, ...] = ("1d", "1w", "1m", "3m", "6m", "12m")
+    symbols = representation.symbols
+    constituent_results: dict[str, dict[PerformancePeriod, PerformancePeriodResult]] = {}
+    basket_dates: pd.DatetimeIndex | None = None
+    for symbol in symbols:
+        frame = history.get(symbol)
+        if frame is None or "close" not in frame:
+            constituent_results[symbol] = {
+                period: PerformancePeriodResult(
+                    None, f"No approved constituent history for {symbol}"
+                )
+                for period in PERFORMANCE_PERIODS
+            }
+            continue
+        periods = calculate_performance_periods(
+            frame["close"],
+            as_of=legacy_as_of,
+            start_session=start_session,
+            end_session=end_session,
+        )
+        try:
+            closes = frame.loc[
+                pd.DatetimeIndex(frame.index).date <= legacy_as_of, "close"
+            ].sort_index()
+            if closes.empty or any(
+                not isfinite(float(value)) or float(value) <= 0 for value in closes
+            ):
+                raise InsufficientHistoryError("Invalid or missing closes")
+            if representation.kind == "basket":
+                dates = pd.DatetimeIndex(closes.index)
+                if dates[-1].date() != legacy_as_of:
+                    raise InsufficientHistoryError(f"No constituent close on {legacy_as_of}")
+                if basket_dates is not None and not basket_dates.equals(dates):
+                    raise InsufficientHistoryError("Incomplete aligned basket history")
+                basket_dates = dates
+        except ValueError as error:
+            for period in PERFORMANCE_PERIODS[1:]:
+                periods[period] = PerformancePeriodResult(None, str(error))
+        constituent_results[symbol] = periods
+
     results: dict[RepresentationPeriod, RepresentationPeriodResult] = {}
-    for period in periods:
+    for period in PERFORMANCE_PERIODS:
         try:
             if period == "1d":
                 if not representation.active_on(as_of):
@@ -135,44 +169,13 @@ def representation_performance(
             elif not representation.active_on(legacy_as_of):
                 raise ValueError("Representation is outside its effective period")
             returns: dict[str, float] = {}
-            basket_dates: pd.DatetimeIndex | None = None
-            for symbol in representation.symbols:
-                frame = history.get(symbol)
-                if frame is None or "close" not in frame:
-                    raise InsufficientHistoryError(
-                        f"No approved constituent history for {symbol}"
-                    )
-                try:
-                    if period == "1d":
-                        assert start_session is not None and end_session is not None
-                        returns[symbol] = calculate_daily_return(
-                            frame["close"], start_session=start_session, end_session=end_session
-                        )
-                    else:
-                        closes = frame.loc[
-                            pd.DatetimeIndex(frame.index).date <= legacy_as_of, "close"
-                        ].sort_index()
-                        if closes.empty or any(
-                            not isfinite(float(value)) or float(value) <= 0 for value in closes
-                        ):
-                            raise InsufficientHistoryError("Invalid or missing closes")
-                        if representation.kind == "basket":
-                            dates = pd.DatetimeIndex(closes.index)
-                            if dates[-1].date() != legacy_as_of:
-                                raise InsufficientHistoryError(
-                                    f"No constituent close on {legacy_as_of}"
-                                )
-                            # Preserve full basket alignment, never drop observations or weights.
-                            if basket_dates is not None and not basket_dates.equals(dates):
-                                raise InsufficientHistoryError("Incomplete aligned basket history")
-                            basket_dates = dates
-                        returns[symbol] = calculate_absolute_performance(
-                            closes, as_of=legacy_as_of, period=period
-                        )[period]
-                except ValueError as error:
-                    raise InsufficientHistoryError(f"{symbol}: {error}") from error
+            for symbol in symbols:
+                result = constituent_results[symbol][period]
+                if result.value is None:
+                    raise InsufficientHistoryError(f"{symbol}: {result.reason}")
+                returns[symbol] = result.value
             value = (
-                returns[representation.symbols[0]]
+                returns[symbols[0]]
                 if representation.kind == "etf"
                 else sum(
                     float(item.weight / 100) * returns[item.symbol]

@@ -76,6 +76,7 @@ def test_industry_momentum_shows_sector_style_trends_for_selected_sectors() -> N
         "Representation",
         "ETF",
         "Evidence state",
+        "1 day",
         "1 week",
         "1 month",
         "3 months",
@@ -87,6 +88,23 @@ def test_industry_momentum_shows_sector_style_trends_for_selected_sectors() -> N
     assert frame.loc[frame["Industry"] == "Semiconductors", "3 months"].item() == pytest.approx(0.1)
     assert pd.isna(frame.loc[frame["Industry"] == "Cloud Computing", "1 week"].item())
     assert pd.isna(frame.loc[frame["Industry"] == "Cybersecurity", "12 months"].item())
+    assert frame["1 day"].isna().all()
+
+
+def test_industry_momentum_uses_explicit_daily_sessions_and_independent_horizons():
+    history = {"SOXX": _trend_history(110).iloc[-30:]}
+    frame = industry_momentum_frame(
+        history,
+        as_of=date(2026, 10, 26),
+        sectors=(),
+        representations=(REPRESENTATIONS[4],),
+        start_session=date(2026, 10, 23),
+        end_session=date(2026, 10, 26),
+    )
+    assert frame["1 day"][0] == pytest.approx(0.1)
+    assert frame["1 week"][0] == pytest.approx(0.1)
+    assert frame["1 month"][0] == pytest.approx(0.1)
+    assert frame[["3 months", "6 months", "12 months"]].isna().all().all()
 
 
 def test_reviewed_basket_momentum_is_weighted_constituent_returns_only() -> None:
@@ -115,8 +133,9 @@ def test_reviewed_basket_momentum_is_weighted_constituent_returns_only() -> None
     result = representation_performance(basket, history, as_of=date(2026, 10, 26))
     assert result["1d"].value is None
     assert result["1d"].reason
-    assert all(result[period].value == pytest.approx(0.02)
-               for period in ("1w", "1m", "3m", "6m", "12m"))
+    assert all(
+        result[period].value == pytest.approx(0.02) for period in ("1w", "1m", "3m", "6m", "12m")
+    )
     missing = representation_performance(
         basket, {"AAA": history["AAA"], "XLK": history["XLK"]}, as_of=date(2026, 10, 26)
     )

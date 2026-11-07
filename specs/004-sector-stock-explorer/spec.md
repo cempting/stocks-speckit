@@ -50,14 +50,12 @@ workflow. Feature 012 supersedes earlier single-assignment and fixed-depth assum
 through its reviewed migration; it does not make old GICS approvals applicable to a custom
 scheme automatically. This consolidation does not activate that migration.
 
-The implemented baseline selects one sector and one industry, with five visible return periods.
-The approved [016 amendment](../016-add-daily-performance/spec.md) adds `1d` before the weekly
-column in both entity tapes, superseding only the five-period count/order constraints in
-FR-029, FR-031, and FR-035. Implementation and new validation follow 016; existing completed
-tasks remain historical evidence. Thumbnail options and ranking defaults are unchanged. Earlier
-003 multi-sector and one-day/direction-selector narratives do not authorize restoring removed
-controls. One-day return semantics remain defined for consumers that use them. Sector and industry
-evidence remain accessible at their respective progressive stages, not as simultaneous tapes.
+Discovery selects one sector and one industry progressively. Entity tapes have six returns,
+with `1 day` before `1 week`; [016](../016-add-daily-performance/spec.md) owns daily evidence,
+display captions, responsive layout and non-hover details. Its task ledger distinguishes
+implemented behavior from pending caption/phone acceptance. Thumbnail options and ranking
+defaults are unchanged; removed multi-sector/period/direction controls are not restored.
+Sector and industry evidence appear at their respective stages, not simultaneously.
 Missing coverage stays explicit; no complete hierarchy or suitable ETF is inferred.
 
 Existing plans, tasks, research, checklists, data models, and contracts retain their original
@@ -362,16 +360,17 @@ simple moving averages, and scorecard information.
   entity's return, not calculate a return ratio. Both choices MUST persist across hierarchy
   navigation; cleared selections MUST use their default behavior.
 - **FR-029**: Sector tape columns MUST remain ordered: "Price + 50-session SMA", "Volume by
-  price direction", "Sector", "1 week", "1 month", "3 months", "6 months",
-  "12 months". Sector status belongs in the sector-name tooltip, not a separate column.
+  price direction", "Sector", "1 day", "1 week", "1 month", "3 months", "6 months",
+  "1 year". Sector status belongs in the sector-name tooltip, not a separate column.
   Industry rows replace "Sector" with "Industry"; both entity buttons identify their mapped fund.
-  industry status, representation, and representation type belong in name-button tooltips
-  under FR-004. Sector Ticker and industry ETF remain internal evidence, not separate
+  Status, representation, and representation type remain evidence accessible through name-button
+  context and non-hover details under [016](../016-add-daily-performance/spec.md).
+  Sector Ticker and industry ETF remain internal evidence, not separate
   visible columns, under [015 FR-014](../015-dedicated-stock-lookup/spec.md).
 - **FR-030**: Both thumbnail plot heights MUST remain 84 pixels across all tapes and period
   choices. Price and supported SMA overlay MUST remain in the first chart; directional volume
   MUST remain in the separate adjacent chart with its existing explanatory legend.
-- **FR-031**: All five sector/industry return columns MUST preserve readable light/dark
+- **FR-031**: All six sector/industry return columns MUST preserve readable light/dark
   gain/loss palettes: green gains, red losses, neutral zero, independently scaled by period
   and sign. Valid returns MUST be right-aligned two-decimal percentages. Missing returns
   MUST say "Unavailable" without gain/loss coloring. Chart rendering MUST retain cell colors.
@@ -401,7 +400,8 @@ FR-025-FR-032 presentation invariants remain unchanged.
   `100 * (ending close / starting close - 1)`. Recent ranking defaults to the five-session
   one-week interval; the one-day calculation uses one completed-session interval. Positive
   returns mean gaining, negative declining, and zero neutral. Invalid or missing endpoints
-  MUST NOT produce fabricated returns or directions. The five visible periods remain FR-029.
+  MUST NOT produce fabricated returns or directions. The six visible periods follow FR-029;
+  exact requested-date daily endpoints and independent availability follow [016](../016-add-daily-performance/spec.md).
 - **FR-036**: Ranks, where presented, MUST use the displayed eligible sector/industry scope,
   default to descending return, give equal returns equal ranks, and order ties by industry name
   then stable identifier. Insufficient rows MUST have no rank. Sorting and any applicable
@@ -500,7 +500,7 @@ FR-025-FR-032 presentation invariants remain unchanged.
 - **SC-012**: All five thumbnail choices produce the exact selected calendar window for
   available price/volume observations in controlled cases, while 100% of return values and
   latest stock prices remain unchanged.
-- **SC-013**: In both light and dark controlled cases, all five return columns preserve the
+- **SC-013**: In both light and dark controlled cases, all six return columns preserve the
   gain/loss/zero/missing conventions and two-decimal percentage formatting.
 - **SC-014**: On a wide viewport, all three header elements retain left-to-right order, the
   sector tape retains all nine labeled columns plus tooltip status, and both plots remain 84 pixels high for

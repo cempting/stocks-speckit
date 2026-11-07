@@ -10,7 +10,21 @@ class InsufficientHistoryError(ValueError):
     """Raised when a return period lacks a valid starting observation."""
 
 
-PerformancePeriod = Literal["1w", "1m", "3m", "6m", "12m"]
+PerformancePeriod = Literal["1d", "1w", "1m", "3m", "6m", "12m"]
+PERFORMANCE_PERIODS: tuple[PerformancePeriod, ...] = ("1d", "1w", "1m", "3m", "6m", "12m")
+_CALENDAR_PERIODS: tuple[tuple[PerformancePeriod, pd.DateOffset], ...] = (
+    ("1w", pd.DateOffset(days=7)),
+    ("1m", pd.DateOffset(months=1)),
+    ("3m", pd.DateOffset(months=3)),
+    ("6m", pd.DateOffset(months=6)),
+    ("12m", pd.DateOffset(months=12)),
+)
+
+
+@dataclass(frozen=True, slots=True)
+class PerformancePeriodResult:
+    value: float | None
+    reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,31 +55,83 @@ def calculate_absolute_performance(
     *,
     as_of: date,
     period: PerformancePeriod | None = None,
+    start_session: date | None = None,
+    end_session: date | None = None,
 ) -> dict[PerformancePeriod, float]:
+    """Require all five legacy horizons by default, or calculate one selected period."""
+    if period == "1d":
+        if start_session is None or end_session is None:
+            raise InsufficientHistoryError("Daily return requires explicit completed-session dates")
+        return {
+            "1d": calculate_daily_return(
+                closes, start_session=start_session, end_session=end_session
+            )
+        }
     as_of_timestamp = pd.Timestamp(as_of)
     prepared = _prepare_closes(closes, as_of_timestamp)
     latest = _close_on_or_before(prepared, as_of_timestamp)
     absolute: dict[PerformancePeriod, float] = {}
-    periods: tuple[tuple[PerformancePeriod, pd.DateOffset], ...] = (
-        ("1w", pd.DateOffset(days=7)),
-        ("1m", pd.DateOffset(months=1)),
-        ("3m", pd.DateOffset(months=3)),
-        ("6m", pd.DateOffset(months=6)),
-        ("12m", pd.DateOffset(months=12)),
-    )
+    periods = _CALENDAR_PERIODS
     if period is not None and period not in {candidate for candidate, _ in periods}:
         raise ValueError(f"Unsupported performance period: {period}")
     for candidate, offset in periods:
         if period is None or candidate == period:
-            absolute[candidate] = latest / _close_on_or_before(
-                prepared, as_of_timestamp - offset
-            ) - 1
+            absolute[candidate] = (
+                latest / _close_on_or_before(prepared, as_of_timestamp - offset) - 1
+            )
     return absolute
 
 
-def calculate_daily_return(
-    closes: pd.Series, *, start_session: date, end_session: date
-) -> float:
+def calculate_performance_periods(
+    closes: pd.Series,
+    *,
+    as_of: date,
+    start_session: date | None = None,
+    end_session: date | None = None,
+) -> dict[PerformancePeriod, PerformancePeriodResult]:
+    """Calculate six independent display horizons, preparing calendar history only once."""
+    results: dict[PerformancePeriod, PerformancePeriodResult] = {}
+    try:
+        daily = calculate_absolute_performance(
+            closes,
+            as_of=as_of,
+            period="1d",
+            start_session=start_session,
+            end_session=end_session,
+        )["1d"]
+        results["1d"] = PerformancePeriodResult(daily)
+    except ValueError as error:
+        results["1d"] = PerformancePeriodResult(None, str(error))
+
+    timestamp = pd.Timestamp(as_of)
+    try:
+        if closes.empty:
+            raise InsufficientHistoryError(f"No close is available on or before {as_of}")
+        if not isinstance(closes.index, pd.DatetimeIndex) or closes.index.hasnans:
+            raise ValueError("Close dates must be valid datetime observations")
+        calendar_closes = closes.tz_localize(None) if closes.index.tz is not None else closes
+        prepared = _prepare_closes(calendar_closes, timestamp)
+        latest = _close_on_or_before(prepared, timestamp)
+    except ValueError as error:
+        results.update(
+            (period, PerformancePeriodResult(None, str(error))) for period, _ in _CALENDAR_PERIODS
+        )
+        return results
+    for period, offset in _CALENDAR_PERIODS:
+        try:
+            baseline = _close_on_or_before(prepared, timestamp - offset)
+            if any(not isfinite(price) or price <= 0 for price in (latest, baseline)):
+                raise InsufficientHistoryError(f"Invalid close for {period}")
+            value = latest / baseline - 1
+            if not isfinite(value):
+                raise InsufficientHistoryError(f"Invalid {period} return")
+            results[period] = PerformancePeriodResult(value)
+        except ValueError as error:
+            results[period] = PerformancePeriodResult(None, str(error))
+    return results
+
+
+def calculate_daily_return(closes: pd.Series, *, start_session: date, end_session: date) -> float:
     if start_session >= end_session:
         raise ValueError("Daily starting session must be earlier than ending session")
     if closes.empty:

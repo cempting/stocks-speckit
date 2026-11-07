@@ -33,6 +33,7 @@ def test_industry_rows_show_sector_style_trend_columns() -> None:
         "Representation",
         "ETF",
         "Evidence state",
+        "1 day",
         "1 week",
         "1 month",
         "3 months",

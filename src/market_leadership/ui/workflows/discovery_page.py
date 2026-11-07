@@ -19,11 +19,10 @@ from market_data.domain.industry_representations import (
     representation_performance,
 )
 from market_data.domain.sector_performance import (
-    InsufficientHistoryError,
+    PERFORMANCE_PERIODS,
     PerformancePeriod,
-    calculate_absolute_performance,
-    calculate_daily_return,
-    calculate_performance,
+    PerformancePeriodResult,
+    calculate_performance_periods,
 )
 from market_data.domain.stock_chart import build_stock_chart_evidence
 from market_leadership.application.discover_sectors import (
@@ -60,6 +59,7 @@ from market_leadership.ui.components.progressive_tape import (
 )
 from market_leadership.ui.components.stock_detail import render_stock_detail
 from market_leadership.ui.navigation import clear_catalog_selections, preserve_catalog_controls
+from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS
 from market_leadership.ui.theme import apply_theme, toggle_dark_mode
 
 DISCOVERY_CACHE_SCHEMA_VERSION = 6
@@ -78,6 +78,49 @@ _EVIDENCE_RESEARCH_CONTEXT_KEY = _PREFIX + "evidence_research_context"
 _EVIDENCE_RESEARCH_GENERATION_KEY = _PREFIX + "evidence_research_generation"
 _SCORES_KEY = _PREFIX + "scores"
 _SCORE_CONTEXT_KEY = _PREFIX + "score_context"
+
+_DISCOVERY_HEADER_STYLE = """
+<style>
+@media (max-width: 640px) {
+    .st-key-discovery_header > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(2.5rem, auto);
+        gap: 0.5rem;
+        align-items: end;
+    }
+    .st-key-discovery_header > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .st-key-discovery_header > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        align-self: center;
+    }
+    .st-key-discovery_header > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {
+        grid-column: 2 / 4;
+        grid-row: 1;
+    }
+    .st-key-discovery_header > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) {
+        grid-column: 2;
+        grid-row: 2;
+    }
+    .st-key-discovery_header > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) {
+        grid-column: 3;
+        grid-row: 2;
+    }
+    .st-key-discovery_header .st-key-theme_action button {
+        min-width: 2.5rem;
+    }
+}
+</style>
+"""
 
 
 def _clear_stock_selection() -> None:
@@ -516,14 +559,10 @@ def _render_member_tape(
             selected_listing.listing_id,
             requested_as_of,
         )
-        if (
-            st.session_state.get(_MEMBER_HISTORY_CONTEXT_KEY) != member_history_context
-        ):
+        if st.session_state.get(_MEMBER_HISTORY_CONTEXT_KEY) != member_history_context:
             st.session_state.pop(_MEMBER_HISTORY_KEY, None)
             st.session_state[_MEMBER_HISTORY_CONTEXT_KEY] = member_history_context
-        history_requested = (
-            st.session_state.get(_MEMBER_HISTORY_KEY) == member_history_context
-        )
+        history_requested = st.session_state.get(_MEMBER_HISTORY_KEY) == member_history_context
         load_selected_history = st.button(
             "Load continuity-filtered history",
             key=_PREFIX + "load_member_detail_history",
@@ -552,9 +591,7 @@ def _render_member_tape(
             except (OSError, RuntimeError, ValueError) as error:
                 st.error(f"Continuity-filtered member history could not be loaded: {error}")
         history_series = (
-            selected_history.series[0]
-            if selected_history and selected_history.series
-            else None
+            selected_history.series[0] if selected_history and selected_history.series else None
         )
         chart_history = (
             history_series.history
@@ -617,27 +654,6 @@ def _render_member_tape(
         st.rerun()
 
 
-def _entity_performance(
-    symbol: str | None,
-    history: dict[str, pd.DataFrame],
-    benchmark: pd.Series,
-    *,
-    as_of: date,
-    performance_mode: str,
-) -> dict[PerformancePeriod, float] | None:
-    if not symbol or symbol not in history or history[symbol].empty or benchmark.empty:
-        return None
-    entity_history = history[symbol].loc[
-        pd.DatetimeIndex(history[symbol].index).date <= as_of, "close"
-    ]
-    benchmark_history = benchmark.loc[pd.DatetimeIndex(benchmark.index).date <= as_of]
-    try:
-        result = calculate_performance(entity_history, benchmark_history, as_of=as_of)
-        return result.absolute if performance_mode == "Absolute" else result.relative
-    except InsufficientHistoryError:
-        return None
-
-
 def _build_entity_tape(
     *,
     entity_rows: tuple[tuple[str, str], ...],
@@ -654,15 +670,17 @@ def _build_entity_tape(
     rows: list[dict[str, object]] = []
     chart_history: dict[str, pd.DataFrame] = {}
     start_session, end_session = daily_session_interval(requested_as_of)
-    benchmark_daily: float | None = None
-    benchmark_reason = ""
-    if performance_mode != "Absolute":
-        try:
-            benchmark_daily = calculate_daily_return(
-                benchmark, start_session=start_session, end_session=end_session
-            )
-        except ValueError as error:
-            benchmark_reason = f"S&P 500 benchmark: {error}"
+    performance_as_of = observed_as_of or requested_as_of
+    benchmark_results = (
+        calculate_performance_periods(
+            benchmark,
+            as_of=performance_as_of,
+            start_session=start_session,
+            end_session=end_session,
+        )
+        if performance_mode != "Absolute"
+        else {}
+    )
     for entity_id, name in entity_rows:
         symbol = representation_by_id.get(entity_id)
         chart_key = symbol or f"unavailable-{entity_id}"
@@ -670,100 +688,70 @@ def _build_entity_tape(
             chart_history[symbol] = history[symbol].loc[
                 pd.DatetimeIndex(history[symbol].index).date <= (observed_as_of or requested_as_of)
             ]
-        metrics = (
-            _entity_performance(
-                symbol,
-                history,
-                benchmark,
-                as_of=observed_as_of or requested_as_of,
-                performance_mode=performance_mode,
-            )
-            if reviewed_by_id is None
-            else None
-        )
         representation = (reviewed_by_id or {}).get(entity_id)
-        representation_results = None
-        daily = float("nan")
-        daily_reason = ""
-        try:
-            if reviewed_by_id is not None:
-                if representation is None:
-                    raise InsufficientHistoryError(
-                        f"No approved representation for {label} {name} [{entity_id}]"
-                    )
-                representation_results = representation_performance(
-                    representation,
-                    history,
-                    as_of=requested_as_of,
-                    start_session=start_session,
-                    end_session=end_session,
-                    performance_as_of=observed_as_of or requested_as_of,
-                )
-                daily_result = representation_results["1d"]
-                if daily_result.value is None:
-                    assert daily_result.reason is not None
-                    raise InsufficientHistoryError(daily_result.reason)
-                absolute_daily = daily_result.value
-            else:
-                if not symbol:
-                    raise InsufficientHistoryError(
-                        f"No approved ticker for {label} {name} [{entity_id}]"
-                    )
-                entity_history = history.get(symbol)
-                if entity_history is None or "close" not in entity_history:
-                    raise InsufficientHistoryError(f"No close history for {symbol}")
-                absolute_daily = calculate_daily_return(
-                    entity_history["close"],
-                    start_session=start_session,
-                    end_session=end_session,
-                )
-            if performance_mode != "Absolute":
-                if benchmark_daily is None:
-                    raise InsufficientHistoryError(benchmark_reason)
-                absolute_daily -= benchmark_daily
-            percentage = absolute_daily * 100
-            if not isfinite(percentage):
-                raise InsufficientHistoryError("Daily percentage is not finite")
-            daily = percentage
-        except ValueError as error:
-            daily_reason = f"{symbol or name}: {error}"
-        evidence_reason: str | None = None
+        results: dict[PerformancePeriod, PerformancePeriodResult]
         if reviewed_by_id is not None:
-            metrics = None
-            if representation_results is not None:
-                metrics = {}
-                reasons: list[str] = []
-                periods: tuple[PerformancePeriod, ...] = ("1w", "1m", "3m", "6m", "12m")
-                for period in periods:
-                    result = representation_results[period]
-                    if result.value is None:
-                        assert result.reason is not None
-                        reasons.append(f"{period}: {result.reason}")
-                        continue
-                    value = result.value
-                    if performance_mode != "Absolute":
-                        try:
-                            baseline = calculate_absolute_performance(
-                                benchmark,
-                                as_of=observed_as_of or requested_as_of,
-                                period=period,
-                            )[period]
-                            value -= baseline
-                        except ValueError as error:
-                            reasons.append(f"{period}: S&P 500 benchmark: {error}")
-                            continue
-                    metrics[period] = value
-                evidence_reason = "; ".join(reasons) if reasons else None
-            elif representation is not None:
-                evidence_reason = daily_reason
-            if representation is not None and representation.invalid_reason:
-                evidence_reason = representation.invalid_reason
+            if representation is None:
+                reason = f"No approved representation for {label} {name} [{entity_id}]"
+                results = {
+                    period: PerformancePeriodResult(None, reason) for period in PERFORMANCE_PERIODS
+                }
+            else:
+                try:
+                    results = representation_performance(
+                        representation,
+                        history,
+                        as_of=requested_as_of,
+                        start_session=start_session,
+                        end_session=end_session,
+                        performance_as_of=performance_as_of,
+                    )
+                except ValueError as error:
+                    results = {
+                        period: PerformancePeriodResult(None, str(error))
+                        for period in PERFORMANCE_PERIODS
+                    }
+        else:
+            entity_history = history.get(symbol or "")
+            closes = (
+                entity_history["close"]
+                if entity_history is not None and "close" in entity_history
+                else pd.Series(dtype="float64")
+            )
+            results = calculate_performance_periods(
+                closes,
+                as_of=performance_as_of,
+                start_session=start_session,
+                end_session=end_session,
+            )
+        metrics: dict[PerformancePeriod, float] = {}
+        reasons: dict[PerformancePeriod, str] = {}
+        for period, result in results.items():
+            if result.value is None:
+                assert result.reason is not None
+                reasons[period] = f"{symbol or name}: {result.reason}"
+                continue
+            value = result.value
+            if performance_mode != "Absolute":
+                baseline = benchmark_results[period]
+                if baseline.value is None:
+                    assert baseline.reason is not None
+                    reasons[period] = f"S&P 500 benchmark: {baseline.reason}"
+                    continue
+                value -= baseline.value
+            if not isfinite(value * 100):
+                reasons[period] = f"{symbol or name}: Invalid {period} percentage"
+                continue
+            metrics[period] = value
+        evidence_reason = "; ".join(
+            f"{period}: {reason}" for period, reason in reasons.items() if period != "1d"
+        )
         covered = representation is not None if reviewed_by_id is not None else symbol is not None
         if not covered:
             status = "Not covered"
         elif representation is not None and representation.invalid_reason:
-            status = f"Invalid evidence: {evidence_reason}"
-        elif metrics is None or len(metrics) < 5:
+            status = f"Invalid evidence: {representation.invalid_reason}"
+        elif any(period not in metrics for period in PERFORMANCE_PERIODS[1:]):
             status = "Insufficient evidence" + (f": {evidence_reason}" if evidence_reason else "")
         elif observed_as_of != end_session:
             status = "Stale"
@@ -774,14 +762,12 @@ def _build_entity_tape(
             label: name,
             "ETF" if label == "Industry" else "Ticker": symbol
             or ("Not covered" if label == "Industry" else "Unavailable"),
-            "1d": daily,
-            "1 week": metrics["1w"] * 100 if metrics and "1w" in metrics else None,
-            "1 month": metrics["1m"] * 100 if metrics and "1m" in metrics else None,
-            "3 months": metrics["3m"] * 100 if metrics and "3m" in metrics else None,
-            "6 months": metrics["6m"] * 100 if metrics and "6m" in metrics else None,
-            "12 months": metrics["12m"] * 100 if metrics and "12m" in metrics else None,
+            **{
+                heading: metrics[period] * 100 if period in metrics else float("nan")
+                for heading, period in zip(PERFORMANCE_COLUMNS, PERFORMANCE_PERIODS, strict=True)
+            },
             "Status": status,
-            "1d reason": daily_reason,
+            "1d reason": reasons.get("1d", ""),
         }
         if label == "Industry":
             row["Representation"] = (
@@ -818,21 +804,23 @@ def render_discovery(
         preserve_catalog_controls()
     if configure_page:
         st.set_page_config(page_title="Discovery", page_icon="📊", layout="wide")
-    heading_column, date_column, refresh_column, theme_column = st.columns(
-        (4, 3, 3, 2), vertical_alignment="bottom"
-    )
-    with heading_column:
-        st.title("Discovery")
-    with theme_column:
-        dark_mode = bool(st.session_state.setdefault("dark_mode", False))
-        with st.container(key="theme_action"):
-            st.button(
-                "Switch to light mode" if dark_mode else "Switch to dark mode",
-                icon=":material/light_mode:" if dark_mode else ":material/dark_mode:",
-                key="dark_mode_button",
-                type="tertiary",
-                on_click=toggle_dark_mode,
-            )
+    st.html(_DISCOVERY_HEADER_STYLE)
+    with st.container(key="discovery_header"):
+        heading_column, date_column, refresh_column, theme_column = st.columns(
+            (4, 3, 3, 2), vertical_alignment="bottom"
+        )
+        with heading_column:
+            st.title("Discovery")
+        with theme_column:
+            dark_mode = bool(st.session_state.setdefault("dark_mode", False))
+            with st.container(key="theme_action"):
+                st.button(
+                    "Switch to light mode" if dark_mode else "Switch to dark mode",
+                    icon=":material/light_mode:" if dark_mode else ":material/dark_mode:",
+                    key="dark_mode_button",
+                    type="tertiary",
+                    on_click=toggle_dark_mode,
+                )
     apply_theme()
 
     settings = settings or load_settings()

@@ -4,10 +4,10 @@
 
 ## Scope and Current Authority
 
-The approved [016 amendment](../016-add-daily-performance/spec.md) adds `1d` before `1 week`
-to both entity tapes, superseding only the five-return/eight-visible-column baseline with
-six returns/nine columns. Preserve all chart, thumbnail, ranking, stock, and loading behavior;
-historical completed tasks do not claim delivery of the new column.
+[016](../016-add-daily-performance/spec.md) owns the six-return/nine-field entity interface,
+daily evidence, display captions and responsive header/rows/details.
+Use `1 day` for display and `1d` internally. Preserve chart, thumbnail, ranking, stock and loading
+behavior; its [task ledger](../016-add-daily-performance/tasks.md) tracks pending caption/phone acceptance.
 
 004 owns Discovery and Industry Deep-Dive, progressive navigation, live industry
 momentum and the accepted chart/control baseline, incorporating former 003.
@@ -63,8 +63,8 @@ Keep the internal evidence fields, all other preservation invariants and selecti
   breadcrumbs and existing descendant invalidation before widget rendering.
   Preserve date, control choices and valid loaded peer context on return.
 - Keep Streamlit chart rows and styled return cells, not a plain dataframe.
-  Row weights remain `[1.3, 1.3, 1.0, ...]`. Price/SMA and volume plots remain
-  separate adjacent charts, nominal width 135 and height 84, stretched to cells.
+  Preserve desktop column weights. Price/SMA and volume remain separate charts,
+  nominal width 135 and height 84, stretched to cells; narrow stacking/scrolling follows 016.
   Preserve the current `Price + 50 MA` and `Volume by price direction` headings.
 - Stock tapes retain exactly five visible columns: price/50-MA chart, volume
   chart, Ticker including company name, CAP Type, Total Score. A private Name
@@ -72,7 +72,7 @@ Keep the internal evidence fields, all other preservation invariants and selecti
   Industry Status, Representation and Representation type stay hidden, with
   their evidence retained in name-button tooltips; sector status follows its
   existing tooltip treatment. Sector Ticker and industry ETF stay internal;
-  each entity tape shows two charts, its entity button and five return periods.
+  each entity tape shows two charts, its entity button and six return periods.
   Keep current name/ID ordering and the stock Ticker label.
 - `performance_column_styles` remains the shared palette producer for Styler
   and HTML cells, with independent per-column positive/negative normalization.
@@ -82,8 +82,9 @@ Keep the internal evidence fields, all other preservation invariants and selecti
   Return cells retain two-decimal percentages, right alignment, 0.5rem padding,
   0.25rem corners and tabular numerals. Missing cells say `Unavailable` without
   a gain/loss background. Volume direction colors remain unchanged.
-- `calculate_performance` remains authoritative: completed closes on/before
-  calendar boundaries and matching-period reviewed S&P 500 benchmark subtraction.
+- Longer-period arithmetic retains completed closes on/before calendar boundaries and
+  matching-period reviewed S&P 500 subtraction; exact daily sessions and independent
+  display availability use 016's shared calculation API.
   Preview selection does not change returns or provider history-range keys.
   Preserve requested/observed session, stale and insufficient states.
 - Sector/industry representations use exact approved effective-dated listings

@@ -8,6 +8,7 @@ from market_data.domain.sector_performance import (
     calculate_absolute_performance,
     calculate_daily_return,
     calculate_performance,
+    calculate_performance_periods,
     with_sma50,
 )
 
@@ -61,11 +62,84 @@ def test_selected_absolute_period_does_not_require_unrelated_yearly_history() ->
         calculate_absolute_performance(closes, as_of=date(2026, 1, 31))
 
 
-def test_selected_absolute_period_rejects_unsupported_daily_offset() -> None:
-    with pytest.raises(ValueError, match="Unsupported performance period"):
+def test_selected_daily_period_requires_explicit_sessions() -> None:
+    with pytest.raises(InsufficientHistoryError, match="explicit completed-session"):
         calculate_absolute_performance(
             _monthly_closes([100, 101]), as_of=date(2025, 11, 30), period="1d"
         )
+
+
+def test_six_period_display_prepares_calendar_history_once(monkeypatch):
+    from market_data.domain import sector_performance
+
+    closes = pd.Series(100.0, index=pd.bdate_range(end="2026-10-30", periods=30))
+    prepares = []
+    original = sector_performance._prepare_closes
+
+    def prepare(*args):
+        prepares.append(True)
+        return original(*args)
+
+    monkeypatch.setattr(sector_performance, "_prepare_closes", prepare)
+    results = calculate_performance_periods(
+        closes,
+        as_of=date(2026, 10, 30),
+        start_session=date(2026, 10, 29),
+        end_session=date(2026, 10, 30),
+    )
+    assert tuple(results) == ("1d", "1w", "1m", "3m", "6m", "12m")
+    assert len(prepares) == 1
+    for period in ("1d", "1w", "1m"):
+        assert results[period].value == 0
+        assert results[period].reason is None
+    for period in ("3m", "6m", "12m"):
+        assert results[period].value is None
+        assert results[period].reason
+
+
+def test_six_period_daily_uses_friday_to_monday_not_calendar_offset():
+    closes = pd.Series([100.0, 102.0], index=pd.to_datetime(["2026-10-23", "2026-10-26"]))
+    result = calculate_absolute_performance(
+        closes,
+        as_of=date(2026, 10, 26),
+        period="1d",
+        start_session=date(2026, 10, 23),
+        end_session=date(2026, 10, 26),
+    )
+    assert result["1d"] == pytest.approx(0.02)
+    results = calculate_performance_periods(
+        closes,
+        as_of=date(2026, 10, 26),
+        start_session=date(2026, 10, 23),
+        end_session=date(2026, 10, 26),
+    )
+    assert results["1d"].value == pytest.approx(0.02)
+    assert results["1w"].value is None
+
+
+def test_six_period_missing_history_has_explicit_reasons():
+    results = calculate_performance_periods(
+        pd.Series(dtype="float64"),
+        as_of=date(2026, 10, 30),
+        start_session=date(2026, 10, 29),
+        end_session=date(2026, 10, 30),
+    )
+    assert len(results) == 6
+    assert all(result.value is None and result.reason for result in results.values())
+
+
+def test_six_period_daily_gap_preserves_calendar_values_and_timezone():
+    closes = pd.Series(100.0, index=pd.bdate_range(end="2026-10-30", periods=400))
+    closes = closes.drop(pd.Timestamp("2026-10-29")).tz_localize("America/New_York")
+    results = calculate_performance_periods(
+        closes,
+        as_of=date(2026, 10, 30),
+        start_session=date(2026, 10, 29),
+        end_session=date(2026, 10, 30),
+    )
+    assert results["1d"].value is None
+    assert "2026-10-29" in results["1d"].reason
+    assert all(results[period].value == 0 for period in ("1w", "1m", "3m", "6m", "12m"))
 
 
 def test_with_sma50_preserves_missing_warmup_values() -> None:
@@ -118,10 +192,13 @@ def test_daily_return_rejects_invalid_endpoint_prices(value, endpoint):
         )
 
 
-@pytest.mark.parametrize("dates", [
-    ["2026-10-29", "2026-10-29", "2026-10-30"],
-    ["2026-10-29 09:00", "2026-10-29 16:00", "2026-10-30 16:00"],
-])
+@pytest.mark.parametrize(
+    "dates",
+    [
+        ["2026-10-29", "2026-10-29", "2026-10-30"],
+        ["2026-10-29 09:00", "2026-10-29 16:00", "2026-10-30 16:00"],
+    ],
+)
 def test_daily_return_rejects_duplicate_observation_dates(dates):
     closes = pd.Series([100.0, 101.0, 102.0], index=pd.to_datetime(dates))
     with pytest.raises(ValueError, match="unique"):
@@ -138,14 +215,13 @@ def test_daily_return_rejects_unordered_sessions(start):
 
 
 def test_daily_return_handles_session_timezone_without_changing_legacy_periods():
-    closes = pd.Series(
-        range(100, 500), index=pd.bdate_range(end="2026-10-30", periods=400)
-    )
+    closes = pd.Series(range(100, 500), index=pd.bdate_range(end="2026-10-30", periods=400))
     before = calculate_absolute_performance(closes, as_of=date(2026, 10, 30))
     assert tuple(before) == ("1w", "1m", "3m", "6m", "12m")
     daily = calculate_daily_return(
         closes.tz_localize("America/New_York"),
-        start_session=date(2026, 10, 29), end_session=date(2026, 10, 30),
+        start_session=date(2026, 10, 29),
+        end_session=date(2026, 10, 30),
     )
     assert daily == pytest.approx(499 / 498 - 1)
     assert before == calculate_absolute_performance(closes, as_of=date(2026, 10, 30))

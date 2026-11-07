@@ -92,6 +92,14 @@ yfinance on page load and refresh;
 the provider needs no API key. The first run may therefore require an internet
 connection. Stop the app with Ctrl-C in the terminal.
 
+Sector performance and Industry momentum add `1 day` before `1 week`; all six horizons are
+independently available. Daily returns use exact consecutive completed US trading sessions,
+never a calendar-day offset or older available pair. The selected basis applies without
+silent Absolute fallback; ranking/snapshots retain their five-period contract.
+See the [display contract](specs/016-add-daily-performance/contracts/daily-performance-ui.md)
+for captions/layout. The approved `1 year` caption still displays as `12 months` in the app
+until [T030](specs/016-add-daily-performance/tasks.md); phone/detail acceptance is also pending.
+
 The **Yahoo Classification Preview** tab is separate from the reviewed catalog and
 does not make network requests. To populate its local-only cache, run a bounded batch
 from the repository root:

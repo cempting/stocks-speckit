@@ -1,21 +1,22 @@
-# Quickstart Validation: Add Daily Performance
+# Validation: Daily Performance
 
-This guide applies after implementation. Planning alone does not add `1d` or establish passing
-application tests. See the [UI contract](contracts/daily-performance-ui.md) and
-[data model](data-model.md) for exact expected behavior.
+**Current status**: Daily calculations and 640/1440px layouts have historical evidence.
+T030 (`1 year` caption) and T027-T029 (phone/details and final acceptance) remain open.
+This documentation cleanup runs no application tests and establishes no new browser pass.
 
-## Prerequisites
+Use the [UI contract](contracts/daily-performance-ui.md), [data model](data-model.md) and
+[API migration](plan.md#python-api-migration) for expected results.
 
-- Python 3.12 and the repository's existing uv-managed environment/dependencies.
-- A valid existing catalog manifest and approved sector/industry representations for a live
-  walkthrough. Use the current default catalog; do not alter published releases for this feature.
-- Deterministic tests use existing fixtures, injected histories, and a fixed clock/calendar
-  boundary rather than real network data.
+## Environment
 
-## Focused automated validation
+Use Python 3.12 and the existing uv environment. Live walkthroughs require the current valid
+catalog and approved representations; retain `MARKET_CATALOG_MANIFEST_PATH` if configured.
+Deterministic cases use existing synthetic fixtures with injected histories/clock/calendar,
+never a production fixture/provider selector or altered published release.
 
-Add failing tests for the new requirements before implementation. Extend the existing files,
-then run from the repository root:
+## Automated Gates
+
+Confirm new regressions fail before implementing their corresponding fixes, then run from repository root:
 
 ```bash
 uv run pytest -m "not live" -q \
@@ -26,39 +27,15 @@ uv run pytest -m "not live" -q \
   tests/unit/ui/test_progressive_tape.py \
   tests/app/test_sector_stock_explorer.py \
   tests/app/test_discovery.py \
+  tests/app/test_market_selection.py \
+  tests/app/test_scoreboard.py \
   tests/integration/test_build_snapshot.py \
   tests/integration/test_industry_representations.py
-```
 
-Extend the existing completed-session tests in `tests/integration/test_build_snapshot.py`
-for exact adjacent session dates, freezing the clock for today's incomplete-session behavior.
-Resolve the daily pair from the requested date, independently of observed dates and prices.
-
-Expected evidence:
-
-- Known positive, negative, zero, and relative returns match the contract to two decimals.
-- Weekend/holiday adjacency and historical as-of bounds are exact; missing sessions are not skipped.
-- With a fixed requested-date interval and an older valid observed pair, missing either required
-  requested-date close produces `Unavailable`, never an older daily return. Entity, benchmark,
-  and every basket member use the same pair; freshness warnings and valid longer returns persist.
-- Non-finite/non-positive prices, duplicate dates, and missing exact endpoints are explicit failures.
-- Both approved ETF and basket paths work; baskets retain all approved weights and exact endpoints.
-- All six representation periods are independently available. Previously valid longer-period
-  arithmetic and row ordering are unchanged; short histories retain supported weekly/monthly
-  cells. Ranking and snapshot callers preserve their original five-period float dictionaries
-  and all-required behavior. See the [Python API migration](plan.md#python-api-migration).
-- Both tables show literal `1d` before `1 week`, including unavailable-only rows.
-- Four rows across six periods generate 24 formatted performance cells; missing cells are uncolored.
-- Daily color scaling does not depend on longer-period extrema; both themes remain readable.
-- Basis/thumbnail changes and navigation preserve selections and do not add data requests.
-- Stock tapes retain their five-column projection, chart behavior, and native selection.
-
-Run the existing quality gates without adding dependencies:
-
-```bash
 uv run ruff check \
   packages/market-data/src/market_data/domain/sector_performance.py \
   packages/market-data/src/market_data/domain/industry_representations.py \
+  packages/market-data/src/market_data/domain/industry_momentum.py \
   src/market_leadership/application/market_sessions.py \
   src/market_leadership/application/discover_sectors.py \
   src/market_leadership/ui/workflows/discovery_page.py \
@@ -71,64 +48,88 @@ uv run ruff check \
   tests/unit/ui/test_progressive_tape.py \
   tests/app/test_sector_stock_explorer.py \
   tests/app/test_discovery.py \
+  tests/app/test_market_selection.py \
+  tests/app/test_scoreboard.py \
   tests/integration/test_build_snapshot.py \
   tests/integration/test_industry_representations.py
 uv run pyright
 ```
 
-Expand the selectors only if implementation touches additional files. Escalate to
-`uv run pytest -m "not live" -q` when practical or when focused results reveal coupled failures.
+Verify controlled return/evidence cases in the contract, exact session boundaries, independent
+horizons, preserved ranking/snapshot outputs, literal captions/order and 24 return cells for
+four rows. Compare longer-period values, palettes, legacy-frame formatting, charts, navigation,
+selection and request counts. Escalate to the full non-live suite when practical or coupled failures warrant it.
 
-## Browser walkthrough
+## Browser Acceptance
 
 ```bash
 uv run streamlit run streamlit_app.py
 ```
 
-Open the local URL printed by Streamlit. If another manifest is already used, retain the existing
-`MARKET_CATALOG_MANIFEST_PATH` setting. Keep synthetic validation histories isolated in automated
-tests; do not introduce a runtime fixture/provider selector.
+Measure actual CSS width, not just requested viewport size. Run both entity tables and the
+Discovery header at **390, 640 and 1440px in light and dark themes** (six combinations).
 
-1. Open Discovery. Confirm Sector performance shows nine visible columns with `1d` immediately
-   before the existing weekly header and all longer-term headers unchanged.
-2. Inspect gain/loss/zero or unavailable examples supported by current evidence. Confirm two-decimal
-   percentages, neutral zero, uncolored `Unavailable`, and visible daily failure context where needed.
-3. Select an approved sector. Confirm Industry momentum presents the identical six horizons using
-   each industry's own approved representation, not the parent sector's return.
-4. Change Performance basis to vs S&P 500. Compare daily values against the same-session entity
-   minus benchmark result. Return to Absolute; no new history load should be needed.
-5. Change each existing thumbnail period. Confirm daily/legacy values are unchanged while chart
-   cropping changes. Navigate between sectors, industries, and stocks; controls/selections retain
-   their existing behavior and stocks show the unchanged five columns.
-6. Check both light and dark themes at wide and narrow widths. Confirm daily/weekly adjacency,
-   all-column access, readable cells, full entity labels, native selection, and preserved charts.
-7. Use deterministic automated cases for missing endpoints, baskets, weekend/holiday dates,
-   incomplete sessions, and stale histories with older valid daily pairs when live evidence
-   cannot exercise them. Confirm stale observation dates never move the daily interval backward.
+1. Verify exact captions/order, daily/weekly adjacency, gains/losses/zero/unavailable styling
+   and readable charts/values. Use deterministic tests for numerical cases live evidence cannot supply.
+2. At 1440px retain nine fields and the four-column header. At 640px charts stack above a
+   fitting ticker/six-value strip. At 390px charts remain readable and the same unwrapped strip
+   has a visible local-scroll cue; use touch swipes and keyboard scrolling to reach all seven fields.
+   Ordinary page overflow must be zero; no value clipping or overlap.
+3. At 390/640px title stays left beside date above refresh/theme. Exercise native date/calendar,
+   refresh and theme with touch/keyboard; preserve limits, cache semantics and valid selections.
+   DOM-dispatched clicks alone do not prove phone touch usability.
+4. Open/close full long-name and unavailable-evidence details by touch and keyboard, without hover.
+   Read all applicable source/date/freshness/representation/failure text; confirm no clipping,
+   navigation, lost selection or added provider/catalog requests.
+5. Exercise both bases, all thumbnail choices, sector/industry/back navigation and stock selection.
+   Basis persists; thumbnails change charts, not returns. Stock tables retain five fields and
+   explicit detail/history-loading safeguards.
 
-Record observed outcomes and commands during implementation. Do not infer numeric correctness,
-CSS accessibility, or zero extra requests solely from a visible header or a successful app launch.
+Record commands, measured dimensions, theme/input method, outcomes and unresolved gaps.
+Do not infer numerical correctness, non-hover usability or zero added requests from an app launch.
 
-## Observed implementation evidence
+## Historical Evidence
 
-- New unified-API tests first failed: **4 failed**, because `representation_performance` did
-  not accept the explicit daily endpoints.
-- Initial nine-file regression run after consolidation: **231 passed, 2 failed**. The failures
-  detected daily effectivity incorrectly suppressing older valid longer-period evidence.
-  Effectivity is now evaluated independently in the requested and observed-date contexts.
-- Corrected nine-file command: **233 passed**; after adding short-history entity/benchmark and
-  period-selector cases, the final nine-file command above passed **243 tests**. This includes exact ETF/basket daily math,
-  fixed-clock completed sessions, daily gaps with valid long returns, independent horizons,
-  both table/basis paths, palettes, unavailable context, navigation, and unchanged request shapes.
-- Strict `uv run pyright`: **0 errors, 0 warnings**. Focused Ruff command above: **passed**.
-- AppTest request spies compare against the pre-existing one-batched-fetch-per-rerun fixture
-  baseline and verify no additional calls for daily/basis/thumbnail/navigation projections;
-  they do not claim that fixture reruns make zero total provider invocations.
-- Full offline `uv run pytest -m "not live" -q`: **1041 passed, 1 failed, 1 deselected**.
-  The failure is the pre-existing three-tab assertion in
-  [test_default_market_catalog.py](../../tests/unit/test_default_market_catalog.py), while
-  [app.py](../../src/market_leadership/app.py) already defines four tabs in `HEAD`.
-  Both files and the entry point have no changes against `HEAD`; this unrelated failure is
-  left untouched. No successful full-suite result is claimed.
-- **Browser acceptance remains pending**: no 1440/640 light/dark walkthrough has been completed.
-  Automated rendering checks do not substitute for actual browser accessibility/layout evidence.
+These results cover the implementation at the time, **not** the pending caption/390px/detail requirements.
+
+| Check | Observed result |
+|---|---|
+| Unified-API test-first run | 4 failures: endpoint arguments not yet accepted. |
+| Initial consolidated nine-file daily suite | 231 passed, 2 failed: daily activity incorrectly suppressed valid older-context longer evidence. |
+| Independent activity correction | 233 passed; added short-history/period-selector cases brought the nine-file suite to 243 passed. |
+| 640px strip test-first/final checks | Two initial failures; final nine-file daily suite 251 passed, focused renderer/workflow 156 passed. |
+| Daily quality gates | Ruff passed; strict Pyright 0 errors/0 warnings. |
+| Full offline suite | 1041 passed, 1 failed, 1 deselected; unrelated existing three-tab assertion in [test_default_market_catalog.py](../../tests/unit/test_default_market_catalog.py) versus four-tab [app.py](../../src/market_leadership/app.py). No full-suite success claimed. |
+| Header test-first/final checks | Regressions failed before implementation; `uv run pytest tests/app/test_market_selection.py tests/app/test_discovery.py -q`: 13 passed. Ruff/Pyright passed. |
+
+Request spies used the existing one-batched-fetch-per-rerun fixture baseline: no additional
+daily/basis/thumbnail/navigation calls, not zero total provider invocations.
+The historical nine-file command used the focused pytest list above without
+`tests/app/test_market_selection.py` and `tests/app/test_scoreboard.py`.
+The 13-test header run reported four existing exchange-calendar warnings.
+
+Browser evidence from 2026-11-07:
+
+- Both tables passed actual 640/1440 CSS pixels in both themes. At 150% browser zoom,
+  requested 960/2160 viewports measured exactly 640/1440 `innerWidth`.
+  Industry rows included +1%, -1%, zero and two unavailable representations; measured backgrounds
+  confirmed gain/loss/neutral/uncolored states after theme rerenders settled.
+- At 640px ticker/name and six labeled values shared vertical coordinates below stacked charts,
+  with 84px cells/available thumbnails and zero page overflow; missing charts kept explicit placeholders.
+  At 1440px nine columns and separate headings remained.
+- Entity +2% and benchmark +0.5% produced relative sector 1.50%; industry +1% produced 0.50%,
+  independently of its parent. Loss/flat/missing industry rows produced -1.50%/-0.50%/`Unavailable`.
+- All five thumbnail controls left returns unchanged. Back navigation preserved basis/thumbnail
+  selections; stock detail opened without exceptions and retained five headings/explicit continuity loads.
+  Stock tapes had no entity-only responsive wrapper.
+- Header passed both widths/themes. At 640px: title x=16, date/refresh x=300, theme x=584;
+  buttons y=172, height 40px, theme target width 40px, page overflow zero.
+  Theme callback was exercised by DOM click, not claimed as phone-touch evidence.
+- Checks used the real Discovery/shared renderer with isolated existing fixture data on an owned
+  port-8503 helper. The shared port-8502 process was not restarted or managed; it was unavailable
+  during some checks and retained imported header code during later reloads.
+  Owned helpers were stopped and their fixture files removed; no production selector, dependency,
+  published-catalog change or remote request was introduced.
+
+Only passing T027-T030 and the current six-combination walkthrough can close the remaining gates;
+historical results do not establish app-wide responsive compliance.
