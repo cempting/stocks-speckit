@@ -113,11 +113,16 @@ def test_reviewed_basket_momentum_is_weighted_constituent_returns_only() -> None
     )
     history = {"AAA": _trend_history(110), "BBB": _trend_history(90), "XLK": _trend_history(200)}
     result = representation_performance(basket, history, as_of=date(2026, 10, 26))
-    assert all(value == pytest.approx(0.02) for value in result.values())
-    with pytest.raises(ValueError, match="BBB"):
-        representation_performance(
-            basket, {"AAA": history["AAA"], "XLK": history["XLK"]}, as_of=date(2026, 10, 26)
-        )
+    assert result["1d"].value is None
+    assert result["1d"].reason
+    assert all(result[period].value == pytest.approx(0.02)
+               for period in ("1w", "1m", "3m", "6m", "12m"))
+    missing = representation_performance(
+        basket, {"AAA": history["AAA"], "XLK": history["XLK"]}, as_of=date(2026, 10, 26)
+    )
+    for period in ("1w", "1m", "3m", "6m", "12m"):
+        assert missing[period].value is None
+        assert "BBB" in missing[period].reason
 
 
 def test_inactive_and_invalid_representations_never_produce_momentum() -> None:

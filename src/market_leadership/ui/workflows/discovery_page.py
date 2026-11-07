@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import date, datetime, timedelta
 from hashlib import sha256
+from math import isfinite
 from typing import cast
 from zoneinfo import ZoneInfo
 
@@ -21,6 +22,7 @@ from market_data.domain.sector_performance import (
     InsufficientHistoryError,
     PerformancePeriod,
     calculate_absolute_performance,
+    calculate_daily_return,
     calculate_performance,
 )
 from market_data.domain.stock_chart import build_stock_chart_evidence
@@ -35,7 +37,10 @@ from market_leadership.application.industry_representations import snapshot_repr
 from market_leadership.application.load_stock_history import (
     StockHistoryBatch,
 )
-from market_leadership.application.market_sessions import latest_completed_us_session
+from market_leadership.application.market_sessions import (
+    daily_session_interval,
+    latest_completed_us_session,
+)
 from market_leadership.application.score_industry import IndustryScoreResult
 from market_leadership.config import Settings, load_settings
 from market_leadership.infrastructure.stock_membership import (
@@ -648,6 +653,16 @@ def _build_entity_tape(
 ) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
     chart_history: dict[str, pd.DataFrame] = {}
+    start_session, end_session = daily_session_interval(requested_as_of)
+    benchmark_daily: float | None = None
+    benchmark_reason = ""
+    if performance_mode != "Absolute":
+        try:
+            benchmark_daily = calculate_daily_return(
+                benchmark, start_session=start_session, end_session=end_session
+            )
+        except ValueError as error:
+            benchmark_reason = f"S&P 500 benchmark: {error}"
     for entity_id, name in entity_rows:
         symbol = representation_by_id.get(entity_id)
         chart_key = symbol or f"unavailable-{entity_id}"
@@ -667,27 +682,80 @@ def _build_entity_tape(
             else None
         )
         representation = (reviewed_by_id or {}).get(entity_id)
+        representation_results = None
+        daily = float("nan")
+        daily_reason = ""
+        try:
+            if reviewed_by_id is not None:
+                if representation is None:
+                    raise InsufficientHistoryError(
+                        f"No approved representation for {label} {name} [{entity_id}]"
+                    )
+                representation_results = representation_performance(
+                    representation,
+                    history,
+                    as_of=requested_as_of,
+                    start_session=start_session,
+                    end_session=end_session,
+                    performance_as_of=observed_as_of or requested_as_of,
+                )
+                daily_result = representation_results["1d"]
+                if daily_result.value is None:
+                    assert daily_result.reason is not None
+                    raise InsufficientHistoryError(daily_result.reason)
+                absolute_daily = daily_result.value
+            else:
+                if not symbol:
+                    raise InsufficientHistoryError(
+                        f"No approved ticker for {label} {name} [{entity_id}]"
+                    )
+                entity_history = history.get(symbol)
+                if entity_history is None or "close" not in entity_history:
+                    raise InsufficientHistoryError(f"No close history for {symbol}")
+                absolute_daily = calculate_daily_return(
+                    entity_history["close"],
+                    start_session=start_session,
+                    end_session=end_session,
+                )
+            if performance_mode != "Absolute":
+                if benchmark_daily is None:
+                    raise InsufficientHistoryError(benchmark_reason)
+                absolute_daily -= benchmark_daily
+            percentage = absolute_daily * 100
+            if not isfinite(percentage):
+                raise InsufficientHistoryError("Daily percentage is not finite")
+            daily = percentage
+        except ValueError as error:
+            daily_reason = f"{symbol or name}: {error}"
         evidence_reason: str | None = None
         if reviewed_by_id is not None:
             metrics = None
-            if representation is not None and not representation.invalid_reason:
-                try:
-                    metrics = representation_performance(
-                        representation,
-                        history,
-                        as_of=observed_as_of or requested_as_of,
-                    )
+            if representation_results is not None:
+                metrics = {}
+                reasons: list[str] = []
+                periods: tuple[PerformancePeriod, ...] = ("1w", "1m", "3m", "6m", "12m")
+                for period in periods:
+                    result = representation_results[period]
+                    if result.value is None:
+                        assert result.reason is not None
+                        reasons.append(f"{period}: {result.reason}")
+                        continue
+                    value = result.value
                     if performance_mode != "Absolute":
-                        benchmark_metrics = calculate_absolute_performance(
-                            benchmark,
-                            as_of=observed_as_of or requested_as_of,
-                        )
-                        metrics = {
-                            period: value - benchmark_metrics[period]
-                            for period, value in metrics.items()
-                        }
-                except ValueError as error:
-                    evidence_reason = str(error)
+                        try:
+                            baseline = calculate_absolute_performance(
+                                benchmark,
+                                as_of=observed_as_of or requested_as_of,
+                                period=period,
+                            )[period]
+                            value -= baseline
+                        except ValueError as error:
+                            reasons.append(f"{period}: S&P 500 benchmark: {error}")
+                            continue
+                    metrics[period] = value
+                evidence_reason = "; ".join(reasons) if reasons else None
+            elif representation is not None:
+                evidence_reason = daily_reason
             if representation is not None and representation.invalid_reason:
                 evidence_reason = representation.invalid_reason
         covered = representation is not None if reviewed_by_id is not None else symbol is not None
@@ -695,9 +763,9 @@ def _build_entity_tape(
             status = "Not covered"
         elif representation is not None and representation.invalid_reason:
             status = f"Invalid evidence: {evidence_reason}"
-        elif metrics is None:
+        elif metrics is None or len(metrics) < 5:
             status = "Insufficient evidence" + (f": {evidence_reason}" if evidence_reason else "")
-        elif observed_as_of != latest_completed_us_session(requested_as_of):
+        elif observed_as_of != end_session:
             status = "Stale"
         else:
             status = "Current"
@@ -706,12 +774,14 @@ def _build_entity_tape(
             label: name,
             "ETF" if label == "Industry" else "Ticker": symbol
             or ("Not covered" if label == "Industry" else "Unavailable"),
-            "1 week": metrics["1w"] * 100 if metrics else None,
-            "1 month": metrics["1m"] * 100 if metrics else None,
-            "3 months": metrics["3m"] * 100 if metrics else None,
-            "6 months": metrics["6m"] * 100 if metrics else None,
-            "12 months": metrics["12m"] * 100 if metrics else None,
+            "1d": daily,
+            "1 week": metrics["1w"] * 100 if metrics and "1w" in metrics else None,
+            "1 month": metrics["1m"] * 100 if metrics and "1m" in metrics else None,
+            "3 months": metrics["3m"] * 100 if metrics and "3m" in metrics else None,
+            "6 months": metrics["6m"] * 100 if metrics and "6m" in metrics else None,
+            "12 months": metrics["12m"] * 100 if metrics and "12m" in metrics else None,
             "Status": status,
+            "1d reason": daily_reason,
         }
         if label == "Industry":
             row["Representation"] = (

@@ -5,7 +5,10 @@ import pandas as pd
 import pytest
 
 from market_leadership.application.build_snapshot import build_daily_history_snapshot
-from market_leadership.application.market_sessions import latest_completed_us_session
+from market_leadership.application.market_sessions import (
+    daily_session_interval,
+    latest_completed_us_session,
+)
 from market_leadership.application.ports import (
     ProviderCandidate,
     ProviderCapability,
@@ -129,6 +132,39 @@ def test_required_session_skips_weekends_holidays_and_open_sessions():
     ) == date(2026, 10, 22)
     with pytest.raises(ValueError, match="future"):
         latest_completed_us_session(date(2026, 10, 27), now=now)
+
+
+@pytest.mark.parametrize(
+    ("as_of", "now", "start", "end"),
+    [
+        (date(2026, 10, 30), datetime(2026, 11, 2, 22, tzinfo=UTC),
+         date(2026, 10, 29), date(2026, 10, 30)),
+        (date(2026, 10, 25), datetime(2026, 10, 26, 22, tzinfo=UTC),
+         date(2026, 10, 22), date(2026, 10, 23)),
+        (date(2026, 7, 6), datetime(2026, 10, 26, 22, tzinfo=UTC),
+         date(2026, 7, 2), date(2026, 7, 6)),
+        (date(2026, 10, 23), datetime(2026, 10, 23, 14, tzinfo=UTC),
+         date(2026, 10, 21), date(2026, 10, 22)),
+        (date(2026, 11, 27), datetime(2026, 11, 27, 17, 59, tzinfo=UTC),
+         date(2026, 11, 24), date(2026, 11, 25)),
+        (date(2026, 11, 27), datetime(2026, 11, 27, 18, tzinfo=UTC),
+         date(2026, 11, 25), date(2026, 11, 27)),
+    ],
+)
+def test_daily_session_interval_uses_exact_completed_calendar_pair(as_of, now, start, end):
+    assert daily_session_interval(as_of, now=now) == (start, end)
+
+
+@pytest.mark.parametrize(
+    ("as_of", "now", "reason"),
+    [
+        (date(2026, 10, 27), datetime(2026, 10, 26, 22, tzinfo=UTC), "future"),
+        (date(2026, 10, 26), datetime(2026, 10, 26, 22), "timezone-aware"),
+    ],
+)
+def test_daily_session_interval_preserves_request_validation(as_of, now, reason):
+    with pytest.raises(ValueError, match=reason):
+        daily_session_interval(as_of, now=now)
 
 
 def test_snapshot_build_uses_resolved_session(tmp_path):

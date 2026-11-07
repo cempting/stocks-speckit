@@ -4,6 +4,11 @@
 
 ## Scope and Current Authority
 
+The approved [016 amendment](../016-add-daily-performance/spec.md) adds `1d` before `1 week`
+to both entity tapes, superseding only the five-return/eight-visible-column baseline with
+six returns/nine columns. Preserve all chart, thumbnail, ranking, stock, and loading behavior;
+historical completed tasks do not claim delivery of the new column.
+
 004 owns Discovery and Industry Deep-Dive, progressive navigation, live industry
 momentum and the accepted chart/control baseline, incorporating former 003.
 015 owns Find a stock placement; retain Yahoo Classification Preview as well.

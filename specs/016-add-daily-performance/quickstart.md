@@ -21,24 +21,32 @@ then run from the repository root:
 uv run pytest -m "not live" -q \
   tests/unit/domain/test_sector_performance.py \
   tests/unit/test_industry_representations.py \
+  tests/unit/test_industry_momentum.py \
   tests/unit/ui/test_performance_table.py \
   tests/unit/ui/test_progressive_tape.py \
   tests/app/test_sector_stock_explorer.py \
   tests/app/test_discovery.py \
+  tests/integration/test_build_snapshot.py \
   tests/integration/test_industry_representations.py
 ```
 
-Include tests for the session-resolution boundary alongside the related domain/workflow tests,
-freezing the clock for today's incomplete-session behavior.
+Extend the existing completed-session tests in `tests/integration/test_build_snapshot.py`
+for exact adjacent session dates, freezing the clock for today's incomplete-session behavior.
+Resolve the daily pair from the requested date, independently of observed dates and prices.
 
 Expected evidence:
 
 - Known positive, negative, zero, and relative returns match the contract to two decimals.
 - Weekend/holiday adjacency and historical as-of bounds are exact; missing sessions are not skipped.
+- With a fixed requested-date interval and an older valid observed pair, missing either required
+  requested-date close produces `Unavailable`, never an older daily return. Entity, benchmark,
+  and every basket member use the same pair; freshness warnings and valid longer returns persist.
 - Non-finite/non-positive prices, duplicate dates, and missing exact endpoints are explicit failures.
 - Both approved ETF and basket paths work; baskets retain all approved weights and exact endpoints.
-- Daily and legacy period availability are independent. Existing five-period values/types and
-  row ordering are unchanged for the same input.
+- All six representation periods are independently available. Previously valid longer-period
+  arithmetic and row ordering are unchanged; short histories retain supported weekly/monthly
+  cells. Ranking and snapshot callers preserve their original five-period float dictionaries
+  and all-required behavior. See the [Python API migration](plan.md#python-api-migration).
 - Both tables show literal `1d` before `1 week`, including unavailable-only rows.
 - Four rows across six periods generate 24 formatted performance cells; missing cells are uncolored.
 - Daily color scaling does not depend on longer-period extrema; both themes remain readable.
@@ -52,15 +60,18 @@ uv run ruff check \
   packages/market-data/src/market_data/domain/sector_performance.py \
   packages/market-data/src/market_data/domain/industry_representations.py \
   src/market_leadership/application/market_sessions.py \
+  src/market_leadership/application/discover_sectors.py \
   src/market_leadership/ui/workflows/discovery_page.py \
   src/market_leadership/ui/performance_table.py \
   src/market_leadership/ui/components/progressive_tape.py \
   tests/unit/domain/test_sector_performance.py \
   tests/unit/test_industry_representations.py \
+  tests/unit/test_industry_momentum.py \
   tests/unit/ui/test_performance_table.py \
   tests/unit/ui/test_progressive_tape.py \
   tests/app/test_sector_stock_explorer.py \
   tests/app/test_discovery.py \
+  tests/integration/test_build_snapshot.py \
   tests/integration/test_industry_representations.py
 uv run pyright
 ```
@@ -91,8 +102,33 @@ tests; do not introduce a runtime fixture/provider selector.
    their existing behavior and stocks show the unchanged five columns.
 6. Check both light and dark themes at wide and narrow widths. Confirm daily/weekly adjacency,
    all-column access, readable cells, full entity labels, native selection, and preserved charts.
-7. Use deterministic automated cases for missing endpoints, baskets, weekend/holiday dates, and
-   incomplete sessions when live market evidence cannot exercise them.
+7. Use deterministic automated cases for missing endpoints, baskets, weekend/holiday dates,
+   incomplete sessions, and stale histories with older valid daily pairs when live evidence
+   cannot exercise them. Confirm stale observation dates never move the daily interval backward.
 
 Record observed outcomes and commands during implementation. Do not infer numeric correctness,
 CSS accessibility, or zero extra requests solely from a visible header or a successful app launch.
+
+## Observed implementation evidence
+
+- New unified-API tests first failed: **4 failed**, because `representation_performance` did
+  not accept the explicit daily endpoints.
+- Initial nine-file regression run after consolidation: **231 passed, 2 failed**. The failures
+  detected daily effectivity incorrectly suppressing older valid longer-period evidence.
+  Effectivity is now evaluated independently in the requested and observed-date contexts.
+- Corrected nine-file command: **233 passed**; after adding short-history entity/benchmark and
+  period-selector cases, the final nine-file command above passed **243 tests**. This includes exact ETF/basket daily math,
+  fixed-clock completed sessions, daily gaps with valid long returns, independent horizons,
+  both table/basis paths, palettes, unavailable context, navigation, and unchanged request shapes.
+- Strict `uv run pyright`: **0 errors, 0 warnings**. Focused Ruff command above: **passed**.
+- AppTest request spies compare against the pre-existing one-batched-fetch-per-rerun fixture
+  baseline and verify no additional calls for daily/basis/thumbnail/navigation projections;
+  they do not claim that fixture reruns make zero total provider invocations.
+- Full offline `uv run pytest -m "not live" -q`: **1041 passed, 1 failed, 1 deselected**.
+  The failure is the pre-existing three-tab assertion in
+  [test_default_market_catalog.py](../../tests/unit/test_default_market_catalog.py), while
+  [app.py](../../src/market_leadership/app.py) already defines four tabs in `HEAD`.
+  Both files and the entry point have no changes against `HEAD`; this unrelated failure is
+  left untouched. No successful full-suite result is claimed.
+- **Browser acceptance remains pending**: no 1440/640 light/dark walkthrough has been completed.
+  Automated rendering checks do not substitute for actual browser accessibility/layout evidence.

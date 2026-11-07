@@ -14,11 +14,19 @@ Add a literal `1d` performance column immediately before `1 week` in both sector
 tapes. Reuse existing adjusted history, approved ETF/basket representations, performance-basis
 selection, and the shared percentage/color renderer. Do not add requests or controls.
 
-Calculate daily returns independently of the existing five-period calculators. Those calculators
-require long history and return all periods together; extending them would risk changing existing
-callers and turning an isolated daily-data gap into missing longer-period values. Add narrowly
-scoped daily helpers to the existing domain modules, supplied with exact completed-session dates
-by the application calendar boundary. Daily failure remains visible without mutating legacy values.
+Following the user's implementation decision, extend `representation_performance` to return
+`1d`, `1w`, `1m`, `3m`, `6m`, and `12m` by default. Each entry is a
+`RepresentationPeriodResult(value, reason)`, so one unavailable horizon cannot suppress another.
+Keep the exact-endpoint scalar daily calculator and supply official session dates from the
+application calendar boundary. The shared absolute calculator accepts one existing period when
+requested; its default five-period dictionary, arithmetic, and error behavior remain unchanged.
+Migrate callers explicitly: entity tapes use independent availability, while ranking/snapshot
+callers still require and project only the five legacy periods.
+
+The 2026-11-06 clarification anchors the daily interval to the requested as-of date, not the
+observed table date. Resolve the latest completed official session and its exact predecessor
+independently of price availability. Missing required closes yield `Unavailable`; an older
+observed date remains disclosure context and never selects an older daily interval.
 
 ## Technical Context
 
@@ -41,9 +49,10 @@ Pyright. Browser walkthroughs verify readable light/dark cells and narrow-width 
 Ordinary control reruns reuse existing histories. Daily arithmetic is limited to two endpoint
 lookups per representation constituent and the matching benchmark interval.
 
-**Constraints**: Exact adjusted completed-session endpoints; no dropped missing-session
-substitution; no absolute fallback in relative mode; no change to existing five-period
-calculations, ranking, chart dimensions, selection keys, or thumbnail options.
+**Constraints**: Exact adjusted completed-session endpoints anchored to the requested date;
+no observed-date fallback or dropped missing-session substitution; no absolute fallback in
+relative mode; no change to existing five-period calculations, ranking, chart dimensions,
+selection keys, or thumbnail options.
 
 **Scale/Scope**: Sector performance and Industry momentum wherever the shared entity tape is
 rendered. Nine visible columns per entity tape: two charts, one entity button, six performance
@@ -60,14 +69,14 @@ periods. Stock tapes remain at five columns. No new tabs, markets, providers, or
 | III. YAGNI | PASS | PASS | No configurable period engine, new persistence, ranking selector, or daily chart option. |
 | IV. Avoid Waste | PASS | PASS | Reuse already-loaded histories; no provider or catalog requests added. |
 | V. Separation of Concerns | PASS | PASS | Application resolves sessions; domain validates/calculates; UI formats and exposes reasons. |
-| VI. High Cohesion, Low Coupling | PASS | PASS | Reuse explicit representation contracts; leave legacy five-period dictionaries and callers intact. |
+| VI. High Cohesion, Low Coupling | PASS | PASS | One six-period representation API with explicit availability; legacy callers adapt to their five-period contract. |
 | Native Streamlit architecture | PASS | PASS | Keep the approved four root tabs and current native buttons/state. |
-| Source, freshness, cache and state | PASS | PASS | Existing yfinance path, dates, cache keys, and session-local selections remain authoritative. |
+| Source, freshness, cache and state | PASS | PASS | Reuse existing histories/cache/state; requested date determines daily sessions, while observed dates remain explicit disclosures. |
 | Observable failure | PASS | PASS | Expected insufficiency has a daily-specific reason in existing context/tooltips, not a fabricated value. |
 | Test-first and type safety | PASS | PASS | Add failing endpoint/basket/renderer/workflow regressions before code; run focused tests and quality gates. |
-| Migration/versioning | PASS | PASS | Additive UI amendment; no public persisted schema migration or change to legacy return types. |
+| Migration/versioning | PASS | PASS | Representation API return values change to typed value/reason entries; repository callers are migrated. No persisted or snapshot schema changes. |
 
-Both gates pass against constitution 4.0.0; no exception is required. Reconcile the existing
+Both gates pass against constitution 4.0.1; no exception is required. Reconcile the existing
 five-period presentation statements with this feature, while preserving their historical
 implementation evidence. Planning does not claim that six-period rendering is implemented.
 
@@ -84,7 +93,7 @@ specs/016-add-daily-performance/
 ├── quickstart.md
 ├── checklists/requirements.md
 ├── contracts/daily-performance-ui.md
-└── tasks.md             # Future /speckit-tasks output; not created by planning
+└── tasks.md             # Regenerated backlog aligned with the selected-date clarification
 ```
 
 ### Source Code (repository root)
@@ -92,7 +101,7 @@ specs/016-add-daily-performance/
 ```text
 packages/market-data/src/market_data/domain/
 ├── sector_performance.py       # New exact-endpoint scalar daily helper
-└── industry_representations.py # Approved ETF/basket daily return
+└── industry_representations.py # Unified six-period ETF/basket results with reasons
 src/market_leadership/
 ├── application/market_sessions.py    # Resolve explicit daily session interval
 ├── application/exchange_calendar.py  # Existing typed calendar boundary
@@ -107,6 +116,7 @@ tests/
 ├── unit/ui/test_progressive_tape.py
 ├── app/test_sector_stock_explorer.py
 ├── app/test_discovery.py
+├── integration/test_build_snapshot.py # Existing completed-session boundary regressions
 └── integration/test_industry_representations.py
 ```
 
@@ -122,25 +132,34 @@ or external technology choices requiring separate research agents.
 
 ## Phase 1: Design and Contracts
 
-1. Resolve an explicit consecutive-session pair using the existing calendar boundary and
-   completed-session cutoff. Use the existing observed table date when stale evidence limits
-   the table, bounded by the requested date and latest actually completed session. Supply dates
-   to pure domain arithmetic; never infer a daily interval by dropping missing observations.
+1. Resolve one explicit consecutive-session pair per table context from `requested_as_of` and
+   a single timezone-aware evaluation clock. Reuse
+   `latest_completed_us_session(requested_as_of, now=...)` for `end_session`, then the typed
+   calendar's `previous_session` for `start_session`. Keep existing future-date/clock validation.
+   Price availability and `observed_as_of` must not select or move either daily endpoint.
+   Supply exact dates to pure domain arithmetic; never infer a daily interval by dropping
+   missing observations. Missing either required close produces `Unavailable`.
 2. Add `calculate_daily_return(closes, *, start_session, end_session) -> float` alongside the
-   unchanged five-period functions. Return a fractional return. Require unique dates, the two
+   default five-period functions. Return a fractional return. Require unique dates, the two
    exact endpoints, finite strictly positive prices, and ordered distinct session dates.
    Raise `InsufficientHistoryError` for missing/invalid evidence; malformed date/index inputs
    raise contextual `ValueError`. Do not inspect unrelated older price values for daily validity.
-3. Add `representation_daily_return(...) -> float` in the existing representation module,
-   receiving the same explicit dates. Validate existing approval/effectivity rules, calculate
-   ETF daily return directly, or sum approved weighted constituent daily returns. Every basket
-   constituent must have both exact endpoints; never drop a constituent or renormalize weights.
-4. In `_build_entity_tape`, independently calculate daily evidence for the approved
-   representation (or existing symbol-only helper path), then subtract an exact matching
+3. Extend `representation_performance` to six default periods with a typed value and unavailable
+   reason per entry. Use `as_of=requested_as_of` for daily effectivity and
+   `performance_as_of=observed_as_of` for the existing longer-period cutoff/effectivity.
+   Receive explicit daily session dates, use the scalar daily calculator, and preserve exact
+   approved weights. Missing dates make only `1d` unavailable; do not infer sessions from prices.
+   Longer periods use the existing calendar offsets independently, retaining full basket
+   alignment and approved constituent checks. Never drop or renormalize constituents.
+4. In `_build_entity_tape`, call the representation API once per reviewed row for all six periods
+   (retain the existing symbol-only helper path), then subtract an exact matching
    benchmark daily return only in relative mode. Absolute daily calculation must work without
-   benchmark prices. Preserve the existing five-period code paths and multiply the daily
-   fractional result by 100 once when inserting `1d` before `1 week`.
-5. Catch only expected domain evidence errors at the workflow boundary. Preserve any daily
+   benchmark prices. Display each available longer period independently and multiply the daily
+   fractional result by 100 once when inserting `1d` before `1 week`. Use loaded histories
+   directly for daily endpoint lookup, not chart/legacy series cropped at `observed_as_of`.
+   Preserve the existing observed-date cutoff for charts and all five longer-period calculations.
+5. Convert expected domain evidence errors to explicit per-period reasons in the representation
+   API; catch invalid representations and benchmark errors at the workflow boundary. Preserve any daily
    reason in the existing entity tooltip/context with a `1d:` prefix, without replacing
    longer-period values, existing status meaning, representation identity, or freshness warnings.
 6. Prepend `1d` to `PERFORMANCE_COLUMNS` so the existing renderer supplies right-aligned
@@ -151,9 +170,30 @@ or external technology choices requiring separate research agents.
    daily/legacy availability, exact headings, both themes, and unchanged interactions.
    Existing renderer tests hard-code 20 cells/five cells per row: update those assertions to
    24/six and add an explicit literal-heading assertion rather than relying only on the constant.
+   Include a fixed requested-date pair with an older valid observed pair: the daily cell must
+   remain unavailable when a required requested-date close is missing, even though an older
+   daily return could be computed. Assert the same pair for entity, benchmark, and every basket
+   constituent while preserving valid longer-period values and freshness disclosures.
 8. Validate via [quickstart.md](quickstart.md), including a browser walkthrough. This feature
    does not change `_calculate_discovery`'s cached result schema or remote request parameters;
    do not invalidate market-data caches merely to add an uncached tape projection.
 
 Outputs: [data-model.md](data-model.md), [UI contract](contracts/daily-performance-ui.md),
-and [quickstart.md](quickstart.md). Task generation and implementation remain subsequent phases.
+and [quickstart.md](quickstart.md). [tasks.md](tasks.md) was regenerated on 2026-11-06 after this
+design reconciliation: its endpoint instructions and quoted model constraints now follow the
+selected-date clarification. The six-period API supersedes the original separate representation
+daily helper design. Automated implementation evidence is recorded in [quickstart.md](quickstart.md);
+browser acceptance and final feature completion remain pending.
+
+## Python API migration
+
+`representation_performance(...)[period]` is now a `RepresentationPeriodResult`, not a float.
+Read `.value`, check for `None`, and expose `.reason` on failure. The ordered dictionary always
+contains six keys for valid representation inputs. Inactive/invalid representations remain
+explicit errors when neither requested nor longer-period context permits them.
+Pass `start_session` and `end_session` for a usable daily result; domain code does not resolve
+clocks/calendars. Omitted endpoints produce an explicit unavailable daily entry.
+
+This is a backward-incompatible Python return-shape change, approved by the user. All repository
+callers are migrated; external consumers must adapt before adopting it. No release version,
+stored catalog, persisted schema, or cached snapshot format changes are made by this implementation.

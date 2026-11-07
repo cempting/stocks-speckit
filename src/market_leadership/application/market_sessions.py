@@ -17,3 +17,10 @@ def latest_completed_us_session(as_of: date, *, now: datetime | None = None) -> 
     if current < calendar.session_close(session).to_pydatetime():
         session = calendar.previous_session(session)
     return session.date()
+
+
+def daily_session_interval(as_of: date, *, now: datetime | None = None) -> tuple[date, date]:
+    end = latest_completed_us_session(as_of, now=now)
+    calendar = get_calendar("XNYS")
+    end_session = calendar.date_to_session(end.isoformat())
+    return calendar.previous_session(end_session).date(), end

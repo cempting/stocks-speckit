@@ -45,7 +45,7 @@ separate. Educational aspects and their decisions have not been merged into appl
 | [013: Market structure service and observation cache](013-market-structure-service/spec.md) | Independent structure delivery, app-owned durable observation coverage, on-demand bootstrap, incremental reuse and offline cached browsing | Revises the runtime delivery boundary across all four current tabs, not 010 publication integrity, 012 identity/membership, 011 source rights, or 004/006/015 UI and explicit-load behavior; workspace/foundation implemented, service/cache integration pending |
 | [014: Fundamental score evaluation](014-fundamental-score-evaluation/spec.md) | Evaluation of Quality, Growth, Cash Flow, and stock-list Total Score methodology; score consistency, interpretation, and risk disclosures | Evaluates 001 component definitions and 006 aggregate semantics; changes require documented findings, explicit approval, and versioning; 011 retains issuer evidence and cash-flow warning ownership |
 | [015: Dedicated stock lookup](015-dedicated-stock-lookup/spec.md) | Placement of retained-stock lookup and its existing detail/history workflow in the dedicated Find a stock tab | Preserves 012 identity and listing verification rules; supersedes 004's exact two-tab limit for this tab and relocates 012's former within-Discovery lookup |
-| [016: Daily sector/industry performance](016-add-daily-performance/spec.md) | Add `1d` immediately before the weekly return in Sector performance and Industry momentum | Narrowly supersedes 004's five-visible-period baseline; preserves 008 approved ETF/basket evidence, 015 buttons/hidden ticker fields, thumbnail options, ranking defaults, and 006 stock columns; planning complete, implementation pending |
+| [016: Daily sector/industry performance](016-add-daily-performance/spec.md) | Add `1d` immediately before the weekly return in Sector performance and Industry momentum | Narrowly supersedes 004's five-visible-period baseline; preserves 008 approved ETF/basket evidence, 015 buttons/hidden ticker fields, thumbnail options, ranking defaults, and 006 stock columns; implementation and focused tests complete, browser acceptance pending; representation API migration documented |
 
 ### Consolidation and precedence
 
@@ -134,6 +134,10 @@ The subsequent approved 015 FR-014 amendment removes the redundant sector Ticker
 and industry ETF columns. Both entity tapes have eight visible columns: two charts,
 Sector/Industry with ticker and full name, and five return periods. Their backing
 ticker evidence remains intact; stock tapes retain all five columns including Ticker.
+
+[016](016-add-daily-performance/spec.md) supersedes only that eight-column baseline:
+sector/industry tapes add `1d` before `1 week` and show nine columns with six returns.
+All protected button, hidden-metadata, stock, thumbnail, ranking and loading behavior remains.
 
 ### File-only catalog invariants
 

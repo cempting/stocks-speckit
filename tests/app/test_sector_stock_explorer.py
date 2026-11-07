@@ -213,12 +213,14 @@ def test_entity_tape_preserves_complete_column_and_row_order(label):
         "Volume chart",
         label,
         "ETF" if label == "Industry" else "Ticker",
+        "1d",
         "1 week",
         "1 month",
         "3 months",
         "6 months",
         "12 months",
         "Status",
+        "1d reason",
     ] + (["Representation", "Representation type"] if label == "Industry" else []) + ["Node ID"]
     assert frame[label].tolist() == ["First", "Second"]
     assert frame["Node ID"].tolist() == ["first", "second"]
@@ -244,9 +246,284 @@ def test_thumbnail_period_does_not_change_performance_returns():
     )
     short = _build_entity_tape(**arguments, preview_start=date(2026, 10, 23))
     long = _build_entity_tape(**arguments, preview_start=date(2025, 10, 30))
-    windows = ["1 week", "1 month", "3 months", "6 months", "12 months"]
+    windows = ["1d", "1 week", "1 month", "3 months", "6 months", "12 months"]
     pd.testing.assert_frame_equal(short[windows], long[windows])
     assert len(short["Price chart"][0]) < len(long["Price chart"][0])
+
+
+@pytest.mark.parametrize("ending, expected", [(102.0, 2.0), (99.0, -1.0), (100.0, 0.0)])
+@pytest.mark.parametrize("reviewed", [False, True])
+def test_sector_daily_return_is_independent_of_yearly_and_benchmark_history(
+    ending, expected, reviewed
+):
+    from market_data.domain.industry_representations import ReviewedRepresentation
+    from market_leadership.ui.workflows.discovery_page import _build_entity_tape
+
+    representation = ReviewedRepresentation(
+        representation_id="reviewed-first",
+        node_id="first",
+        kind="etf",
+        name="Full reviewed sector name",
+        source_id="reviewed",
+        approval_reference="review-1",
+        effective_from=date(2020, 1, 1),
+        symbol="FIRST",
+    )
+    frame = _build_entity_tape(
+        entity_rows=(("first", "First"),),
+        label="Sector",
+        representation_by_id={"first": "FIRST"},
+        reviewed_by_id={"first": representation} if reviewed else None,
+        history={
+            "FIRST": pd.DataFrame(
+                {"close": [100.0, ending]},
+                index=pd.to_datetime(["2026-10-29", "2026-10-30"]),
+            )
+        },
+        benchmark=pd.Series(dtype="float64"),
+        requested_as_of=date(2026, 10, 30),
+        observed_as_of=date(2026, 10, 30),
+        performance_mode="Absolute",
+    )
+    assert frame["1d"][0] == pytest.approx(expected)
+    assert pd.api.types.is_numeric_dtype(frame["1d"])
+    assert frame[["1 week", "1 month", "3 months", "6 months", "12 months"]].isna().all().all()
+    assert frame["1d reason"][0] == ""
+
+
+@pytest.mark.parametrize("kind, expected", [("etf", -1.0), ("basket", 0.5)])
+def test_reviewed_industry_daily_return_uses_own_evidence(kind, expected):
+    from decimal import Decimal
+
+    from market_data.domain.industry_representations import (
+        BasketConstituent,
+        ReviewedRepresentation,
+    )
+    from market_leadership.ui.workflows.discovery_page import _build_entity_tape
+
+    representation = ReviewedRepresentation(
+        representation_id="reviewed-industry",
+        node_id="first",
+        kind=kind,
+        name="Full industry representation",
+        source_id="reviewed",
+        approval_reference="review-1",
+        effective_from=date(2020, 1, 1),
+        symbol="BBB" if kind == "etf" else None,
+        constituents=(
+            BasketConstituent("listing-aaa", "AAA", Decimal("50")),
+            BasketConstituent("listing-bbb", "BBB", Decimal("50")),
+        )
+        if kind == "basket"
+        else (),
+    )
+    history = {
+        symbol: pd.DataFrame(
+            {"close": closes, "volume": [1000, 1000]},
+            index=pd.to_datetime(["2026-10-29", "2026-10-30"]),
+        )
+        for symbol, closes in {"AAA": [100, 102], "BBB": [200, 198], "PARENT": [100, 120]}.items()
+    }
+    arguments = dict(
+        entity_rows=(("first", "First"), ("missing", "Not covered industry")),
+        label="Industry",
+        representation_by_id={"first": "BBB"} if kind == "etf" else {},
+        reviewed_by_id={"first": representation},
+        history=history,
+        benchmark=pd.Series(dtype="float64"),
+        requested_as_of=date(2026, 10, 30),
+        observed_as_of=date(2026, 10, 30),
+        performance_mode="Absolute",
+    )
+    frame = _build_entity_tape(**arguments)
+    assert frame["1d"][0] == pytest.approx(expected)
+    assert frame["1d"][0] != 20.0
+    assert pd.isna(frame["1d"][1])
+    assert "approved representation" in frame["1d reason"][1]
+    assert frame["Status"][1] == "Not covered"
+    if kind == "basket":
+        assert frame["Price chart"][0] == "Unavailable"
+        assert frame["ETF"][0] == "Not an ETF"
+    for preview_start in (date(2026, 10, 23), date(2026, 9, 30), date(2025, 10, 30)):
+        cropped = _build_entity_tape(**arguments, preview_start=preview_start)
+        pd.testing.assert_frame_equal(
+            frame[["1d", "1 week", "1 month", "3 months", "6 months", "12 months"]],
+            cropped[["1d", "1 week", "1 month", "3 months", "6 months", "12 months"]],
+        )
+
+
+def _stale_daily_arguments(label):
+    from market_data.domain.industry_representations import ReviewedRepresentation
+
+    index = pd.bdate_range(end="2026-10-30", periods=400)
+    entity = pd.DataFrame({"close": [100.0] * 400, "volume": [1000] * 400}, index=index)
+    entity.loc[pd.Timestamp("2026-10-30"), "close"] = 102.0
+    entity.loc[pd.Timestamp("2026-11-02")] = [10000.0, 1000]
+    benchmark = pd.Series([100.0] * 400, index=index)
+    benchmark.loc[pd.Timestamp("2026-10-30")] = 100.5
+    benchmark.loc[pd.Timestamp("2026-11-02")] = 10000.0
+    representation = ReviewedRepresentation(
+        representation_id="reviewed-first",
+        node_id="first",
+        kind="etf",
+        name="Full reviewed representation",
+        source_id="reviewed",
+        approval_reference="review-1",
+        effective_from=date(2020, 1, 1),
+        symbol="FIRST",
+    )
+    return dict(
+        entity_rows=(("first", "First"),),
+        label=label,
+        representation_by_id={"first": "FIRST"},
+        reviewed_by_id={"first": representation},
+        history={"FIRST": entity},
+        benchmark=benchmark,
+        requested_as_of=date(2026, 10, 30),
+        observed_as_of=date(2026, 10, 28),
+        performance_mode="Absolute",
+    )
+
+
+@pytest.mark.parametrize("label", ["Sector", "Industry"])
+@pytest.mark.parametrize("mode, expected", [("Absolute", 2.0), ("vs S&P 500", 1.5)])
+def test_daily_basis_uses_requested_sessions_while_preserving_legacy_crop(
+    monkeypatch, label, mode, expected
+):
+    from unittest.mock import Mock
+
+    from market_data.domain.industry_representations import representation_performance
+    from market_data.domain.sector_performance import calculate_absolute_performance
+    from market_leadership.ui.workflows import discovery_page
+
+    arguments = _stale_daily_arguments(label)
+    arguments["performance_mode"] = mode
+    interval = Mock(wraps=discovery_page.daily_session_interval)
+    benchmark_daily = Mock(wraps=discovery_page.calculate_daily_return)
+    monkeypatch.setattr(discovery_page, "daily_session_interval", interval)
+    monkeypatch.setattr(discovery_page, "calculate_daily_return", benchmark_daily)
+    frame = discovery_page._build_entity_tape(**arguments)
+    assert frame["1d"][0] == pytest.approx(expected)
+    assert frame["Status"][0] == "Stale"
+    assert interval.call_count == 1
+    assert benchmark_daily.call_count == (0 if mode == "Absolute" else 1)
+    assert all(point["session"] <= "2026-10-28" for point in frame["Price chart"][0])
+    legacy = representation_performance(
+        arguments["reviewed_by_id"]["first"],
+        arguments["history"],
+        as_of=arguments["observed_as_of"],
+    )
+    benchmark_legacy = calculate_absolute_performance(
+        arguments["benchmark"], as_of=arguments["observed_as_of"]
+    )
+    for heading, period in zip(
+        ["1 week", "1 month", "3 months", "6 months", "12 months"],
+        ["1w", "1m", "3m", "6m", "12m"],
+        strict=True,
+    ):
+        expected_legacy = legacy[period].value - (
+            benchmark_legacy[period] if mode != "Absolute" else 0
+        )
+        assert frame[heading][0] == expected_legacy * 100
+    arguments["entity_rows"] = (("first", "First"), ("second", "Second"))
+    arguments["representation_by_id"]["second"] = "FIRST"
+    arguments["reviewed_by_id"]["second"] = arguments["reviewed_by_id"]["first"]
+    interval.reset_mock()
+    benchmark_daily.reset_mock()
+    multiple = discovery_page._build_entity_tape(**arguments)
+    assert multiple["1d"].tolist() == pytest.approx([expected, expected])
+    assert interval.call_count == 1
+    assert benchmark_daily.call_count == (0 if mode == "Absolute" else 1)
+
+
+@pytest.mark.parametrize("label", ["Sector", "Industry"])
+@pytest.mark.parametrize("mode", ["Absolute", "vs S&P 500"])
+@pytest.mark.parametrize("target", ["entity", "benchmark"])
+def test_shared_representation_tape_retains_available_shorter_periods(label, mode, target):
+    from market_leadership.ui.workflows.discovery_page import _build_entity_tape
+
+    arguments = _stale_daily_arguments(label)
+    arguments["performance_mode"] = mode
+    if target == "entity":
+        arguments["history"]["FIRST"] = arguments["history"]["FIRST"].iloc[-30:]
+    else:
+        arguments["benchmark"] = arguments["benchmark"].iloc[-30:]
+    frame = _build_entity_tape(**arguments)
+    assert frame["1d"][0] == pytest.approx(2.0 if mode == "Absolute" else 1.5)
+    assert frame["1 week"][0] == 0
+    assert frame["1 month"][0] == 0
+    if target == "benchmark" and mode == "Absolute":
+        assert frame["Status"][0] == "Stale"
+        assert (frame[["3 months", "6 months", "12 months"]] == 0).all().all()
+    else:
+        assert frame[["3 months", "6 months", "12 months"]].isna().all().all()
+        assert frame["Status"][0].startswith("Insufficient evidence:")
+        assert "3m:" in frame["Status"][0]
+
+
+@pytest.mark.parametrize("label", ["Sector", "Industry"])
+@pytest.mark.parametrize("mode", ["Absolute", "vs S&P 500"])
+@pytest.mark.parametrize("target", ["entity", "benchmark"])
+@pytest.mark.parametrize("session", ["2026-10-29", "2026-10-30"])
+def test_daily_missing_exact_endpoint_never_uses_older_valid_pair(label, mode, target, session):
+    from market_leadership.ui.workflows.discovery_page import _build_entity_tape
+
+    arguments = _stale_daily_arguments(label)
+    arguments["performance_mode"] = mode
+    if target == "entity":
+        arguments["history"]["FIRST"] = arguments["history"]["FIRST"].drop(pd.Timestamp(session))
+    else:
+        arguments["benchmark"] = arguments["benchmark"].drop(pd.Timestamp(session))
+    frame = _build_entity_tape(**arguments)
+    assert frame["Status"][0] == "Stale"
+    assert (frame[["1 week", "1 month", "3 months", "6 months", "12 months"]] == 0).all().all()
+    if target == "benchmark" and mode == "Absolute":
+        assert frame["1d"][0] == pytest.approx(2.0)
+        assert frame["1d reason"][0] == ""
+    else:
+        assert pd.isna(frame["1d"][0])
+        assert session in frame["1d reason"][0]
+        assert ("FIRST" if target == "entity" else "S&P 500 benchmark") in frame["1d reason"][0]
+
+
+@pytest.mark.parametrize("label", ["Sector", "Industry"])
+@pytest.mark.parametrize("target", ["entity", "benchmark"])
+@pytest.mark.parametrize("invalid", [float("nan"), float("inf"), -float("inf"), 0.0, -1.0])
+def test_daily_invalid_endpoint_is_unavailable_without_losing_longer_returns(
+    label, target, invalid
+):
+    from market_leadership.ui.workflows.discovery_page import _build_entity_tape
+
+    arguments = _stale_daily_arguments(label)
+    arguments["performance_mode"] = "vs S&P 500"
+    if target == "entity":
+        arguments["history"]["FIRST"].loc[pd.Timestamp("2026-10-30"), "close"] = invalid
+    else:
+        arguments["benchmark"].loc[pd.Timestamp("2026-10-30")] = invalid
+    frame = _build_entity_tape(**arguments)
+    assert pd.isna(frame["1d"][0])
+    assert "Invalid close" in frame["1d reason"][0]
+    assert "2026-10-30" in frame["1d reason"][0]
+    assert frame["Status"][0] == "Stale"
+    assert frame["1 week"][0] == 0.0
+
+
+@pytest.mark.parametrize("label", ["Sector", "Industry"])
+def test_daily_representation_is_validated_at_requested_not_observed_date(label):
+    from dataclasses import replace
+
+    from market_leadership.ui.workflows.discovery_page import _build_entity_tape
+
+    arguments = _stale_daily_arguments(label)
+    representation = arguments["reviewed_by_id"]["first"]
+    arguments["reviewed_by_id"]["first"] = replace(
+        representation, effective_to=date(2026, 10, 29)
+    )
+    frame = _build_entity_tape(**arguments)
+    assert pd.isna(frame["1d"][0])
+    assert "effective period" in frame["1d reason"][0]
+    assert frame["1 week"][0] == 0.0
+    assert frame["Status"][0] == "Stale"
 
 
 def test_stock_views_do_not_request_hidden_industry_proxy(monkeypatch, catalog_release):

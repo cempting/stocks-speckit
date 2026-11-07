@@ -44,6 +44,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
                 "Node ID": ["first", "second"],
                 "Status": ["Not covered", "Invalid evidence: expired mapping"],
                 "ETF" if entity_column == "Industry" else "Ticker": ["ETF", None],
+                "1d": [None, None],
                 "1 week": [None, None],
                 "1 month": [None, None],
                 "3 months": [None, None],
@@ -73,6 +74,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
         entity_column,
         "Ticker",
         "ETF",
+        "1d",
         "1 week",
         "1 month",
         "3 months",
@@ -83,6 +85,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
         "Price + 50 MA",
         "Volume by price direction",
         entity_column,
+        "1d",
         "1 week",
         "1 month",
         "3 months",
@@ -642,16 +645,67 @@ def test_visual_tape_preserves_performance_colors_and_formats_missing_values(
 
     assert not app.exception
     cells = [element.proto.body for element in app.get("html")]
-    assert len(cells) == 20
+    assert len(cells) == 24
     for row_index, (color, text) in enumerate(
         [(gain, "8.00%"), (loss, "-4.00%"), (neutral, "0.00%")]
     ):
-        for cell in cells[row_index * 5 : (row_index + 1) * 5]:
+        for cell in cells[row_index * 6 : (row_index + 1) * 6]:
             assert f"background-color: {color}" in cell
             assert f"color: {foreground}" in cell
             assert text in cell
-    for cell in cells[15:]:
+    for cell in cells[18:]:
         assert "Unavailable" in cell
         assert "background-color" not in cell
+    assert all("text-align: right" in cell for cell in cells)
     assert sum(item.value == "Price unavailable" for item in app.caption) == 4
     assert sum(item.value == "Volume unavailable" for item in app.caption) == 4
+
+
+@pytest.mark.parametrize("entity_column", ["Sector", "Industry"])
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "FIRST: No close for required session 2026-10-30",
+        "FIRST: Invalid close for required session 2026-10-30",
+        "No approved representation for missing entity",
+        "Basket weights must total exactly 100%",
+        "S&P 500 benchmark: No close for required session 2026-10-30",
+    ],
+)
+def test_daily_unavailable_tooltip_retains_status_and_hides_backing_reason(entity_column, reason):
+    def render(entity_column: str, reason: str) -> None:
+        import pandas as pd
+
+        from market_leadership.ui.components.progressive_tape import render_chart_tape
+
+        frame = pd.DataFrame(
+            {
+                "Price chart": ["Unavailable"] * 2,
+                "Volume chart": ["Unavailable"] * 2,
+                entity_column: ["Full unavailable name", "Full neutral name"],
+                "Node ID": ["missing", "neutral"],
+                "ETF" if entity_column == "Industry" else "Ticker": ["FIRST", "SECOND"],
+                "1d": [float("nan"), 0.0],
+                "Status": ["Stale: prior evidence reason", "Current"],
+                "1d reason": [reason, ""],
+                "Representation": ["Approved ETF"] * 2,
+                "Representation type": ["ETF"] * 2,
+            }
+        )
+        render_chart_tape(frame, key="daily-context", on_select=lambda _: None)
+
+    app = AppTest.from_function(render, args=(entity_column, reason)).run()
+    assert not app.exception
+    help_text = app.button("daily-context_select_missing").help
+    assert "Stale: prior evidence reason" in help_text
+    assert f"1d: {reason}" in help_text
+    assert "1d:" not in app.button("daily-context_select_neutral").help
+    assert not any(item.value == "1d reason" for item in app.caption)
+    cells = [
+        element.proto.body
+        for element in app.get("html")
+        if "font-variant-numeric: tabular-nums" in element.proto.body
+    ]
+    assert len(cells) == 2
+    assert "Unavailable" in cells[0] and "background-color" not in cells[0]
+    assert "0.00%" in cells[1] and "background-color: #f4f6f5" in cells[1]

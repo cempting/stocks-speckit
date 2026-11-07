@@ -1,8 +1,11 @@
+from datetime import UTC, date, datetime
 from pathlib import Path
 
+import pandas as pd
+import pytest
 from streamlit.testing.v1 import AppTest
 
-from tests.fixtures.catalogs.ui import configure_ui, edit_csv, publish_entry
+from tests.fixtures.catalogs.ui import DailyProvider, configure_ui, edit_csv, publish_entry
 
 APP = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
 
@@ -61,3 +64,93 @@ def test_comparison_and_sentiment_use_independent_file_listings(monkeypatch, cat
     app = AppTest.from_file(APP).run(timeout=20)
     assert not app.exception
     assert set(calls[0]) == {"TEST_COMPARISON", "TEST_SENTIMENT", "TEST_ETF"}
+
+
+@pytest.mark.parametrize("stale", [False, True])
+def test_daily_controls_reuse_existing_requests_and_ignore_incomplete_future_prices(
+    monkeypatch, catalog_release, stale
+):
+    from market_leadership.application import market_sessions
+    from market_leadership.ui.workflows import discovery_page
+
+    class FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            current = datetime(2026, 10, 30, 19, tzinfo=UTC)
+            return current.astimezone(tz) if tz is not None else current.replace(tzinfo=None)
+
+    class EvidenceProvider(DailyProvider):
+        def fetch_daily_history(self, symbols, *, start, end, force=False):
+            frames = super().fetch_daily_history(symbols, start=start, end=end, force=force)
+            for symbol, frame in frames.items():
+                frame.loc[pd.Timestamp("2026-10-28"), "close"] = 100.0
+                frame.loc[pd.Timestamp("2026-10-29"), "close"] = 102.0
+                frame.loc[pd.Timestamp("2026-10-30"), "close"] = 10000.0
+                if stale:
+                    frame = frame.loc[frame.index.date <= date(2026, 10, 28)].copy()
+                frame.loc[pd.Timestamp("2026-11-02")] = [10000.0, 1000]
+                frames[symbol] = frame
+            return frames
+
+    calls = configure_ui(monkeypatch, catalog_release)
+    monkeypatch.setattr(market_sessions, "datetime", FrozenDatetime)
+    monkeypatch.setattr(discovery_page, "datetime", FrozenDatetime)
+    monkeypatch.setattr(
+        "market_leadership.bootstrap.build_request_provider",
+        lambda *args, **kwargs: EvidenceProvider(calls),
+    )
+    prefix = "market_leadership.progressive_discovery."
+
+    def render():
+        from market_leadership.ui.workflows.discovery_page import render_discovery
+
+        render_discovery()
+
+    app = AppTest.from_function(render).run(timeout=20)
+    assert not app.exception
+    assert app.date_input[0].value == date(2026, 10, 30)
+    assert calls == [("TEST_ETF",)]
+
+    def cells():
+        return [
+            element.proto.body
+            for element in app.get("html")
+            if "font-variant-numeric: tabular-nums" in element.proto.body
+        ]
+
+    if stale:
+        assert "Unavailable" in cells()[0]
+        assert "1d:" in app.button(prefix + "sector_tape_select_test-sector").help
+        assert "2026-10-29" in app.button(prefix + "sector_tape_select_test-sector").help
+    else:
+        assert "2.00%" in cells()[0]
+    assert any("stale or insufficient" in item.value for item in app.warning)
+    for level in ("sector", "industry"):
+        original = cells()
+        symbols = calls[-1]
+        for period in ("1w", "1m", "3m", "6m", "1y"):
+            count = len(calls)
+            app.segmented_control(prefix + "thumbnail_period").set_value(period).run()
+            assert not app.exception
+            assert len(calls) == count + 1
+            assert calls[-1] == symbols
+            assert cells() == original
+        count = len(calls)
+        app.segmented_control(prefix + "performance_basis").set_value("vs S&P 500").run()
+        assert not app.exception
+        assert len(calls) == count + 1 and calls[-1] == symbols
+        if level == "sector" and not stale:
+            assert "0.00%" in cells()[0]
+        app.segmented_control(prefix + "performance_basis").set_value("Absolute").run()
+        assert cells() == original
+        assert calls[-1] == symbols
+        if level == "sector":
+            app.button(prefix + "sector_tape_select_test-sector").click().run()
+            assert not app.exception
+            assert app.session_state[prefix + "sector"] == "test-sector"
+            assert set(calls[-1]) == {"TEST_ETF", "TEST_INVENTORY"}
+    app.button(prefix + "breadcrumb_sectors").click().run()
+    assert not app.exception
+    assert calls[-1] == ("TEST_ETF",)
+    assert app.segmented_control(prefix + "thumbnail_period").value == "1y"
+    assert app.segmented_control(prefix + "performance_basis").value == "Absolute"

@@ -10,6 +10,12 @@
 
 ## Clarifications
 
+**016 presentation precedence**: [Daily performance](../016-add-daily-performance/spec.md)
+supersedes only FR-014/SC-007's eight-column count with nine visible entity columns:
+two charts, the existing entity button, and six returns including `1d` before `1 week`.
+Hidden ticker evidence, button behavior, and the five-column stock table remain unchanged.
+Historical 015 task and validation records describe the earlier eight-column baseline.
+
 ### Session 2026-11-06
 
 - Q: How should cross-feature documentation be consolidated after moving stock lookup? → A: Rebuild 001's current executable backlog while preserving completed IDs and recording retired work; supersede 002's unbuilt multi-sector increment; reconcile 013 with all current tabs and one shared service context; defer lookup placement to 015 while preserving 012 identity safeguards; update pending paths to the shared-package layout. These are documentation changes, not implementation completion.

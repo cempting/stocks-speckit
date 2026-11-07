@@ -1,5 +1,10 @@
 # Stock Lookup UI Contract
 
+**016 presentation precedence**: [Daily performance](../../016-add-daily-performance/spec.md)
+adds `1d` before `1 week` to sector/industry tapes, replacing only the eight-column baseline
+with nine visible columns. Full entity buttons, hidden ticker evidence, and the five-column
+stock projection remain unchanged; historical 015 validation is not evidence of 016 delivery.
+
 ## Navigation and Ownership
 
 - The root application exposes exactly four native tabs: **Discovery**, **Industry Deep-Dive**,

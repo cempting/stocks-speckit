@@ -1,11 +1,128 @@
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
+import pandas as pd
 import pytest
 
+from market_data.domain.industry_representations import (
+    BasketConstituent,
+    ReviewedRepresentation,
+    representation_performance,
+)
 from market_data_tools.legacy.region_database import RegionDatabase
 
 DAY = date(2026, 10, 30)
+
+
+def _daily_representation(kind="basket"):
+    return ReviewedRepresentation(
+        representation_id="daily", node_id="test-cloud", kind=kind, name="Daily evidence",
+        source_id="fixture", approval_reference="review-1", effective_from=date(2020, 1, 1),
+        symbol="BBB" if kind == "etf" else None,
+        constituents=() if kind == "etf" else (
+            BasketConstituent("a", "AAA", Decimal("50")),
+            BasketConstituent("b", "BBB", Decimal("50")),
+        ),
+    )
+
+
+def _daily_history():
+    index = pd.bdate_range("2026-10-29", periods=2)
+    return {
+        "AAA": pd.DataFrame({"close": [100.0, 102.0]}, index=index),
+        "BBB": pd.DataFrame({"close": [200.0, 198.0]}, index=index),
+    }
+
+
+@pytest.mark.parametrize(("kind", "expected"), [("etf", -0.01), ("basket", 0.005)])
+def test_representation_performance_returns_six_independent_periods(kind, expected):
+    result = representation_performance(
+        _daily_representation(kind), _daily_history(), as_of=DAY,
+        start_session=date(2026, 10, 29), end_session=DAY,
+    )
+    assert list(result) == ["1d", "1w", "1m", "3m", "6m", "12m"]
+    assert result["1d"].value == pytest.approx(expected)
+    assert result["1d"].reason is None
+    for period in ("1w", "1m", "3m", "6m", "12m"):
+        assert result[period].value is None
+        assert result[period].reason
+
+
+def test_representation_performance_daily_gap_preserves_longer_values():
+    index = pd.bdate_range(end=DAY, periods=300)
+    history = {"BBB": pd.DataFrame({"close": 100.0}, index=index)}
+    history["BBB"] = history["BBB"].drop(pd.Timestamp("2026-10-29"))
+    result = representation_performance(
+        _daily_representation("etf"), history, as_of=DAY,
+        start_session=date(2026, 10, 29), end_session=DAY,
+    )
+    assert result["1d"].value is None
+    assert result["1d"].reason is not None
+    assert "2026-10-29" in result["1d"].reason
+    for period in ("1w", "1m", "3m", "6m", "12m"):
+        assert result[period].value == 0
+        assert result[period].reason is None
+
+
+def test_representation_performance_longer_periods_are_independently_available():
+    index = pd.bdate_range(end=DAY, periods=30)
+    history = {"BBB": pd.DataFrame({"close": 100.0}, index=index)}
+    result = representation_performance(
+        _daily_representation("etf"), history, as_of=DAY,
+        start_session=date(2026, 10, 29), end_session=DAY,
+    )
+    for period in ("1d", "1w", "1m"):
+        assert result[period].value == 0
+        assert result[period].reason is None
+    for period in ("3m", "6m", "12m"):
+        assert result[period].value is None
+        assert result[period].reason
+
+
+@pytest.mark.parametrize(("kind", "expected"), [("etf", -0.01), ("basket", 0.005)])
+def test_daily_representation_preserves_approved_etf_and_exact_basket_weights(kind, expected):
+    representation = _daily_representation(kind)
+    result = representation_performance(
+        representation, _daily_history(), as_of=DAY,
+        start_session=date(2026, 10, 29), end_session=DAY,
+    )
+    assert result["1d"].value == pytest.approx(expected)
+    assert result["1d"].reason is None
+    assert representation.source_id == "fixture"
+    assert representation.approval_reference == "review-1"
+
+
+@pytest.mark.parametrize("symbol", ["AAA", "BBB"])
+@pytest.mark.parametrize("session", ["2026-10-29", "2026-10-30"])
+def test_daily_basket_does_not_drop_missing_constituents_or_shift_sessions(symbol, session):
+    history = _daily_history()
+    history[symbol] = history[symbol].drop(pd.Timestamp(session))
+    result = representation_performance(
+        _daily_representation(), history, as_of=DAY,
+        start_session=date(2026, 10, 29), end_session=DAY,
+    )
+    assert result["1d"].value is None
+    assert result["1d"].reason is not None
+    assert symbol in result["1d"].reason
+
+
+@pytest.mark.parametrize("change", [
+    {"approval_reference": ""},
+    {"effective_from": date(2027, 1, 1)},
+    {"effective_to": date(2026, 10, 29)},
+    {"reason": "Unapproved representation"},
+    {"constituents": (
+        BasketConstituent("a", "AAA", Decimal("60")),
+        BasketConstituent("b", "BBB", Decimal("39")),
+    )},
+])
+def test_daily_representation_requires_current_approved_evidence(change):
+    with pytest.raises(ValueError):
+        representation_performance(
+            replace(_daily_representation(), **change), _daily_history(), as_of=DAY,
+            start_session=date(2026, 10, 29), end_session=DAY,
+        )
 
 
 def approve_basket(database: RegionDatabase, weights: tuple[str, str] = ("60", "40")) -> str:

@@ -201,7 +201,17 @@ def discover_sectors_from_history(
                 raise InsufficientHistoryError(
                     comparison_reason or "No benchmark close is available"
                 )
-            absolute = representation_performance(representation, history, as_of=benchmark_as_of)
+            calculated = representation_performance(
+                representation, history, as_of=benchmark_as_of
+            )
+            absolute: dict[PerformancePeriod, float] = {}
+            periods: tuple[PerformancePeriod, ...] = ("1w", "1m", "3m", "6m", "12m")
+            for period in periods:
+                result = calculated[period]
+                if result.value is None:
+                    assert result.reason is not None
+                    raise InsufficientHistoryError(result.reason)
+                absolute[period] = result.value
             baseline = calculate_absolute_performance(
                 benchmark_history["close"], as_of=benchmark_as_of
             )

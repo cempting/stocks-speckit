@@ -1,14 +1,23 @@
 from datetime import date
 from decimal import Decimal
 
+import pandas as pd
 import pytest
 
+from market_data.domain.industry_representations import representation_performance
 from market_data_tools.legacy.industry_representations import representation_worklist
 
 DAY = date(2026, 10, 30)
 
 
-def _basket(database, *, start=date(2020, 1, 1), end=None, approval="review-1"):
+def _basket(
+    database,
+    *,
+    start=date(2020, 1, 1),
+    end=None,
+    approval="review-1",
+    weights=(Decimal("60"), Decimal("40")),
+):
     with database.connect() as connection:
         listings = [
             row["listing_id"]
@@ -26,7 +35,7 @@ def _basket(database, *, start=date(2020, 1, 1), end=None, approval="review-1"):
         approval_reference=approval,
         effective_from=start,
         effective_to=end,
-        constituents=((listings[0], Decimal("60")), (listings[1], Decimal("40"))),
+        constituents=((listings[0], weights[0]), (listings[1], weights[1])),
     )
 
 
@@ -53,6 +62,39 @@ def _worklist(database, **kwargs):
         as_of=DAY,
         **kwargs,
     )
+
+
+@pytest.mark.parametrize("kind, expected", [("etf", 0.02), ("basket", 0.005)])
+def test_approved_worklist_daily_return_uses_exact_sessions(
+    representation_database, kind, expected
+):
+    if kind == "etf":
+        _etf(representation_database)
+    else:
+        _basket(representation_database, weights=(Decimal("50"), Decimal("50")))
+    representation = _worklist(representation_database)[0].representation
+    assert representation is not None
+    assert representation.source_id == "reviewed"
+    assert representation.approval_reference == "review-1"
+    history = {
+        symbol: pd.DataFrame(
+            {"close": closes},
+            index=pd.to_datetime(["2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30"]),
+        )
+        for symbol, closes in {"AAA": [80, 100, 100, 102], "BBB": [200, 200, 200, 198]}.items()
+    }
+    arguments = dict(as_of=DAY, start_session=date(2026, 10, 29), end_session=DAY)
+    result = representation_performance(representation, history, **arguments)
+    assert result["1d"].value == pytest.approx(expected)
+    assert result["1d"].reason is None
+    for symbol in representation.symbols:
+        for session in (date(2026, 10, 29), DAY):
+            missing = dict(history)
+            missing[symbol] = history[symbol].drop(pd.Timestamp(session))
+            result = representation_performance(representation, missing, **arguments)
+            assert result["1d"].value is None
+            assert result["1d"].reason is not None
+            assert symbol in result["1d"].reason
 
 
 def test_worklist_covers_every_industry_and_subindustry_including_empty_nodes(

@@ -304,7 +304,7 @@ def _render_visual_tape(
     st.caption(str(frame.attrs.get("volume_legend", "")))
     hidden_columns = ("Instrument ID", "Resolution", "Node ID")
     if "Sector" in frame.columns or "Industry" in frame.columns:
-        hidden_columns += ("Status",)
+        hidden_columns += ("Status", "1d reason")
     if "Sector" in frame.columns:
         hidden_columns += ("Ticker",)
     if "Industry" in frame.columns:
@@ -359,6 +359,8 @@ def _render_visual_tape(
             with cell:
                 if on_entity_select is not None and column in ("Sector", "Industry"):
                     help_text = str(row["Status"])
+                    if daily_reason := row.get("1d reason"):
+                        help_text += f"\n1d: {daily_reason}"
                     if column == "Industry":
                         help_text += f"\nRepresentation: {row['Representation']}"
                         help_text += f"\nRepresentation type: {row['Representation type']}"

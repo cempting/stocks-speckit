@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
+from math import isfinite
 from typing import Literal
 
 import pandas as pd
@@ -39,6 +40,7 @@ def calculate_absolute_performance(
     closes: pd.Series,
     *,
     as_of: date,
+    period: PerformancePeriod | None = None,
 ) -> dict[PerformancePeriod, float]:
     as_of_timestamp = pd.Timestamp(as_of)
     prepared = _prepare_closes(closes, as_of_timestamp)
@@ -51,9 +53,50 @@ def calculate_absolute_performance(
         ("6m", pd.DateOffset(months=6)),
         ("12m", pd.DateOffset(months=12)),
     )
-    for period, offset in periods:
-        absolute[period] = latest / _close_on_or_before(prepared, as_of_timestamp - offset) - 1
+    if period is not None and period not in {candidate for candidate, _ in periods}:
+        raise ValueError(f"Unsupported performance period: {period}")
+    for candidate, offset in periods:
+        if period is None or candidate == period:
+            absolute[candidate] = latest / _close_on_or_before(
+                prepared, as_of_timestamp - offset
+            ) - 1
     return absolute
+
+
+def calculate_daily_return(
+    closes: pd.Series, *, start_session: date, end_session: date
+) -> float:
+    if start_session >= end_session:
+        raise ValueError("Daily starting session must be earlier than ending session")
+    if closes.empty:
+        raise InsufficientHistoryError(
+            f"No closes for required daily sessions {start_session} and {end_session}"
+        )
+    if not isinstance(closes.index, pd.DatetimeIndex) or closes.index.hasnans:
+        raise ValueError("Daily close dates must be valid datetime observations")
+    dates = pd.Index(closes.index.date)
+    if dates.has_duplicates:
+        raise ValueError("Close dates must be unique")
+    prices: list[float] = []
+    for session in (start_session, end_session):
+        observation = closes.loc[dates == session]
+        if observation.empty:
+            raise InsufficientHistoryError(f"No close for required session {session}")
+        try:
+            price = float(observation.iloc[0])
+        except (TypeError, ValueError, OverflowError) as error:
+            raise InsufficientHistoryError(
+                f"Invalid close for required session {session}"
+            ) from error
+        if not isfinite(price) or price <= 0:
+            raise InsufficientHistoryError(f"Invalid close for required session {session}")
+        prices.append(price)
+    result = prices[1] / prices[0] - 1
+    if not isfinite(result):
+        raise InsufficientHistoryError(
+            f"Invalid daily return for required sessions {start_session} and {end_session}"
+        )
+    return result
 
 
 def calculate_performance(

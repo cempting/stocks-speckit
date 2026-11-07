@@ -40,6 +40,11 @@ T018-T022 extend, rather than renumber or reopen, completed T001-T017.
 
 ### Redundant entity-column removal (2026-11-06)
 
+The approved [016 amendment](../016-add-daily-performance/spec.md) supersedes only this
+increment's eight-column count with nine entity columns by adding `1d` before `1 week`.
+The following implementation/evidence record remains historical; ticker metadata,
+native buttons and five-column stock tapes retain their existing behavior.
+
 FR-014/SC-007 remove only the separate sector Ticker and industry ETF columns,
 already represented in the Sector/Industry buttons. Extend the shared renderer's
 hidden-column projection; do not drop these fields from the backing frame or
