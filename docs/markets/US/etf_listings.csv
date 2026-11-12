@@ -1,0 +1,87 @@
+ListingId,RegionId,InstrumentId,InstrumentType,Ticker,ProviderSymbol,Name,Exchange,Currency,IsPrimary,ResolutionState,EffectiveFrom,EffectiveTo,SourceId,ApprovalReference
+listing-aiq-1,US,instrument-aiq-1,etf,AIQ,AIQ,Global X Artificial Intelligence & Technology ETF,NASDAQ,USD,true,verified,2018-05-11,,source-1,review-aiq-1
+listing-arkq-1,US,instrument-arkq-1,etf,ARKQ,ARKQ,ARK Autonomous Technology & Robotics ETF,Cboe BZX,USD,true,verified,2014-09-30,,source-1,review-arkq-1
+listing-arkx-1,US,instrument-arkx-1,etf,ARKX,ARKX,ARK Space & Defense Innovation ETF,Cboe BZX,USD,true,verified,2021-03-30,,source-1,review-arkx-1
+listing-batt-1,US,instrument-batt-1,etf,BATT,BATT,Amplify Lithium & Battery Technology ETF,NYSE Arca,USD,true,verified,2018-06-06,,source-1,review-batt-1
+listing-bito-1,US,instrument-bito-1,etf,BITO,BITO,ProShares Bitcoin ETF,NYSE Arca,USD,true,verified,2021-10-18,,source-1,review-bito-1
+listing-blok-1,US,instrument-blok-1,etf,BLOK,BLOK,Amplify Blockchain Technology ETF,NYSE Arca,USD,true,verified,2018-01-16,,source-1,review-blok-1
+listing-botz-1,US,instrument-botz-1,etf,BOTZ,BOTZ,Global X Robotics & Artificial Intelligence ETF,NASDAQ,USD,true,verified,2016-09-12,,source-1,review-botz-1
+listing-bug-1,US,instrument-bug-1,etf,BUG,BUG,Global X Cybersecurity ETF,NASDAQ,USD,true,verified,2019-10-25,,source-1,review-bug-1
+listing-cgw-1,US,instrument-cgw-1,etf,CGW,CGW,Invesco S&P Global Water Index ETF,NYSE Arca,USD,true,verified,2007-05-14,,source-1,review-cgw-1
+listing-cibr-1,US,instrument-cibr-1,etf,CIBR,CIBR,First Trust NASDAQ Cybersecurity ETF,NASDAQ,USD,true,verified,2015-07-07,,source-1,review-cibr-1
+listing-clou-1,US,instrument-clou-1,etf,CLOU,CLOU,Global X Cloud Computing ETF,NASDAQ,USD,true,verified,2019-04-12,,source-1,review-clou-1
+listing-copx-1,US,instrument-copx-1,etf,COPX,COPX,Global X Copper Miners ETF,NYSE Arca,USD,true,verified,2010-04-19,,source-1,review-copx-1
+listing-cut-1,US,instrument-cut-1,etf,CUT,CUT,Invesco MSCI Global Timber ETF,NYSE Arca,USD,true,verified,2007-11-09,,source-1,review-cut-1
+listing-driv-1,US,instrument-driv-1,etf,DRIV,DRIV,Global X Autonomous & Electric Vehicles ETF,NASDAQ,USD,true,verified,2018-04-13,,source-1,review-driv-1
+listing-espo-1,US,instrument-espo-1,etf,ESPO,ESPO,VanEck Video Gaming and eSports ETF,NASDAQ,USD,true,verified,2018-10-16,,source-1,review-espo-1
+listing-etha-1,US,instrument-etha-1,etf,ETHA,ETHA,iShares Ethereum Trust ETF,NASDAQ,USD,true,verified,2024-07-24,,source-1,review-etha-1
+listing-fan-1,US,instrument-fan-1,etf,FAN,FAN,First Trust Global Wind Energy ETF,NYSE Arca,USD,true,verified,2008-06-16,,source-1,review-fan-1
+listing-fdn-1,US,instrument-fdn-1,etf,FDN,FDN,First Trust Dow Jones Internet Index Fund,NYSE Arca,USD,true,verified,2006-06-19,,source-1,review-fdn-1
+listing-finx-1,US,instrument-finx-1,etf,FINX,FINX,Global X FinTech ETF,NASDAQ,USD,true,verified,2016-09-12,,source-1,review-finx-1
+listing-fiw-1,US,instrument-fiw-1,etf,FIW,FIW,First Trust Water ETF,NYSE Arca,USD,true,verified,2007-05-08,,source-1,review-fiw-1
+listing-gdx-1,US,instrument-gdx-1,etf,GDX,GDX,VanEck Gold Miners ETF,NYSE Arca,USD,true,verified,2006-05-22,,source-1,review-gdx-1
+listing-gdxj-1,US,instrument-gdxj-1,etf,GDXJ,GDXJ,VanEck Junior Gold Miners ETF,NYSE Arca,USD,true,verified,2009-11-11,,source-1,review-gdxj-1
+listing-genz-1,US,instrument-genz-1,etf,GENZ,GENZ,VanEck Gaming ETF,NASDAQ,USD,true,verified,2008-01-22,,source-1,review-genz-1
+listing-grid-1,US,instrument-grid-1,etf,GRID,GRID,First Trust NASDAQ Clean Edge Smart Grid Infrastructure Index Fund,NASDAQ,USD,true,verified,2009-11-17,,source-1,review-grid-1
+listing-hack-1,US,instrument-hack-1,etf,HACK,HACK,Amplify Cybersecurity ETF,NYSE Arca,USD,true,verified,2014-11-11,,source-1,review-hack-1
+listing-hail-1,US,instrument-hail-1,etf,HAIL,HAIL,State Street SPDR S&P Kensho Smart Mobility ETF,NYSE Arca,USD,true,verified,2017-12-26,,source-1,review-hail-1
+listing-hero-1,US,instrument-hero-1,etf,HERO,HERO,Global X Video Games & Esports ETF,NASDAQ,USD,true,verified,2019-10-25,,source-1,review-hero-1
+listing-hydr-1,US,instrument-hydr-1,etf,HYDR,HYDR,Global X Hydrogen ETF,NASDAQ,USD,true,verified,2021-07-12,,source-1,review-hydr-1
+listing-iai-1,US,instrument-iai-1,etf,IAI,IAI,iShares U.S. Broker-Dealers & Securities Exchanges ETF,NYSE Arca,USD,true,verified,2006-05-01,,source-1,review-iai-1
+listing-iak-1,US,instrument-iak-1,etf,IAK,IAK,iShares U.S. Insurance ETF,NYSE Arca,USD,true,verified,2006-05-01,,source-1,review-iak-1
+listing-iat-1,US,instrument-iat-1,etf,IAT,IAT,iShares U.S. Regional Banks ETF,NYSE Arca,USD,true,verified,2006-05-01,,source-1,review-iat-1
+listing-ibb-1,US,instrument-ibb-1,etf,IBB,IBB,iShares Biotechnology ETF,NASDAQ,USD,true,verified,2001-02-05,,source-1,review-ibb-1
+listing-ibit-1,US,instrument-ibit-1,etf,IBIT,IBIT,iShares Bitcoin Trust ETF,NASDAQ,USD,true,verified,2024-01-05,,source-1,review-ibit-1
+listing-ibuy-1,US,instrument-ibuy-1,etf,IBUY,IBUY,Amplify Online Retail ETF,NYSE Arca,USD,true,verified,2016-04-20,,source-1,review-ibuy-1
+listing-icln-1,US,instrument-icln-1,etf,ICLN,ICLN,iShares Global Clean Energy ETF,NASDAQ,USD,true,verified,2008-06-24,,source-1,review-icln-1
+listing-ifra-1,US,instrument-ifra-1,etf,IFRA,IFRA,iShares U.S. Infrastructure ETF,Cboe BZX,USD,true,verified,2018-04-03,,source-1,review-ifra-1
+listing-igv-1,US,instrument-igv-1,etf,IGV,IGV,iShares Expanded Tech-Software Sector ETF,Cboe BZX,USD,true,verified,2001-07-10,,source-1,review-igv-1
+listing-ihak-1,US,instrument-ihak-1,etf,IHAK,IHAK,iShares Cybersecurity and Tech ETF,NYSE Arca,USD,true,verified,2019-06-11,,source-1,review-ihak-1
+listing-ihe-1,US,instrument-ihe-1,etf,IHE,IHE,iShares U.S. Pharmaceuticals ETF,NYSE Arca,USD,true,verified,2006-05-01,,source-1,review-ihe-1
+listing-ihf-1,US,instrument-ihf-1,etf,IHF,IHF,iShares U.S. Healthcare Providers ETF,NYSE Arca,USD,true,verified,2006-05-01,,source-1,review-ihf-1
+listing-ihi-1,US,instrument-ihi-1,etf,IHI,IHI,iShares U.S. Medical Devices ETF,NYSE Arca,USD,true,verified,2006-05-01,,source-1,review-ihi-1
+listing-ipay-1,US,instrument-ipay-1,etf,IPAY,IPAY,Amplify Digital Payments ETF,NYSE Arca,USD,true,verified,2015-07-15,,source-1,review-ipay-1
+listing-ita-1,US,instrument-ita-1,etf,ITA,ITA,iShares U.S. Aerospace & Defense ETF,Cboe BZX,USD,true,verified,2006-05-01,,source-1,review-ita-1
+listing-itb-1,US,instrument-itb-1,etf,ITB,ITB,iShares U.S. Home Construction ETF,Cboe BZX,USD,true,verified,2006-05-01,,source-1,review-itb-1
+listing-iyr-1,US,instrument-iyr-1,etf,IYR,IYR,iShares U.S. Real Estate ETF,NYSE Arca,USD,true,verified,2000-06-12,,source-1,review-iyr-1
+listing-iyt-1,US,instrument-iyt-1,etf,IYT,IYT,iShares U.S. Transportation ETF,Cboe BZX,USD,true,verified,2003-10-06,,source-1,review-iyt-1
+listing-jets-1,US,instrument-jets-1,etf,JETS,JETS,U.S. Global Jets ETF,NYSE Arca,USD,true,verified,2015-04-28,,source-1,review-jets-1
+listing-kie-1,US,instrument-kie-1,etf,KIE,KIE,State Street SPDR S&P Insurance ETF,NYSE Arca,USD,true,verified,2005-11-08,,source-1,review-kie-1
+listing-kre-1,US,instrument-kre-1,etf,KRE,KRE,State Street SPDR S&P Regional Banking ETF,NYSE Arca,USD,true,verified,2006-06-19,,source-1,review-kre-1
+listing-lit-1,US,instrument-lit-1,etf,LIT,LIT,Global X Lithium & Battery Tech ETF,NYSE Arca,USD,true,verified,2010-07-22,,source-1,review-lit-1
+listing-oih-1,US,instrument-oih-1,etf,OIH,OIH,VanEck Oil Services ETF,NYSE Arca,USD,true,verified,2011-12-20,,source-1,review-oih-1
+listing-pbj-1,US,instrument-pbj-1,etf,PBJ,PBJ,Invesco Food & Beverage ETF,NYSE Arca,USD,true,verified,2005-06-23,,source-1,review-pbj-1
+listing-pbw-1,US,instrument-pbw-1,etf,PBW,PBW,Invesco WilderHill Clean Energy ETF,NYSE Arca,USD,true,verified,2005-03-03,,source-1,review-pbw-1
+listing-pho-1,US,instrument-pho-1,etf,PHO,PHO,Invesco Water Resources ETF,NASDAQ,USD,true,verified,2005-12-06,,source-1,review-pho-1
+listing-pick-1,US,instrument-pick-1,etf,PICK,PICK,iShares MSCI Global Metals & Mining Producers ETF,Cboe BZX,USD,true,verified,2012-01-31,,source-1,review-pick-1
+listing-ppa-1,US,instrument-ppa-1,etf,PPA,PPA,Invesco Aerospace & Defense ETF,NYSE Arca,USD,true,verified,2005-10-26,,source-1,review-ppa-1
+listing-qcln-1,US,instrument-qcln-1,etf,QCLN,QCLN,First Trust NASDAQ Clean Edge Green Energy Index Fund,NASDAQ,USD,true,verified,2007-02-08,,source-1,review-qcln-1
+listing-remx-1,US,instrument-remx-1,etf,REMX,REMX,VanEck Rare Earth and Strategic Metals ETF,NYSE Arca,USD,true,verified,2010-10-27,,source-1,review-remx-1
+listing-sil-1,US,instrument-sil-1,etf,SIL,SIL,Global X Silver Miners ETF,NYSE Arca,USD,true,verified,2010-04-19,,source-1,review-sil-1
+listing-skyy-1,US,instrument-skyy-1,etf,SKYY,SKYY,First Trust Cloud Computing ETF,NASDAQ,USD,true,verified,2011-07-05,,source-1,review-skyy-1
+listing-slx-1,US,instrument-slx-1,etf,SLX,SLX,VanEck Steel ETF,NYSE Arca,USD,true,verified,2006-10-10,,source-1,review-slx-1
+listing-smh-1,US,instrument-smh-1,etf,SMH,SMH,VanEck Semiconductor ETF,NASDAQ,USD,true,verified,2011-12-20,,source-1,review-smh-1
+listing-socl-1,US,instrument-socl-1,etf,SOCL,SOCL,Global X Social Media ETF,NASDAQ,USD,true,verified,2011-11-14,,source-1,review-socl-1
+listing-soxx-1,US,instrument-soxx-1,etf,SOXX,SOXX,iShares Semiconductor ETF,NASDAQ,USD,true,verified,2001-07-10,,source-1,review-soxx-1
+listing-tan-1,US,instrument-tan-1,etf,TAN,TAN,Invesco Solar ETF,NYSE Arca,USD,true,verified,2008-04-15,,source-1,review-tan-1
+listing-ufo-1,US,instrument-ufo-1,etf,UFO,UFO,Procure Space ETF,NASDAQ,USD,true,verified,2019-04-11,,source-1,review-ufo-1
+listing-ura-1,US,instrument-ura-1,etf,URA,URA,Global X Uranium ETF,NYSE Arca,USD,true,verified,2010-11-04,,source-1,review-ura-1
+listing-urnm-1,US,instrument-urnm-1,etf,URNM,URNM,Sprott Uranium Miners ETF,NYSE Arca,USD,true,verified,2019-12-03,,source-1,review-urnm-1
+listing-vnq-1,US,instrument-vnq-1,etf,VNQ,VNQ,Vanguard Real Estate ETF,NYSE Arca,USD,true,verified,2004-09-23,,source-1,review-vnq-1
+listing-xar-1,US,instrument-xar-1,etf,XAR,XAR,State Street SPDR S&P Aerospace & Defense ETF,NYSE Arca,USD,true,verified,2011-09-28,,source-1,review-xar-1
+listing-xbi-1,US,instrument-xbi-1,etf,XBI,XBI,State Street SPDR S&P Biotech ETF,NYSE Arca,USD,true,verified,2006-01-31,,source-1,review-xbi-1
+listing-xes-1,US,instrument-xes-1,etf,XES,XES,State Street SPDR S&P Oil & Gas Equipment & Services ETF,NYSE Arca,USD,true,verified,2006-06-19,,source-1,review-xes-1
+listing-xhb-1,US,instrument-xhb-1,etf,XHB,XHB,State Street SPDR S&P Homebuilders ETF,NYSE Arca,USD,true,verified,2006-01-31,,source-1,review-xhb-1
+listing-xlb-1,US,instrument-xlb-1,etf,XLB,XLB,State Street Materials Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xlb-1
+listing-xlc-1,US,instrument-xlc-1,etf,XLC,XLC,State Street Communication Services Select Sector SPDR ETF,NYSE Arca,USD,true,verified,2018-06-18,,source-1,review-xlc-1
+listing-xle-1,US,instrument-xle-1,etf,XLE,XLE,State Street Energy Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xle-1
+listing-xlf-1,US,instrument-xlf-1,etf,XLF,XLF,State Street Financial Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xlf-1
+listing-xli-1,US,instrument-xli-1,etf,XLI,XLI,State Street Industrial Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xli-1
+listing-xlk-1,US,instrument-xlk-1,etf,XLK,XLK,State Street Technology Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xlk-1
+listing-xlp-1,US,instrument-xlp-1,etf,XLP,XLP,State Street Consumer Staples Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xlp-1
+listing-xlre-1,US,instrument-xlre-1,etf,XLRE,XLRE,State Street Real Estate Select Sector SPDR ETF,NYSE Arca,USD,true,verified,2015-10-07,,source-1,review-xlre-1
+listing-xlu-1,US,instrument-xlu-1,etf,XLU,XLU,State Street Utilities Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xlu-1
+listing-xlv-1,US,instrument-xlv-1,etf,XLV,XLV,State Street Health Care Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xlv-1
+listing-xly-1,US,instrument-xly-1,etf,XLY,XLY,State Street Consumer Discretionary Select Sector SPDR ETF,NYSE Arca,USD,true,verified,1998-12-16,,source-1,review-xly-1
+listing-xme-1,US,instrument-xme-1,etf,XME,XME,State Street SPDR S&P Metals & Mining ETF,NYSE Arca,USD,true,verified,2006-06-19,,source-1,review-xme-1
+listing-xop-1,US,instrument-xop-1,etf,XOP,XOP,State Street SPDR S&P Oil & Gas Exploration & Production ETF,NYSE Arca,USD,true,verified,2006-06-19,,source-1,review-xop-1

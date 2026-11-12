@@ -1,0 +1,66 @@
+RegionId,ClassificationId,ClassificationVersion,NodeId,NodeType,Name,SectorId,ParentIndustryId,EffectiveFrom,EffectiveTo,SourceId,ApprovalReference,ApprovalOrigin
+US,MY_THEMES,1,artificial-intelligence,sector,Artificial Intelligence,artificial-intelligence,,2026-01-01,,source-1,review-theme-artificial-intelligence-1,own
+US,MY_THEMES,1,robotics-automation,sector,Robotics & Automation,robotics-automation,,2026-01-01,,source-1,review-theme-robotics-automation-1,own
+US,MY_THEMES,1,cybersecurity,sector,Cybersecurity,cybersecurity,,2026-01-01,,source-1,review-theme-cybersecurity-1,own
+US,MY_THEMES,1,cloud-computing,sector,Cloud Computing,cloud-computing,,2026-01-01,,source-1,review-theme-cloud-computing-1,own
+US,MY_THEMES,1,fintech,sector,Fintech,fintech,,2026-01-01,,source-1,review-theme-fintech-1,own
+US,MY_THEMES,1,electric-vehicles,sector,Electric Vehicles,electric-vehicles,,2026-01-01,,source-1,review-theme-electric-vehicles-1,own
+US,MY_THEMES,1,space,sector,Space,space,,2026-01-01,,source-1,review-theme-space-1,own
+US,MY_THEMES,1,water,sector,Water,water,,2026-01-01,,source-1,review-theme-water-1,own
+US,MY_THEMES,1,clean-energy,sector,Clean Energy,clean-energy,,2026-01-01,,source-1,review-theme-clean-energy-1,own
+US,MY_THEMES,1,digital-assets,sector,Digital Assets,digital-assets,,2026-01-01,,source-1,review-theme-digital-assets-1,own
+US,MY_THEMES,1,video-games-esports,sector,Video Games & Esports,video-games-esports,,2026-01-01,,source-1,review-theme-video-games-esports-1,own
+US,MY_THEMES,1,infrastructure,sector,Infrastructure,infrastructure,,2026-01-01,,source-1,review-theme-infrastructure-1,own
+US,MY_THEMES,1,internet-commerce,sector,Internet & E-Commerce,internet-commerce,,2026-01-01,,source-1,review-theme-internet-commerce-1,own
+US,MY_TAXONOMY,1,technology,sector,Technology,technology,,2026-01-01,,source-1,review-node-technology-1,own
+US,MY_TAXONOMY,1,health-care,sector,Health Care,health-care,,2026-01-01,,source-1,review-node-health-care-1,own
+US,MY_TAXONOMY,1,financials,sector,Financials,financials,,2026-01-01,,source-1,review-node-financials-1,own
+US,MY_TAXONOMY,1,energy,sector,Energy,energy,,2026-01-01,,source-1,review-node-energy-1,own
+US,MY_TAXONOMY,1,industrials,sector,Industrials,industrials,,2026-01-01,,source-1,review-node-industrials-1,own
+US,MY_TAXONOMY,1,consumer-discretionary,sector,Consumer Discretionary,consumer-discretionary,,2026-01-01,,source-1,review-node-consumer-discretionary-1,own
+US,MY_TAXONOMY,1,consumer-staples,sector,Consumer Staples,consumer-staples,,2026-01-01,,source-1,review-node-consumer-staples-1,own
+US,MY_TAXONOMY,1,materials,sector,Materials,materials,,2026-01-01,,source-1,review-node-materials-1,own
+US,MY_TAXONOMY,1,utilities,sector,Utilities,utilities,,2026-01-01,,source-1,review-node-utilities-1,own
+US,MY_TAXONOMY,1,real-estate,sector,Real Estate,real-estate,,2026-01-01,,source-1,review-node-real-estate-1,own
+US,MY_TAXONOMY,1,communication-services,sector,Communication Services,communication-services,,2026-01-01,,source-1,review-node-communication-services-1,own
+US,MY_TAXONOMY,1,software,industry,Software,technology,,2026-01-01,,source-1,review-node-software-1,own
+US,MY_TAXONOMY,1,semiconductors,industry,Semiconductors,technology,,2026-01-01,,source-1,review-node-semiconductors-1,own
+US,MY_TAXONOMY,1,biotechnology,industry,Biotechnology,health-care,,2026-01-01,,source-1,review-node-biotechnology-1,own
+US,MY_TAXONOMY,1,pharmaceuticals,industry,Pharmaceuticals,health-care,,2026-01-01,,source-1,review-node-pharmaceuticals-1,own
+US,MY_TAXONOMY,1,health-care-equipment,industry,Health Care Equipment & Supplies,health-care,,2026-01-01,,source-1,review-node-health-care-equipment-1,own
+US,MY_TAXONOMY,1,health-care-providers,industry,Health Care Providers & Services,health-care,,2026-01-01,,source-1,review-node-health-care-providers-1,own
+US,MY_TAXONOMY,1,banks,industry,Banks,financials,,2026-01-01,,source-1,review-node-banks-1,own
+US,MY_TAXONOMY,1,capital-markets,industry,Capital Markets,financials,,2026-01-01,,source-1,review-node-capital-markets-1,own
+US,MY_TAXONOMY,1,financial-services,industry,Financial Services,financials,,2026-01-01,,source-1,review-node-financial-services-1,own
+US,MY_TAXONOMY,1,insurance,industry,Insurance,financials,,2026-01-01,,source-1,review-node-insurance-1,own
+US,MY_TAXONOMY,1,oil-gas-equipment-services,industry,Oil & Gas Equipment & Services,energy,,2026-01-01,,source-1,review-node-oil-gas-equipment-services-1,own
+US,MY_TAXONOMY,1,oil-gas-exploration-production,industry,Oil & Gas Exploration & Production,energy,,2026-01-01,,source-1,review-node-oil-gas-exploration-production-1,own
+US,MY_TAXONOMY,1,aerospace-defense,industry,Aerospace & Defense,industrials,,2026-01-01,,source-1,review-node-aerospace-defense-1,own
+US,MY_TAXONOMY,1,transportation,industry,Transportation,industrials,,2026-01-01,,source-1,review-node-transportation-1,own
+US,MY_TAXONOMY,1,metals-mining,industry,Metals & Mining,materials,,2026-01-01,,source-1,review-node-metals-mining-1,own
+US,MY_TAXONOMY,1,paper-forest-products,industry,Paper & Forest Products,materials,,2026-01-01,,source-1,review-node-paper-forest-products-1,own
+US,MY_TAXONOMY,1,renewable-energy,industry,Renewable Energy,utilities,,2026-01-01,,source-1,review-node-renewable-energy-1,own
+US,MY_TAXONOMY,1,retailing,industry,Retailing,consumer-discretionary,,2026-01-01,,source-1,review-node-retailing-1,own
+US,MY_TAXONOMY,1,consumer-durables-apparel,industry,Consumer Durables & Apparel,consumer-discretionary,,2026-01-01,,source-1,review-node-consumer-durables-apparel-1,own
+US,MY_TAXONOMY,1,hotels-restaurants-leisure,industry,"Hotels, Restaurants & Leisure",consumer-discretionary,,2026-01-01,,source-1,review-node-hotels-restaurants-leisure-1,own
+US,MY_TAXONOMY,1,food-beverage,industry,Food & Beverage,consumer-staples,,2026-01-01,,source-1,review-node-food-beverage-1,own
+US,MY_TAXONOMY,1,equity-reits,industry,Equity REITs,real-estate,,2026-01-01,,source-1,review-node-equity-reits-1,own
+US,MY_TAXONOMY,1,interactive-media-services,industry,Interactive Media & Services,communication-services,,2026-01-01,,source-1,review-node-interactive-media-services-1,own
+US,MY_TAXONOMY,1,regional-banks,sub_industry,Regional Banks,financials,banks,2026-01-01,,source-1,review-node-regional-banks-1,own
+US,MY_TAXONOMY,1,broker-dealers-exchanges,sub_industry,Broker-Dealers & Securities Exchanges,financials,capital-markets,2026-01-01,,source-1,review-node-broker-dealers-exchanges-1,own
+US,MY_TAXONOMY,1,payments,sub_industry,Transaction & Payment Processing,financials,financial-services,2026-01-01,,source-1,review-node-payments-1,own
+US,MY_TAXONOMY,1,internet-retail,sub_industry,Internet & Direct Marketing Retail,consumer-discretionary,retailing,2026-01-01,,source-1,review-node-internet-retail-1,own
+US,MY_TAXONOMY,1,homebuilding,sub_industry,Homebuilding,consumer-discretionary,consumer-durables-apparel,2026-01-01,,source-1,review-node-homebuilding-1,own
+US,MY_TAXONOMY,1,casinos-gaming,sub_industry,Casinos & Gaming,consumer-discretionary,hotels-restaurants-leisure,2026-01-01,,source-1,review-node-casinos-gaming-1,own
+US,MY_TAXONOMY,1,airlines,sub_industry,Airlines,industrials,transportation,2026-01-01,,source-1,review-node-airlines-1,own
+US,MY_TAXONOMY,1,gold-mining,sub_industry,Gold Mining,materials,metals-mining,2026-01-01,,source-1,review-node-gold-mining-1,own
+US,MY_TAXONOMY,1,silver-mining,sub_industry,Silver Mining,materials,metals-mining,2026-01-01,,source-1,review-node-silver-mining-1,own
+US,MY_TAXONOMY,1,copper-mining,sub_industry,Copper Mining,materials,metals-mining,2026-01-01,,source-1,review-node-copper-mining-1,own
+US,MY_TAXONOMY,1,rare-earth-strategic-metals,sub_industry,Rare Earth & Strategic Metals,materials,metals-mining,2026-01-01,,source-1,review-node-rare-earth-strategic-metals-1,own
+US,MY_TAXONOMY,1,uranium-mining,sub_industry,Uranium Mining,materials,metals-mining,2026-01-01,,source-1,review-node-uranium-mining-1,own
+US,MY_TAXONOMY,1,steel,sub_industry,Steel,materials,metals-mining,2026-01-01,,source-1,review-node-steel-1,own
+US,MY_TAXONOMY,1,lithium-battery-materials,sub_industry,Lithium & Battery Materials,materials,metals-mining,2026-01-01,,source-1,review-node-lithium-battery-materials-1,own
+US,MY_TAXONOMY,1,solar,sub_industry,Solar,utilities,renewable-energy,2026-01-01,,source-1,review-node-solar-1,own
+US,MY_TAXONOMY,1,wind,sub_industry,Wind,utilities,renewable-energy,2026-01-01,,source-1,review-node-wind-1,own
+US,MY_TAXONOMY,1,hydrogen,sub_industry,Hydrogen,utilities,renewable-energy,2026-01-01,,source-1,review-node-hydrogen-1,own
+US,MY_TAXONOMY,1,timber-forestry,sub_industry,Timber & Forestry,materials,paper-forest-products,2026-01-01,,source-1,review-node-timber-forestry-1,own
