@@ -12,6 +12,12 @@ Research whether and how this data can help the app to provide a usable data sou
 Make sure that yFinance , which is the current data fetcher, can fetch the respective etf  data.
 Research on how to renuvate the data catalog scheme."
 
+## Clarifications
+
+### Session 2026-11-12
+
+- Q: Should the individual-stock detail workflow be specified as part of feature 018, remain owned by feature 017, or be split so that feature 018 covers discovery-to-detail navigation and feature 017 covers the detail data/chart/scoring behavior? → A: Keep the full individual-stock detail workflow in feature 017; feature 018 remains focused on category and ETF discovery.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Discover US industries and themes (Priority: P1)
@@ -166,6 +172,9 @@ representation has an explicit reason and no success-shaped fallback.
 - **FR-013**: Catalog-backed workflows that resolve a classification from a region and date MUST
   retain current behavior when exactly one classification is active and MUST require an explicit
   classification when more than one is active; they MUST NOT select one by release or file order.
+- **FR-014**: Individual-stock detail data loading and presentation, including its chart,
+  fundamentals, and scoring, MUST remain governed by feature 017; this feature MUST NOT add or
+  redefine that workflow.
 
 ### Key Entities
 

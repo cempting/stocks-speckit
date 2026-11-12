@@ -45,6 +45,14 @@ redefining those contracts.
   units, provenance, explicit gaps, and separation of peer-relative scores from absolute
   financial condition. Those safeguards also apply here.
 
+## Clarifications
+
+### Session 2026-11-12
+
+- Q: When a user opens a selected stock’s detail, should its chart history and existing peer scorecard load automatically, or should they remain behind explicit load actions? → A: Automatically load the selected listing’s chart history and existing peer scorecard on detail open.
+- Q: Should the automatic chart-and-score loading work when a stock detail is opened both from the Discovery stock list and from Stock Lookup, or only from Discovery? → A: It MUST work from both Discovery and Stock Lookup for the same verified listing.
+- Q: If a verified stock has no valid peer group or insufficient data for its existing peer scorecard, what should its detail page show? → A: Use its verified industry peer group when available; otherwise use the broader verified sector peer group and identify that context. If neither can support a score, state why and do not fabricate one.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Read Price, Trend, and Volume Together (Priority: P1)
@@ -73,6 +81,14 @@ supported period, and verify the displayed price dates, both moving averages, an
    the unavailable average is identified as insufficient and is not drawn as zero or guessed data.
 5. **Given** price or volume history is missing or a request fails, **When** detail is displayed,
    **Then** the gap or failure is explicit and is not presented as complete data.
+6. **Given** a user opens a selected, verified stock listing's detail from Discovery or Stock
+   Lookup, **When** chart and peer-score data are available, **Then** the selected-range chart and
+   existing peer scorecard are populated without requiring separate per-section load actions;
+   optional quarterly/company research remains explicitly loaded.
+7. **Given** the industry peer group cannot support scoring but the verified sector peer group
+   can, **When** the detail opens, **Then** the existing scorecard uses and identifies the sector
+   group; if neither group can support scoring, the scorecard states why and the valid chart
+   remains visible.
 
 ### User Story 2 - Identify a Consolidation Interval (Priority: P2)
 
@@ -210,6 +226,19 @@ periods, units, and explicit data limitations.
 - **FR-016**: Market and financial observations MUST come from the application's currently selected
   permitted data source. The feature MUST disclose unavailable coverage or source limitations and
   MUST NOT silently substitute another provider.
+- **FR-017**: Opening an explicitly selected, verified stock detail MUST request or reuse sufficient
+  daily history for the selected chart range and required warm-up, and MUST populate the existing
+  peer scorecard for its applicable comparison context without a separate chart or score load
+  action, whether opened from the Discovery stock list or Stock Lookup. Both entry paths MUST
+  retain the same verified listing identity and cutoff. A failure or unavailable result in either
+  data path MUST NOT suppress valid results from the other. Rerenders and resizing MUST reuse valid
+  cached history. Optional quarterly/company research remains behind its existing explicit load
+  action.
+- **FR-018**: The existing peer scorecard MUST use the selected stock's verified industry peer
+  group when that group can support scoring. If it cannot, the scorecard MUST use the verified
+  sector peer group and identify the broader comparison context. If neither group can support
+  scoring, the detail MUST show the unavailable/insufficient state and reason; it MUST NOT invent
+  a score or use an unverified comparison group.
 
 ### Key Entities
 
@@ -226,6 +255,8 @@ periods, units, and explicit data limitations.
   value, unit/currency, source, and availability status.
 - **Fundamental Metric**: A comparable raw or derived measure whose formula inputs, period, and
   evidence status are identifiable.
+- **Peer Comparison Context**: The verified industry or sector peer group used by the existing
+  scorecard, including its comparison level and score availability.
 
 ## Success Criteria *(mandatory)*
 
@@ -245,6 +276,10 @@ periods, units, and explicit data limitations.
 - **SC-005**: Users can complete the chart and financial-history review at both 1440px and 390px
   viewport widths without clipped essential controls, overlapping content, or page-wide
   horizontal scrolling.
+- **SC-006**: In controlled tests, opening a stock detail through either Discovery or Stock Lookup
+  displays its available chart and scorecard without a separate chart/score load action; the
+  scorecard identifies the industry group or sector fallback, or gives an explicit reason when
+  neither can support scoring.
 
 ## Assumptions
 
