@@ -22,6 +22,21 @@ def test_discovery_uses_one_yfinance_path_and_discloses_dates(monkeypatch, catal
     assert calls == [("TEST_ETF",)]
 
 
+def test_entity_details_expose_dates_without_changing_state_or_requests(
+    monkeypatch, catalog_release
+):
+    calls = configure_ui(monkeypatch, catalog_release)
+    app = AppTest.from_file(APP).run(timeout=20)
+    before = list(calls)
+    details = app.get("expander")
+    assert details
+    text = "\n".join(element.value for details_row in details for element in details_row.text)
+    assert "SOURCE YFINANCE" in text and "REQUESTED" in text and "OBSERVED" in text
+    assert calls == before
+    period = app.segmented_control("market_leadership.progressive_discovery.thumbnail_period")
+    assert period.value == "3m"
+
+
 def test_missing_purpose_benchmarks_are_explicit_and_never_defaulted(monkeypatch, catalog_release):
     calls = configure_ui(monkeypatch, catalog_release)
     edit_csv(catalog_release, "benchmarks", lambda rows: rows.clear())

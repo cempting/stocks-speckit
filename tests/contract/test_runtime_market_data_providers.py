@@ -134,8 +134,12 @@ def test_yfinance_maps_requested_range_and_uses_explicit_adjusted_prices() -> No
     calls: list[dict[str, object]] = []
     downloaded = pd.DataFrame(
         {
+            "Open": [100.0],
+            "High": [102.0],
+            "Low": [99.0],
             "Close": [101.0],
             "Volume": [1_100.0],
+            "Stock Splits": [0.0],
         },
         index=pd.to_datetime(["2026-10-23"]),
     )
@@ -157,14 +161,62 @@ def test_yfinance_maps_requested_range_and_uses_explicit_adjusted_prices() -> No
             "end": "2026-10-24",
             "interval": "1d",
             "auto_adjust": True,
-            "actions": False,
+            "actions": True,
             "progress": False,
             "group_by": "ticker",
             "threads": True,
         }
     ]
-    assert history.iloc[-1].to_dict() == {"close": 101.0, "volume": 1_100.0}
+    assert history.iloc[-1].to_dict() == {
+        "open": 100.0,
+        "high": 102.0,
+        "low": 99.0,
+        "close": 101.0,
+        "volume": 1_100.0,
+        "split_ratio": 0.0,
+    }
     assert history.attrs["source_id"] == "yfinance"
+    assert history.attrs["adjusted_ohlc"] is True
+    assert history.attrs["volume_comparable"] is True
+
+
+def test_yfinance_does_not_infer_adjusted_ohlc_or_comparable_volume() -> None:
+    downloaded = pd.DataFrame(
+        {"Close": [101.0], "Volume": [1_100.0], "Stock Splits": [0.0]},
+        index=pd.to_datetime(["2026-10-23"]),
+    )
+    history = YFinanceProvider(downloader=lambda **kwargs: downloaded).fetch_daily_history(
+        ("SPY",),
+        start=date(2026, 10, 23),
+        end=date(2026, 10, 23),
+    )["SPY"]
+
+    assert list(history.columns) == ["close", "volume", "split_ratio"]
+    assert history.attrs.get("adjusted_ohlc") is not True
+    assert history.attrs.get("volume_comparable") is not True
+
+
+def test_yfinance_split_actions_break_volume_comparability() -> None:
+    downloaded = pd.DataFrame(
+        {
+            "Open": [100.0],
+            "High": [102.0],
+            "Low": [99.0],
+            "Close": [101.0],
+            "Volume": [1_100.0],
+            "Stock Splits": [4.0],
+        },
+        index=pd.to_datetime(["2026-10-23"]),
+    )
+    history = YFinanceProvider(downloader=lambda **kwargs: downloaded).fetch_daily_history(
+        ("SPY",),
+        start=date(2026, 10, 23),
+        end=date(2026, 10, 23),
+    )["SPY"]
+
+    assert history.iloc[-1]["split_ratio"] == 4.0
+    assert history.attrs["adjusted_ohlc"] is True
+    assert history.attrs["volume_comparable"] is False
 
 
 def test_yfinance_missing_ticker_returns_typed_empty_canonical_history() -> None:

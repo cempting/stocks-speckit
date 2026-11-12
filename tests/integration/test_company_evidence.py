@@ -214,6 +214,8 @@ def _financial_bundle(
         ),  # values are constrained by the test fixture
         profile_domain=profile_domain,
         trading_currency="USD",
+        market_cap=1_200_000_000.0,
+        market_cap_as_of=date(2026, 1, 2),
     )
 
 
@@ -264,8 +266,26 @@ def test_financial_acquisition_requires_listing_and_profile_gate_before_publicat
     assert calls == 1
     assert result.association.state == "verified"
     assert result.outcome.state == "complete"
-    assert len(result.outcome.observations) == 2
-    assert {item.currency for item in result.outcome.observations} == {"USD"}
+    reported = tuple(
+        item for item in result.outcome.observations if item.origin == "source_supplied"
+    )
+    assert len(reported) == 3
+    assert {item.currency for item in reported} == {"USD"}
+    derived_margin = next(
+        item
+        for item in result.outcome.observations
+        if item.metric_key == "net_margin"
+    )
+    assert derived_margin.value == pytest.approx(-5 / 120)
+    assert derived_margin.derivation_input_ids
+    market_cap = next(
+        item
+        for item in result.outcome.observations
+        if item.metric_key == "market_capitalization"
+    )
+    assert market_cap.value == 1_200_000_000
+    assert market_cap.currency == "USD"
+    assert market_cap.period_end == date(2026, 1, 2)
     assert result.snapshot is not None
     assert result.snapshot.request.association.association_id == association.association_id
 

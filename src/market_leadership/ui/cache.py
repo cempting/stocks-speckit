@@ -47,6 +47,8 @@ from market_leadership.infrastructure.yfinance_fundamentals import (
     ticker_factory,
 )
 
+STOCK_HISTORY_CACHE_SCHEMA_VERSION = 2
+
 
 @st.cache_resource(show_spinner=False)
 def _catalog_reader() -> CatalogReader:
@@ -259,8 +261,10 @@ def _cached_member_series(
     symbol: str,
     as_of: date,
     retry_limit: int,
+    cache_schema_version: int,
     _seed: tuple[str, StockHistorySeries] | None = None,
 ) -> tuple[str, StockHistorySeries]:
+    del cache_schema_version
     # A missing entry raises instead of caching unavailable or incomplete evidence.
     if _seed is None:
         raise _HistoryCacheMiss
@@ -281,11 +285,21 @@ def load_member_history(
     provider_id = "yfinance"
     for symbol in symbols:
         if force_refresh:
-            _cached_member_series.clear(source_cache_path, symbol, as_of, retry_limit)
+            _cached_member_series.clear(
+                source_cache_path,
+                symbol,
+                as_of,
+                retry_limit,
+                STOCK_HISTORY_CACHE_SCHEMA_VERSION,
+            )
             continue
         try:
             provider_id, cached[symbol] = _cached_member_series(
-                source_cache_path, symbol, as_of, retry_limit
+                source_cache_path,
+                symbol,
+                as_of,
+                retry_limit,
+                STOCK_HISTORY_CACHE_SCHEMA_VERSION,
             )
         except _HistoryCacheMiss:
             continue
@@ -307,6 +321,7 @@ def load_member_history(
                     item.symbol,
                     as_of,
                     retry_limit,
+                    STOCK_HISTORY_CACHE_SCHEMA_VERSION,
                     _seed=(provider_id, item),
                 )
     return StockHistoryBatch(provider_id, as_of, tuple(cached[symbol] for symbol in symbols))
@@ -324,6 +339,7 @@ def _cached_selected_listing_history(
     retry_limit: int,
     eligible_start: date,
     eligible_end: date,
+    cache_schema_version: int,
     _catalog: CatalogSnapshot,
     _seed: StockHistoryBatch | None = None,
 ) -> StockHistoryBatch:
@@ -339,6 +355,7 @@ def _cached_selected_listing_history(
         eligible_start,
         eligible_end,
         _catalog,
+        cache_schema_version,
     )
     if _seed is None:
         raise _HistoryCacheMiss
@@ -391,6 +408,7 @@ def load_selected_listing_history(
         retry_limit,
         window.eligible_start,
         window.eligible_end,
+        STOCK_HISTORY_CACHE_SCHEMA_VERSION,
     )
     if force_refresh:
         _cached_selected_listing_history.clear(*key)

@@ -14,8 +14,18 @@ import pandas as pd
 
 from market_leadership.application.ports import MarketDataProvider
 
-CACHE_SCHEMA_VERSION = 4
-_DATA_COLUMNS = ["symbol", "date", "close", "volume"]
+CACHE_SCHEMA_VERSION = 5
+_DATA_COLUMNS = [
+    "symbol",
+    "date",
+    "close",
+    "volume",
+    "open",
+    "high",
+    "low",
+    "split_ratio",
+]
+_OPTIONAL_DATA_COLUMNS = ["open", "high", "low", "split_ratio"]
 
 
 class _CacheMiss(Exception):
@@ -83,8 +93,15 @@ class CachedMarketDataProvider:
             end=end,
             force=force,
         )
-        records, source_availability = _to_records(result, symbols, start=start, end=end)
-        canonical_result = _from_records(records, symbols, source_id=self.provider_id)
+        records, source_availability, history_evidence = _to_records(
+            result, symbols, start=start, end=end
+        )
+        canonical_result = _from_records(
+            records,
+            symbols,
+            source_id=self.provider_id,
+            history_evidence=history_evidence,
+        )
         for symbol, history in canonical_result.items():
             history.attrs["available_on"] = source_availability.get(symbol)
         self._publish(
@@ -93,6 +110,7 @@ class CachedMarketDataProvider:
             records,
             selection=self._selection,
             source_availability=source_availability,
+            history_evidence=history_evidence,
         )
         return canonical_result
 
@@ -162,9 +180,15 @@ class CachedMarketDataProvider:
             actual_start, actual_end, starts, ends = _record_coverage(records, requested_symbols)
             coverage = manifest.get("coverage")
             availability = manifest.get("source_availability_by_symbol")
-            if not isinstance(coverage, dict) or not isinstance(availability, dict):
+            history_evidence = manifest.get("history_evidence_by_symbol")
+            if (
+                not isinstance(coverage, dict)
+                or not isinstance(availability, dict)
+                or not isinstance(history_evidence, dict)
+            ):
                 raise _CacheMiss
             availability = cast(dict[str, object], availability)
+            history_evidence = cast(dict[str, object], history_evidence)
             if coverage != {
                 "requested_start": request["start"],
                 "requested_end": request["end"],
@@ -172,7 +196,9 @@ class CachedMarketDataProvider:
                 "actual_end": actual_end,
                 "actual_start_by_symbol": starts,
                 "actual_end_by_symbol": ends,
-            } or set(availability) != set(requested_symbols):
+            } or set(availability) != set(requested_symbols) or set(history_evidence) != set(
+                requested_symbols
+            ):
                 raise _CacheMiss
             for symbol in requested_symbols:
                 available_on = availability[symbol]
@@ -192,6 +218,9 @@ class CachedMarketDataProvider:
                 records,
                 requested_symbols,
                 source_id=request["provider_id"],
+                history_evidence=_validated_history_evidence(
+                    history_evidence, requested_symbols
+                ),
             )
             for symbol, history in result.items():
                 history.attrs["available_on"] = availability[symbol]
@@ -207,6 +236,7 @@ class CachedMarketDataProvider:
         *,
         selection: dict[str, Any],
         source_availability: dict[str, str | None],
+        history_evidence: dict[str, dict[str, bool]],
     ) -> None:
         entry_dir.mkdir(parents=True, exist_ok=True)
         temporary_dir = Path(tempfile.mkdtemp(prefix=".publishing-", dir=entry_dir))
@@ -232,6 +262,7 @@ class CachedMarketDataProvider:
                     "actual_end_by_symbol": ends,
                 },
                 "source_availability_by_symbol": source_availability,
+                "history_evidence_by_symbol": history_evidence,
                 "selection": selection,
                 "data_file": "data.parquet",
                 "data_sha256": _sha256(data_path),
@@ -272,25 +303,93 @@ def _normalized_request(
     }
 
 
+def _validated_history_evidence(
+    value: dict[str, object], symbols: tuple[str, ...]
+) -> dict[str, dict[str, bool]]:
+    evidence: dict[str, dict[str, bool]] = {}
+    required_keys = {
+        "has_ohlc",
+        "has_split_ratio",
+        "adjusted_ohlc",
+        "volume_comparable",
+    }
+    if set(value) != set(symbols):
+        raise ValueError("Invalid cached history evidence symbols")
+    for symbol in symbols:
+        item = value[symbol]
+        if not isinstance(item, dict):
+            raise ValueError("Invalid cached history evidence")
+        flags = cast(dict[str, object], item)
+        if set(flags) != required_keys:
+            raise ValueError("Invalid cached history evidence")
+        if any(not isinstance(flags[key], bool) for key in required_keys):
+            raise ValueError("Invalid cached history evidence flags")
+        normalized = {key: bool(flags[key]) for key in required_keys}
+        if normalized["adjusted_ohlc"] and not normalized["has_ohlc"]:
+            raise ValueError("Adjusted OHLC evidence requires OHLC records")
+        if normalized["volume_comparable"] and not (
+            normalized["adjusted_ohlc"] and normalized["has_split_ratio"]
+        ):
+            raise ValueError("Comparable volume evidence requires adjusted OHLC and split data")
+        evidence[symbol] = normalized
+    return evidence
+
+
 def _to_records(
     result: dict[str, pd.DataFrame],
     requested_symbols: tuple[str, ...],
     *,
     start: date,
     end: date,
-) -> tuple[pd.DataFrame, dict[str, str | None]]:
+) -> tuple[pd.DataFrame, dict[str, str | None], dict[str, dict[str, bool]]]:
     if set(result) - set(requested_symbols):
         raise ValueError("Daily history contains unexpected symbols")
     frames: list[pd.DataFrame] = []
     availability: dict[str, str | None] = {}
+    history_evidence: dict[str, dict[str, bool]] = {}
     for symbol in requested_symbols:
         history = result.get(symbol)
         if history is None or history.empty:
             availability[symbol] = None
+            history_evidence[symbol] = {
+                "has_ohlc": False,
+                "has_split_ratio": False,
+                "adjusted_ohlc": False,
+                "volume_comparable": False,
+            }
             continue
         if not {"close", "volume"}.issubset(history.columns):
             raise ValueError(f"Daily history for {symbol} lacks canonical columns")
-        frame = pd.DataFrame(history.loc[:, ["close", "volume"]].copy())
+        has_ohlc = {"open", "high", "low"}.issubset(history.columns)
+        has_split_ratio = "split_ratio" in history.columns
+        adjusted_ohlc = has_ohlc and history.attrs.get("adjusted_ohlc") is True
+        volume_comparable = (
+            adjusted_ohlc
+            and has_split_ratio
+            and history.attrs.get("volume_comparable") is True
+        )
+        history_evidence[symbol] = {
+            "has_ohlc": has_ohlc,
+            "has_split_ratio": has_split_ratio,
+            "adjusted_ohlc": adjusted_ohlc,
+            "volume_comparable": volume_comparable,
+        }
+        frame = pd.DataFrame(index=history.index)
+        frame["close"] = history["close"]
+        frame["volume"] = history["volume"]
+        for column in _OPTIONAL_DATA_COLUMNS:
+            if column in history.columns:
+                try:
+                    frame[column] = pd.to_numeric(history[column], errors="raise").astype(
+                        "float64"
+                    )
+                except (TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"Daily history for {symbol} has invalid {column} values"
+                    ) from error
+            else:
+                frame[column] = float("nan")
+        frame = frame.loc[:, ["close", "volume", *_OPTIONAL_DATA_COLUMNS]]
         frame.columns.name = None
         frame.insert(0, "date", pd.DatetimeIndex(frame.index).tz_localize(None))
         frame.insert(0, "symbol", symbol)
@@ -323,11 +422,25 @@ def _to_records(
                 "date": pd.Series(dtype="datetime64[ns]"),
                 "close": pd.Series(dtype="float64"),
                 "volume": pd.Series(dtype="float64"),
+                **{
+                    column: pd.Series(dtype="float64")
+                    for column in _OPTIONAL_DATA_COLUMNS
+                },
             }
-        ), availability
+        ), availability, history_evidence
     records = pd.concat(frames, ignore_index=True)
     records["symbol"] = records["symbol"].astype("string")
-    return records.astype({"close": "float64", "volume": "float64"}), availability
+    records = records.astype(
+        {
+            "close": "float64",
+            "volume": "float64",
+            "open": "float64",
+            "high": "float64",
+            "low": "float64",
+            "split_ratio": "float64",
+        }
+    )
+    return records, availability, history_evidence
 
 
 def _record_coverage(
@@ -354,15 +467,28 @@ def _from_records(
     requested_symbols: tuple[str, ...],
     *,
     source_id: str,
+    history_evidence: dict[str, dict[str, bool]],
 ) -> dict[str, pd.DataFrame]:
     result: dict[str, pd.DataFrame] = {}
     for symbol in requested_symbols:
-        symbol_records = records.loc[records["symbol"] == symbol, ["date", "close", "volume"]]
+        evidence = history_evidence[symbol]
+        columns = ["date"]
+        if evidence["has_ohlc"]:
+            columns.extend(("open", "high", "low"))
+        columns.extend(("close", "volume"))
+        if evidence["has_split_ratio"]:
+            columns.append("split_ratio")
+        symbol_records = records.loc[records["symbol"] == symbol, columns]
         if symbol_records.empty:
             result[symbol] = pd.DataFrame(
                 {
                     "close": pd.Series(dtype="float64"),
                     "volume": pd.Series(dtype="float64"),
+                    **{
+                        column: pd.Series(dtype="float64")
+                        for column in columns
+                        if column not in ("date", "close", "volume")
+                    },
                 }
             )
             result[symbol].attrs.update({"source_id": source_id, "available_on": None})
@@ -376,6 +502,9 @@ def _from_records(
                 "available_on": history.index[-1].date().isoformat(),
             }
         )
+        if evidence["has_ohlc"]:
+            history.attrs["adjusted_ohlc"] = evidence["adjusted_ohlc"]
+            history.attrs["volume_comparable"] = evidence["volume_comparable"]
         result[symbol] = history
     return result
 
@@ -394,6 +523,7 @@ def _has_canonical_record_types(records: pd.DataFrame) -> bool:
         and str(records["date"].dtype) == "datetime64[ns]"
         and str(records["close"].dtype) == "float64"
         and str(records["volume"].dtype) == "float64"
+        and all(str(records[column].dtype) == "float64" for column in _OPTIONAL_DATA_COLUMNS)
     )
 
 
@@ -402,6 +532,15 @@ def _valid_numeric_records(records: pd.DataFrame) -> bool:
         all(records[column].map(math.isfinite).all() for column in ("close", "volume"))
         and (records["close"] > 0).all()
         and (records["volume"] >= 0).all()
+        and all(
+            records[column].dropna().map(math.isfinite).all()
+            for column in _OPTIONAL_DATA_COLUMNS
+        )
+        and all(
+            (records[column].dropna() > 0).all()
+            for column in ("open", "high", "low")
+        )
+        and (records["split_ratio"].dropna() >= 0).all()
     )
 
 

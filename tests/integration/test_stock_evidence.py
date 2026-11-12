@@ -499,6 +499,112 @@ def test_missing_member_response_is_explicit_not_a_successful_empty_row():
     assert result.series[1].reason is not None
 
 
+def test_member_history_preserves_detector_ohlc_actions_and_provenance() -> None:
+    class EvidenceProvider:
+        provider_id = "yfinance"
+
+        def fetch_daily_history(
+            self,
+            symbols: tuple[str, ...],
+            *,
+            start: date,
+            end: date,
+            force: bool = False,
+        ) -> dict[str, pd.DataFrame]:
+            del start, end, force
+            history = pd.DataFrame(
+                {
+                    "open": [100.0],
+                    "high": [102.0],
+                    "low": [99.0],
+                    "close": [101.0],
+                    "volume": [1_000.0],
+                    "split_ratio": [0.0],
+                },
+                index=pd.to_datetime(["2026-10-23"]),
+            )
+            history.attrs.update(
+                {
+                    "source_id": self.provider_id,
+                    "available_on": "2026-10-23",
+                    "adjusted_ohlc": True,
+                    "volume_comparable": True,
+                }
+            )
+            return {symbol: history for symbol in symbols}
+
+    series = load_stock_history(
+        EvidenceProvider(), ("AAA",), as_of=date(2026, 10, 23)
+    ).series[0]
+
+    assert list(series.history.columns) == [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "split_ratio",
+    ]
+    assert series.history.attrs["source_id"] == "yfinance"
+    assert series.history.attrs["adjusted_ohlc"] is True
+    assert series.history.attrs["volume_comparable"] is True
+    assert series.history.attrs["history_truncated"] is True
+
+
+def test_member_history_cache_preserves_detector_metadata(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    class EvidenceProvider:
+        provider_id = "yfinance"
+        calls = 0
+
+        def fetch_daily_history(
+            self,
+            symbols: tuple[str, ...],
+            *,
+            start: date,
+            end: date,
+            force: bool = False,
+        ) -> dict[str, pd.DataFrame]:
+            del start, end, force
+            self.calls += 1
+            history = pd.DataFrame(
+                {
+                    "open": [100.0],
+                    "high": [102.0],
+                    "low": [99.0],
+                    "close": [101.0],
+                    "volume": [1_000.0],
+                    "split_ratio": [0.0],
+                },
+                index=pd.to_datetime(["2026-10-23"]),
+            )
+            history.attrs.update(
+                {
+                    "source_id": self.provider_id,
+                    "available_on": "2026-10-23",
+                    "adjusted_ohlc": True,
+                    "volume_comparable": True,
+                }
+            )
+            return {symbol: history for symbol in symbols}
+
+    provider = EvidenceProvider()
+    monkeypatch.setattr(
+        "market_leadership.bootstrap.build_request_provider",
+        lambda *args, **kwargs: provider,
+    )
+    arguments = (str(tmp_path), ("AAA",), date(2026, 10, 23))
+    first = load_member_history(*arguments, retry_limit=1)
+    cached = load_member_history(*arguments, retry_limit=1)
+
+    assert provider.calls == 1
+    for batch in (first, cached):
+        assert batch.series[0].history.attrs["adjusted_ohlc"] is True
+        assert batch.series[0].history.attrs["volume_comparable"] is True
+        assert batch.series[0].history.attrs["history_truncated"] is True
+
+
 def test_provider_failure_is_not_cached_as_empty_success(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):

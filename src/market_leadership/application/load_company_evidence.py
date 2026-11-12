@@ -30,6 +30,7 @@ from market_data.domain.fundamentals import (
     FinancialQuarter,
     FundamentalBundle,
     FundamentalRequest,
+    build_history_metrics,
 )
 from market_leadership.infrastructure.yfinance_fundamentals import FundamentalAcquisitionError
 
@@ -522,7 +523,174 @@ def _financial_observations(
                     schema_revision,
                 )
             )
+    raw_observations = tuple(output)
+    raw_ids = {
+        (item.metric_key, item.period_end): item.observation_id for item in raw_observations
+    }
+    output.extend(
+        _history_metric_observations(
+            association,
+            bundle,
+            assessment,
+            schema_revision,
+            raw_ids,
+        )
+    )
+    if bundle.market_cap is not None and bundle.market_cap_as_of is not None:
+        output.append(
+            _market_cap_observation(
+                association,
+                bundle,
+                assessment,
+                schema_revision,
+            )
+        )
     return tuple(output)
+
+
+def _history_metric_observations(
+    association: CompanyAssociation,
+    bundle: FundamentalBundle,
+    assessment: SourceAssessment,
+    schema_revision: str,
+    raw_ids: dict[tuple[str, date], str],
+) -> list[FinancialObservation]:
+    income_periods = tuple(sorted(quarter.period for quarter in bundle.income))
+    result: list[FinancialObservation] = []
+    for metric in build_history_metrics(bundle):
+        inputs: list[tuple[str, date]] = []
+        if metric.key in ("sales_yoy", "eps_yoy"):
+            index = income_periods.index(metric.period) if metric.period in income_periods else -1
+            if index >= 4:
+                row = "revenue" if metric.key == "sales_yoy" else "diluted_eps"
+                inputs.extend(
+                    (row, income_periods[position]) for position in (index, index - 4)
+                )
+        elif metric.key in ("gross_margin", "operating_margin", "net_margin"):
+            numerator = {
+                "gross_margin": "gross_profit",
+                "operating_margin": "operating_income",
+                "net_margin": "net_income",
+            }[metric.key]
+            inputs.extend(((numerator, metric.period), ("revenue", metric.period)))
+        elif metric.key == "fcf_margin":
+            cash = next(
+                (quarter for quarter in bundle.cash if quarter.period == metric.period),
+                None,
+            )
+            cash_inputs = (
+                ("fcf",)
+                if cash is not None and cash.get("fcf") is not None
+                else ("ocf", "capex")
+            )
+            inputs.extend((key, metric.period) for key in (*cash_inputs, "revenue"))
+        elif metric.key == "roce":
+            prior_periods = tuple(
+                period for period in income_periods if period <= metric.period
+            )[-4:]
+            inputs.extend(("ebit", period) for period in prior_periods)
+            inputs.extend(
+                (key, metric.period) for key in ("assets", "current_liabilities")
+            )
+        elif metric.key == "current_ratio":
+            inputs.extend(
+                (key, metric.period) for key in ("current_assets", "current_liabilities")
+            )
+        elif metric.key == "debt_to_equity":
+            inputs.extend(
+                (key, metric.period) for key in ("total_debt", "shareholders_equity")
+            )
+        input_ids = tuple(
+            dict.fromkeys(raw_ids[item] for item in inputs if item in raw_ids)
+        )
+        result.append(
+            FinancialObservation(
+                observation_id=(
+                    f"{association.association_id}:derived:{metric.key}:"
+                    f"{metric.period.isoformat()}"
+                ),
+                association_id=association.association_id,
+                metric_key=metric.key,
+                value=metric.value,
+                unit="ratio",
+                currency=None,
+                source_scale=1.0,
+                period_start=None,
+                period_end=metric.period,
+                basis="quarterly",
+                origin="derived",
+                definition=metric.detail,
+                derivation_input_ids=input_ids,
+                provenance=EvidenceProvenance(
+                    source_id=assessment.source_id,
+                    provider_id=bundle.provider_id,
+                    assessment_fingerprint=assessment.fingerprint,
+                    source_url=None,
+                    locator=f"derived/{metric.key}",
+                    publication_date=None,
+                    publication_precision="unknown",
+                    observed_at=_now_utc(bundle.fetched_at),
+                    period_start=None,
+                    period_end=metric.period,
+                    payload_sha256=bundle.fingerprint,
+                    schema_revision=schema_revision,
+                    limitations=("Provider does not expose a verified publication vintage",),
+                ),
+                state=metric.state,
+                reason=None if metric.value is not None else metric.detail,
+            )
+        )
+    return result
+
+
+def _market_cap_observation(
+    association: CompanyAssociation,
+    bundle: FundamentalBundle,
+    assessment: SourceAssessment,
+    schema_revision: str,
+) -> FinancialObservation:
+    assert bundle.market_cap is not None and bundle.market_cap_as_of is not None
+    currency = bundle.trading_currency or bundle.currency
+    if not currency or len(currency) != 3 or not currency.isascii() or not currency.isalpha():
+        currency = None
+    else:
+        currency = currency.upper()
+    observed_at = _now_utc(bundle.fetched_at)
+    return FinancialObservation(
+        observation_id=(
+            f"{association.association_id}:profile:market_capitalization:"
+            f"{bundle.market_cap_as_of.isoformat()}"
+        ),
+        association_id=association.association_id,
+        metric_key="market_capitalization",
+        value=bundle.market_cap,
+        unit="currency",
+        currency=currency,
+        source_scale=1.0,
+        period_start=None,
+        period_end=bundle.market_cap_as_of,
+        basis="unknown",
+        origin="source_supplied",
+        definition="Current company market capitalization",
+        derivation_input_ids=(),
+        provenance=EvidenceProvenance(
+            source_id=assessment.source_id,
+            provider_id=bundle.provider_id,
+            assessment_fingerprint=assessment.fingerprint,
+            source_url=None,
+            locator="marketCap",
+            publication_date=None,
+            publication_precision="unknown",
+            observed_at=observed_at,
+            period_start=None,
+            period_end=bundle.market_cap_as_of,
+            payload_sha256=bundle.fingerprint,
+            schema_revision=schema_revision,
+            limitations=("Current profile value; not historical market capitalization",),
+        ),
+        state="available",
+        reason=None,
+    )
 
 
 def _quarter_observations(

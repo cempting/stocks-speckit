@@ -14,7 +14,10 @@ import streamlit as st
 from market_data.domain.peer_scores import BlockPeerScore, PeerScorecard
 from market_data.domain.stock_chart import build_discovery_chart_preview
 from market_leadership.ui.dataframe import render_dataframe
-from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS, performance_column_styles
+from market_leadership.ui.performance_table import (
+    PERFORMANCE_STYLE_COLUMNS,
+    performance_column_styles,
+)
 
 _ChartSeries = Sequence[Mapping[str, object]]
 _THUMBNAIL_HEIGHT = 84
@@ -24,30 +27,50 @@ _ENTITY_TAPE_STYLE = """
 .tape-performance-label {
     display: none;
 }
+.tape-scroll-cue {
+    display: none;
+}
+.tape-performance-cell[tabindex="0"]:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
+}
+[class*="st-key-tape_details_"] [data-testid="stText"] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
 @media (max-width: 640px) {
+    [class*="st-key-entity_tape_"] {
+        container-type: inline-size;
+        overflow-x: auto;
+        max-width: 100%;
+    }
     [class*="st-key-entity_tape_"] [class*="st-key-tape_headers_"] {
         display: none;
     }
     [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
         > [data-testid="stHorizontalBlock"] {
-        flex-wrap: wrap;
-        column-gap: 0.5rem;
+        display: grid !important;
+        grid-template-columns: minmax(100px, 2.25fr) repeat(6, minmax(64px, 1fr));
+        gap: 0.5rem;
     }
     [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
         > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-        min-width: 0;
+        min-width: 0 !important;
+        width: auto !important;
     }
     [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
         > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(-n+2) {
-        flex: 1 1 100%;
+        grid-column: 1 / -1;
+        width: 100cqw !important;
+        max-width: 100cqw;
     }
-    [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
-        > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) {
-        flex: 2.25 1 0%;
-    }
-    [class*="st-key-entity_tape_"] > [data-testid="stLayoutWrapper"]
-        > [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(n+4) {
-        flex: 1 1 0%;
+    @media (max-width: 639px) {
+        .tape-scroll-cue {
+            display: block;
+            font-size: 0.75rem;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
     }
     [class*="st-key-entity_tape_"] .tape-performance-cell {
         padding: 0.25rem !important;
@@ -360,6 +383,7 @@ def _render_visual_tape(
     *,
     key: str,
     selectable: bool,
+    show_volume_legend: bool = True,
     on_entity_select: Callable[[str], None] | None = None,
 ) -> tuple[int, ...]:
     price_column = "Price chart"
@@ -369,7 +393,8 @@ def _render_visual_tape(
         return ()
     if selectable or on_entity_select is not None:
         st.html(_ENTITY_BUTTON_STYLE)
-    st.caption(str(frame.attrs.get("volume_legend", "")))
+    if show_volume_legend:
+        st.caption(str(frame.attrs.get("volume_legend", "")))
     hidden_columns = ("Instrument ID", "Resolution", "Node ID")
     if "Sector" in frame.columns or "Industry" in frame.columns:
         hidden_columns += ("Status", "1d reason")
@@ -399,11 +424,20 @@ def _render_visual_tape(
         column: performance_column_styles(
             frame[column], dark_mode=bool(st.session_state.get("dark_mode", False))
         )
-        for column in PERFORMANCE_COLUMNS
+        for column in PERFORMANCE_STYLE_COLUMNS
         if column in content_columns
     }
+    last_performance_column = (
+        next(
+            (column for column in reversed(content_columns) if column in performance_styles),
+            None,
+        )
+        if "Sector" in frame.columns or "Industry" in frame.columns
+        else None
+    )
     selected_rows: list[int] = []
     for row_index, (_, row) in enumerate(frame.iterrows()):
+        entity_details: tuple[str, str] | None = None
         cells = st.columns(weights)
         with cells[0]:
             chart = build_price_thumbnail(
@@ -446,6 +480,9 @@ def _render_visual_tape(
                     ):
                         ticker = "No ticker"
                     help_text = f"{ticker}\n{value}\n\n{help_text}"
+                    if context := frame.attrs.get("evidence_context"):
+                        help_text += f"\n\n{context}"
+                    entity_details = (ticker, help_text)
                     button_key = f"{key}_select_{row['Node ID']}"
                     with st.container(key=f"tape_entity_fixed_{button_key}"):
                         st.button(
@@ -468,8 +505,13 @@ def _render_visual_tape(
                 elif column in performance_styles:
                     text = f"{float(value):.2f}%" if pd.notna(value) else "Unavailable"
                     style = performance_styles[column][row_index]
+                    keyboard_attributes = (
+                        f' tabindex="0" role="group" aria-label="{column} return: {text}"'
+                        if column == last_performance_column
+                        else ""
+                    )
                     st.html(
-                        f'<div class="tape-performance-cell" '
+                        f'<div class="tape-performance-cell"{keyboard_attributes} '
                         f'style="{style}; padding: 0.5rem; border-radius: 0.25rem; '
                         f'height: {_THUMBNAIL_HEIGHT}px; box-sizing: border-box; display: flex; '
                         f'align-items: center; justify-content: flex-end; '
@@ -479,6 +521,11 @@ def _render_visual_tape(
                     )
                 else:
                     st.write(value)
+        if entity_details is not None:
+            ticker, help_text = entity_details
+            with st.container(key=f"tape_details_{key}_{row_index}"):
+                with st.expander(f"Full name and evidence: {ticker}"):
+                    st.text(help_text)
     return tuple(selected_rows)
 
 
@@ -491,10 +538,21 @@ def render_chart_tape(
     if "Sector" in frame.columns or "Industry" in frame.columns:
         st.html(_ENTITY_TAPE_STYLE)
         with st.container(key=f"entity_tape_{key}"):
+            st.html(
+                '<div class="tape-scroll-cue" role="note">'
+                'Swipe within the table or use Tab to reach the final return field.</div>'
+            )
             _render_visual_tape(frame, key=key, selectable=False, on_entity_select=on_select)
     else:
         _render_visual_tape(frame, key=key, selectable=False, on_entity_select=on_select)
 
 
-def render_selectable_stock_tape(frame: pd.DataFrame, *, key: str) -> tuple[int, ...]:
-    return _render_visual_tape(frame, key=key, selectable=True)
+def render_selectable_stock_tape(
+    frame: pd.DataFrame, *, key: str, show_volume_legend: bool = True
+) -> tuple[int, ...]:
+    return _render_visual_tape(
+        frame,
+        key=key,
+        selectable=True,
+        show_volume_legend=show_volume_legend,
+    )

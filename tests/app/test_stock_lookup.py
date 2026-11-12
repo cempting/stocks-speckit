@@ -9,6 +9,7 @@ from types import SimpleNamespace
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from market_data.domain.stock_chart import stock_chart_lookback_days
 from tests.fixtures.catalogs.ui import configure_ui, edit_csv, publish_entry
 from tests.membership_helpers import build_v2_release, membership_fixture
 
@@ -155,6 +156,47 @@ def test_history_is_requested_only_after_explicit_load(
 
     assert not app.exception
     assert history_calls == ["selected history"]
+
+
+def test_selected_chart_range_requests_and_reuses_required_history_coverage(
+    monkeypatch: pytest.MonkeyPatch,
+    catalog_release: Path,
+    tmp_path: Path,
+) -> None:
+    app, _provider_calls, _history_calls, _evidence_calls = _run_lookup(
+        monkeypatch, catalog_release, tmp_path
+    )
+    lookbacks: list[int] = []
+
+    def load_history(*_args, **kwargs):
+        lookbacks.append(kwargs["lookback_days"])
+        return SimpleNamespace(series=())
+
+    monkeypatch.setattr("market_leadership.bootstrap.load_selected_stock_history", load_history)
+    app.text_input(LOOKUP_PREFIX + "lookup_query").set_value("share-class").run(timeout=20)
+    instrument_picker = app.selectbox(LOOKUP_PREFIX + "lookup_instrument")
+    selected_option = next(
+        option for option in instrument_picker.options if "share-class-b" in option
+    )
+    instrument_picker.select(selected_option).run(timeout=20)
+    listing_picker = app.selectbox(LOOKUP_PREFIX + "lookup_listing")
+    listing_picker.select(listing_picker.options[0]).run(timeout=20)
+    app.button(LOOKUP_PREFIX + "open_lookup").click().run(timeout=20)
+
+    expected_lookback = stock_chart_lookback_days(
+        app.date_input(LOOKUP_PREFIX + "as_of").value,
+        "24m",
+    )
+    range_key = LOOKUP_PREFIX + "detail.chart_range"
+    app.selectbox(range_key).select("24m").run(timeout=20)
+    app.button(LOOKUP_PREFIX + "load_lookup_history").click().run(timeout=20)
+
+    assert not app.exception
+    assert lookbacks == [expected_lookback]
+
+    app.selectbox(range_key).select("1m").run(timeout=20)
+    assert not app.exception
+    assert lookbacks == [expected_lookback, expected_lookback]
 
 
 def test_changing_as_of_date_clears_selected_lookup_context(

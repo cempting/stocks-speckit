@@ -20,7 +20,12 @@ def _run(monkeypatch, catalog_release):
 
 
 def _select_industry(app, prefix, node_id):
-    selectbox = app.selectbox(prefix + "industry")
+    selectbox = next(
+        (widget for widget in app.selectbox if widget.key == prefix + "industry"),
+        None,
+    )
+    if selectbox is None:
+        return app.button(prefix + "industry_tape_select_" + node_id).click()
     option = next(value for value in selectbox.options if value.endswith(f"[{node_id}]"))
     return selectbox.select(option)
 
@@ -45,6 +50,7 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
     assert not app.exception
     assert app.session_state[PREFIX + "sector"] == "test-sector"
     assert not any(widget.key == PREFIX + "sector" for widget in app.selectbox)
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value in {"Status", "Representation"} for item in app.caption)
     assert not any(item.value == "Representation type" for item in app.caption)
@@ -54,15 +60,16 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
     assert not any(item.value == "ETF" for item in app.caption)
     button.click().run()
     assert not app.exception
-    assert app.selectbox(PREFIX + "industry").value == industry
     assert any(item.value == "Contained stocks" for item in app.subheader)
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
     if industry == "test-empty":
         assert any("no active stock memberships" in item.value for item in app.info)
     else:
         assert any(item.label == "**TEST\\_STOCK\\_1**  \nTest stock 1" for item in app.button)
         assert any(item.value == "Not loaded" for item in app.markdown)
     assert app.segmented_control(PREFIX + "thumbnail_period").value == "1w"
-    assert app.segmented_control(PREFIX + "performance_basis").value == "vs S&P 500"
+    assert not any(widget.label == "Performance basis" for widget in app.segmented_control)
+    assert app.session_state[PREFIX + "performance_basis_state"] == "vs S&P 500"
     assert app.date_input[0].value == as_of
 
 
@@ -78,16 +85,18 @@ def test_clickable_sector_and_industry_names_open_their_child_tapes(
 def test_breadcrumbs_return_to_ancestors_and_preserve_controls(
     monkeypatch, catalog_release, target, heading, sector, industry, placeholder
 ):
-    app = _stocks(_run(monkeypatch, catalog_release))
+    app = _run(monkeypatch, catalog_release)
     app.segmented_control(PREFIX + "thumbnail_period").set_value("1w").run()
     app.segmented_control(PREFIX + "performance_basis").set_value("vs S&P 500").run()
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run(timeout=20)
+    _select_industry(app, PREFIX, "test-cloud").run(timeout=20)
     as_of = app.date_input[0].value
     if placeholder:
         next(
             button for button in app.button if "Unresolved placeholder" in button.label
         ).click().run()
     else:
-        app.selectbox(PREFIX + "stock_picker").select("test-stock-1").run()
+        app.button(PREFIX + "stock_tape_select_test-stock-1").click().run()
     assert not app.exception
     assert app.button(PREFIX + "breadcrumb_sectors").label == "US sectors"
     assert any("Test stock" in item.value for item in app.caption)
@@ -96,13 +105,20 @@ def test_breadcrumbs_return_to_ancestors_and_preserve_controls(
     assert any(item.value == heading for item in app.subheader)
     if sector is not None:
         assert app.session_state[PREFIX + "sector"] == sector
-        assert app.selectbox(PREFIX + "industry").value == industry
+        assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
+        if industry is not None:
+            assert app.session_state[PREFIX + "industry"] == industry
     else:
         assert PREFIX + "sector" not in app.session_state
         assert PREFIX + "industry" not in app.session_state
+    assert not any(widget.key == PREFIX + "stock_picker" for widget in app.selectbox)
     assert PREFIX + "stock" not in app.session_state
     assert app.segmented_control(PREFIX + "thumbnail_period").value == "1w"
-    assert app.segmented_control(PREFIX + "performance_basis").value == "vs S&P 500"
+    if heading == "Contained stocks":
+        assert not any(widget.label == "Performance basis" for widget in app.segmented_control)
+        assert app.session_state[PREFIX + "performance_basis_state"] == "vs S&P 500"
+    else:
+        assert app.segmented_control(PREFIX + "performance_basis").value == "vs S&P 500"
     assert app.date_input[0].value == as_of
 
 
@@ -120,7 +136,7 @@ def test_breadcrumbs_allow_return_from_industry_and_empty_stock_lists(monkeypatc
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert app.session_state[PREFIX + "sector"] == "test-sector"
-    assert app.selectbox(PREFIX + "industry").value is None
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
 
 
 def test_discovery_shows_only_sector_tape_until_sector_is_selected(monkeypatch, catalog_release):
@@ -148,9 +164,11 @@ def test_sector_and_industry_selection_replaces_tape_and_shows_all_members(
     assert not app.exception
     assert any(item.value == "Industry momentum" for item in app.subheader)
     assert not any(item.value == "Sector performance" for item in app.subheader)
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
     _select_industry(app, PREFIX, "test-cloud").run(timeout=20)
     assert not app.exception
     assert any(item.value == "Contained stocks" for item in app.subheader)
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
     assert any(item.label == "**TEST\\_STOCK\\_1**  \nTest stock 1" for item in app.button)
     assert any("Unresolved placeholder" in item.label for item in app.button)
     assert any(item.value == "CAP Type" for item in app.caption)
@@ -161,7 +179,44 @@ def test_sector_and_industry_selection_replaces_tape_and_shows_all_members(
         for item in app.caption
     )
     assert any(item.value == "Not loaded" for item in app.markdown)
-    assert any(item.label == "Load peer scores" for item in app.button)
+
+
+def test_industry_selector_is_not_rendered_in_discovery(monkeypatch, catalog_release):
+    app = _run(monkeypatch, catalog_release)
+    app.button(PREFIX + "sector_tape_select_test-sector").click().run()
+
+    assert any(item.value == "Industry momentum" for item in app.subheader)
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
+
+    app.button(PREFIX + "industry_tape_select_test-cloud").click().run()
+    assert any(item.value == "Contained stocks" for item in app.subheader)
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
+
+
+def test_contained_stocks_keeps_breadcrumbs_without_selection_controls(
+    monkeypatch, catalog_release
+):
+    app = _stocks(_run(monkeypatch, catalog_release))
+
+    assert any(button.key == PREFIX + "breadcrumb_sector" for button in app.button)
+    assert not any(
+        widget.key in {PREFIX + "industry", PREFIX + "stock_picker"}
+        for widget in app.selectbox
+    )
+    assert not any(widget.label == "Performance basis" for widget in app.segmented_control)
+    assert any(widget.label == "Thumbnail period" for widget in app.segmented_control)
+    assert not any(button.label == "Load peer scores" for button in app.button)
+    assert any("cloud" in item.value.lower() for item in app.caption)
+    assert not any("source" in item.value.lower() for item in app.caption)
+    assert not any("not verified buyer or seller activity" in item.value for item in app.caption)
+    style = next(
+        element.proto.body
+        for element in app.get("html")
+        if ".st-key-contained_stocks_controls" in element.proto.body
+    )
+    assert "@media (max-width: 640px)" in style
+    assert "grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)" in style
+    assert "grid-column: 2;" in style and "grid-row: 1;" in style
 
 
 def test_thumbnail_period_and_performance_basis_persist_across_tapes(monkeypatch, catalog_release):
@@ -174,6 +229,9 @@ def test_thumbnail_period_and_performance_basis_persist_across_tapes(monkeypatch
     _stocks(app)
     assert not app.exception
     assert app.segmented_control(PREFIX + "thumbnail_period").value == "1w"
+    assert not any(widget.label == "Performance basis" for widget in app.segmented_control)
+    assert app.session_state[PREFIX + "performance_basis_state"] == "vs S&P 500"
+    app.button(PREFIX + "breadcrumb_sector").click().run()
     assert app.segmented_control(PREFIX + "performance_basis").value == "vs S&P 500"
 
 
@@ -218,7 +276,7 @@ def test_entity_tape_preserves_complete_column_and_row_order(label):
         "1 month",
         "3 months",
         "6 months",
-        "12 months",
+        "1 year",
         "Status",
         "1d reason",
     ] + (["Representation", "Representation type"] if label == "Industry" else []) + ["Node ID"]
@@ -246,7 +304,7 @@ def test_thumbnail_period_does_not_change_performance_returns():
     )
     short = _build_entity_tape(**arguments, preview_start=date(2026, 10, 23))
     long = _build_entity_tape(**arguments, preview_start=date(2025, 10, 30))
-    windows = ["1 day", "1 week", "1 month", "3 months", "6 months", "12 months"]
+    windows = ["1 day", "1 week", "1 month", "3 months", "6 months", "1 year"]
     pd.testing.assert_frame_equal(short[windows], long[windows])
     assert len(short["Price chart"][0]) < len(long["Price chart"][0])
 
@@ -287,7 +345,7 @@ def test_sector_daily_return_is_independent_of_yearly_and_benchmark_history(
     )
     assert frame["1 day"][0] == pytest.approx(expected)
     assert pd.api.types.is_numeric_dtype(frame["1 day"])
-    assert frame[["1 week", "1 month", "3 months", "6 months", "12 months"]].isna().all().all()
+    assert frame[["1 week", "1 month", "3 months", "6 months", "1 year"]].isna().all().all()
     assert frame["1d reason"][0] == ""
 
 
@@ -347,8 +405,8 @@ def test_reviewed_industry_daily_return_uses_own_evidence(kind, expected):
     for preview_start in (date(2026, 10, 23), date(2026, 9, 30), date(2025, 10, 30)):
         cropped = _build_entity_tape(**arguments, preview_start=preview_start)
         pd.testing.assert_frame_equal(
-            frame[["1 day", "1 week", "1 month", "3 months", "6 months", "12 months"]],
-            cropped[["1 day", "1 week", "1 month", "3 months", "6 months", "12 months"]],
+            frame[["1 day", "1 week", "1 month", "3 months", "6 months", "1 year"]],
+            cropped[["1 day", "1 week", "1 month", "3 months", "6 months", "1 year"]],
         )
 
 
@@ -417,7 +475,7 @@ def test_daily_basis_uses_requested_sessions_while_preserving_legacy_crop(
         arguments["benchmark"], as_of=arguments["observed_as_of"]
     )
     for heading, period in zip(
-        ["1 week", "1 month", "3 months", "6 months", "12 months"],
+        ["1 week", "1 month", "3 months", "6 months", "1 year"],
         ["1w", "1m", "3m", "6m", "12m"],
         strict=True,
     ):
@@ -454,9 +512,9 @@ def test_shared_representation_tape_retains_available_shorter_periods(label, mod
     assert frame["1 month"][0] == 0
     if target == "benchmark" and mode == "Absolute":
         assert frame["Status"][0] == "Stale"
-        assert (frame[["3 months", "6 months", "12 months"]] == 0).all().all()
+        assert (frame[["3 months", "6 months", "1 year"]] == 0).all().all()
     else:
-        assert frame[["3 months", "6 months", "12 months"]].isna().all().all()
+        assert frame[["3 months", "6 months", "1 year"]].isna().all().all()
         assert frame["Status"][0].startswith("Insufficient evidence:")
         assert "3m:" in frame["Status"][0]
 
@@ -476,7 +534,7 @@ def test_daily_missing_exact_endpoint_never_uses_older_valid_pair(label, mode, t
         arguments["benchmark"] = arguments["benchmark"].drop(pd.Timestamp(session))
     frame = _build_entity_tape(**arguments)
     assert frame["Status"][0] == "Stale"
-    assert (frame[["1 week", "1 month", "3 months", "6 months", "12 months"]] == 0).all().all()
+    assert (frame[["1 week", "1 month", "3 months", "6 months", "1 year"]] == 0).all().all()
     if target == "benchmark" and mode == "Absolute":
         assert frame["1 day"][0] == pytest.approx(2.0)
         assert frame["1d reason"][0] == ""
@@ -535,7 +593,7 @@ def test_stock_views_do_not_request_hidden_industry_proxy(monkeypatch, catalog_r
     assert ("TEST_STOCK_1",) in calls
     assert all("TEST_INVENTORY" not in symbols for symbols in calls)
     calls.clear()
-    app.selectbox(PREFIX + "stock_picker").select("test-stock-1").run()
+    app.button(PREFIX + "stock_tape_select_test-stock-1").click().run()
     assert not app.exception
     assert all(symbols == ("TEST_ETF",) for symbols in calls)
     next(item for item in app.button if item.label == "Back to Discovery").click().run()
@@ -683,7 +741,7 @@ def test_reviewed_zero_member_industry_is_visible_without_fabricated_stocks(
     app = AppTest.from_file(PAGE).run()
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
     assert any(
-        option.endswith("[test-empty]") for option in app.selectbox(PREFIX + "industry").options
+        button.key == PREFIX + "industry_tape_select_test-empty" for button in app.button
     )
     calls.clear()
     _select_industry(app, PREFIX, "test-empty").run()
@@ -691,104 +749,6 @@ def test_reviewed_zero_member_industry_is_visible_without_fabricated_stocks(
     assert any("no active stock memberships" in item.value for item in app.info)
     assert calls == [("TEST_ETF",)]
     assert not any(item.label == "Load peer scores" for item in app.button)
-
-
-@pytest.mark.parametrize("missing", [None, "quality", "growth", "cash_flow"])
-def test_total_score_requires_complete_quality_growth_and_cash_flow(
-    monkeypatch, catalog_release, missing
-):
-    from dataclasses import replace
-
-    from market_data.domain.peer_scores import BlockPeerScore
-    from tests.app.test_stock_detail import _score_result
-
-    configure_ui(monkeypatch, catalog_release)
-    cohorts = []
-
-    def score(
-        members,
-        *,
-        cutoff,
-        refresh=False,
-        cohort_fingerprint=None,
-        comparison_context=None,
-    ):
-        cohorts.append(tuple(member.instrument_id for member in members))
-        assert comparison_context is not None
-        result = _score_result(members)
-        evidence = result.stocks[0]
-        card = replace(
-            evidence.scorecard,
-            quality=BlockPeerScore("Quality", 30, "available", ()),
-            growth=BlockPeerScore("Growth", 60, "available", ()),
-            cash_flow=BlockPeerScore("Cash Flow", 90, "available", ()),
-        )
-        if missing:
-            card = replace(card, **{missing: BlockPeerScore(missing, None, "insufficient", ())})
-        return replace(result, stocks=(replace(evidence, scorecard=card),))
-
-    monkeypatch.setattr("market_leadership.application.score_industry.score_industry", score)
-    app = _stocks(AppTest.from_file(PAGE).run())
-    assert not cohorts
-    next(button for button in app.button if button.label == "Load peer scores").click().run()
-    assert not app.exception
-    assert cohorts == [("test-stock-1",)]
-    assert any(item.value == ("Insufficient" if missing else "60.0") for item in app.markdown)
-
-
-def test_peer_scores_keep_separate_contexts_and_reuse_a_b_a_results(
-    monkeypatch,
-    catalog_release,
-):
-    from dataclasses import replace
-
-    from tests.app.test_stock_detail import _score_result
-
-    configure_ui(monkeypatch, catalog_release)
-    calls = []
-
-    def score(
-        members,
-        *,
-        cutoff,
-        refresh=False,
-        cohort_fingerprint=None,
-        comparison_context=None,
-    ):
-        del cutoff, refresh
-        assert comparison_context is not None
-        calls.append(
-            (comparison_context.industry_id, tuple(item.instrument_id for item in members))
-        )
-        return replace(
-            _score_result(members),
-            cohort_fingerprint=cohort_fingerprint,
-            context=comparison_context,
-        )
-
-    monkeypatch.setattr("market_leadership.application.score_industry.score_industry", score)
-    app = _stocks(AppTest.from_file(PAGE).run(timeout=20))
-    next(button for button in app.button if button.label == "Load peer scores").click().run(
-        timeout=20
-    )
-    assert calls[0][0] == "test-cloud"
-
-    _select_industry(app, PREFIX, "test-hardware").run(timeout=20)
-    assert len(calls) == 1
-    next(button for button in app.button if button.label == "Load peer scores").click().run(
-        timeout=20
-    )
-    assert calls[1][0] == "test-hardware"
-
-    _select_industry(app, PREFIX, "test-cloud").run(timeout=20)
-    assert not app.exception
-    assert len(calls) == 2
-    results = app.session_state[PREFIX + "scores"]
-    assert len(results) == 2
-    assert {result.context.industry_id for result in results.values()} == {
-        "test-cloud",
-        "test-hardware",
-    }
 
 
 def test_multiple_regions_default_to_us_and_clear_descendants_on_switch(
@@ -856,10 +816,7 @@ def test_multiple_regions_default_to_us_and_clear_descendants_on_switch(
 def test_reviewed_subindustry_remains_a_gap_row_with_exact_members(monkeypatch, catalog_release):
     app = _run(monkeypatch, catalog_release)
     app.button(PREFIX + "sector_tape_select_test-sector").click().run()
-    assert any(
-        option.endswith("[test-specialist]")
-        for option in app.selectbox(PREFIX + "industry").options
-    )
+    assert not any(widget.key == PREFIX + "industry" for widget in app.selectbox)
     specialist_label = app.button(PREFIX + "industry_tape_select_test-specialist").label
     assert specialist_label.startswith("**No ticker**  \n")
     assert specialist_label.endswith(r"\[test\-specialist\]")

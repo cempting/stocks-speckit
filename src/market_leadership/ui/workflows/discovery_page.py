@@ -24,7 +24,10 @@ from market_data.domain.sector_performance import (
     PerformancePeriodResult,
     calculate_performance_periods,
 )
-from market_data.domain.stock_chart import build_stock_chart_evidence
+from market_data.domain.stock_chart import (
+    build_stock_chart_evidence,
+    stock_chart_lookback_days,
+)
 from market_leadership.application.discover_sectors import (
     DiscoveryResult,
     discover_sectors_from_history,
@@ -64,20 +67,23 @@ from market_leadership.ui.theme import apply_theme, toggle_dark_mode
 
 DISCOVERY_CACHE_SCHEMA_VERSION = 6
 _PREFIX = "market_leadership.progressive_discovery."
+_DETAIL_WIDGET_PREFIX = "market_leadership.stock_detail."
 _REGION_KEY = _PREFIX + "region"
 _SECTOR_KEY = _PREFIX + "sector"
 _INDUSTRY_KEY = _PREFIX + "industry"
 _STOCK_KEY = _PREFIX + "stock"
 _STOCK_PICKER_KEY = _PREFIX + "stock_picker"
+_PERFORMANCE_BASIS_KEY = _PREFIX + "performance_basis"
+_PERFORMANCE_BASIS_STATE_KEY = _PREFIX + "performance_basis_state"
 _MEMBER_HISTORY_KEY = _PREFIX + "member_history"
 _MEMBER_HISTORY_CONTEXT_KEY = _PREFIX + "member_history_context"
+_MEMBER_HISTORY_LOOKBACK_KEY = _PREFIX + "member_history_lookback"
 _EVIDENCE_FINANCIAL_CONTEXT_KEY = _PREFIX + "evidence_financial_context"
 _EVIDENCE_FINANCIAL_GENERATION_KEY = _PREFIX + "evidence_financial_generation"
 _EVIDENCE_FINANCIAL_PROCESSED_KEY = _PREFIX + "evidence_financial_processed"
 _EVIDENCE_RESEARCH_CONTEXT_KEY = _PREFIX + "evidence_research_context"
 _EVIDENCE_RESEARCH_GENERATION_KEY = _PREFIX + "evidence_research_generation"
 _SCORES_KEY = _PREFIX + "scores"
-_SCORE_CONTEXT_KEY = _PREFIX + "score_context"
 
 _DISCOVERY_HEADER_STYLE = """
 <style>
@@ -117,6 +123,88 @@ _DISCOVERY_HEADER_STYLE = """
     }
     .st-key-discovery_header .st-key-theme_action button {
         min-width: 2.5rem;
+    }
+    .st-key-discovery_header h1 {
+        font-size: clamp(1.25rem, 5vw, 2.5rem);
+        overflow-wrap: anywhere;
+    }
+}
+</style>
+"""
+
+_ENTITY_PERFORMANCE_CONTROL_STYLE = """
+<style>
+@media (max-width: 640px) {
+    .st-key-entity_performance_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .st-key-entity_performance_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .st-key-entity_performance_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+    }
+    .st-key-entity_performance_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .st-key-entity_performance_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) {
+        grid-column: 2;
+        grid-row: 2;
+    }
+    .st-key-entity_performance_controls h3,
+    .st-key-entity_performance_controls [data-testid="stMarkdownContainer"] p {
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+    .st-key-entity_performance_controls button {
+        white-space: normal;
+        height: auto;
+        min-height: 2.5rem;
+    }
+}
+</style>
+"""
+
+_CONTAINED_STOCKS_CONTROL_STYLE = """
+<style>
+@media (max-width: 640px) {
+    .st-key-contained_stocks_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.5rem;
+        align-items: start;
+    }
+    .st-key-contained_stocks_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .st-key-contained_stocks_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    .st-key-contained_stocks_controls > [data-testid="stLayoutWrapper"] >
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .st-key-contained_stocks_controls h3,
+    .st-key-contained_stocks_controls [data-testid="stMarkdownContainer"] p {
+        overflow-wrap: anywhere;
+        white-space: normal;
     }
 }
 </style>
@@ -379,24 +467,12 @@ def _render_member_tape(
             if observed_dates
             else "unavailable"
         )
-        st.caption(
-            f"Price source {history_batch.provider_id.upper()} · requested "
-            f"{history_batch.requested_as_of.isoformat()} · observed {observed_range}"
-        )
-
-    score_members = tuple(
-        entry
-        for member in members
-        if (
-            entry := membership_entry(
-                snapshot,
-                member,
-                requested_as_of,
-                selected_node_id=industry_id,
+        if st.session_state.get(_STOCK_KEY) is not None:
+            st.caption(
+                f"Price source {history_batch.provider_id.upper()} · requested "
+                f"{history_batch.requested_as_of.isoformat()} · observed {observed_range}"
             )
-        )
-        is not None
-    )
+
     membership_revision = membership_result.revision or revision
     score_context = (
         region_id,
@@ -411,55 +487,6 @@ def _render_member_tape(
         score_results.update(cast(dict[object, object], saved_results))
     saved_score = score_results.get(score_context)
     score_result = saved_score if isinstance(saved_score, IndustryScoreResult) else None
-    if score_members:
-        if st.button("Load peer scores", key=_PREFIX + "load_scores"):
-            try:
-                with st.spinner("Loading complete industry peer evidence..."):
-                    from market_leadership.application.score_industry import (
-                        PEER_OBSERVATION_BASIS,
-                        PEER_SCORE_RULES_REVISION,
-                        PeerComparisonContext,
-                        score_industry,
-                    )
-
-                    eligible_ids = tuple(entry.instrument_id for entry in score_members)
-                    eligible_id_set = set(eligible_ids)
-                    listing_identities = tuple(
-                        sorted(
-                            {
-                                (member.instrument_id, member.listing.listing_id)
-                                for member in members
-                                if member.instrument_id in eligible_id_set
-                                and member.listing is not None
-                            }
-                        )
-                    )
-                    comparison_context = PeerComparisonContext(
-                        scope,
-                        industry_id,
-                        requested_as_of,
-                        eligible_ids,
-                        listing_identities,
-                        membership_revision,
-                        PEER_SCORE_RULES_REVISION,
-                        PEER_OBSERVATION_BASIS,
-                    )
-
-                    score_result = score_industry(
-                        score_members,
-                        cutoff=requested_as_of,
-                        refresh=force_refresh,
-                        cohort_fingerprint=membership_revision,
-                        comparison_context=comparison_context,
-                    )
-                score_results[score_context] = score_result
-                st.session_state[_SCORES_KEY] = score_results
-                st.session_state[_SCORE_CONTEXT_KEY] = score_context
-            except (OSError, RuntimeError, ValueError) as error:
-                st.error(f"Industry peer scores could not be loaded: {error}")
-    else:
-        st.caption("Peer scores are unavailable because no verified primary listing is present.")
-
     if score_result is not None and score_result.context is not None:
         context = score_result.context
         st.caption(
@@ -513,22 +540,11 @@ def _render_member_tape(
 
     stock_frame = build_stock_tape_frame(tuple(rows), preview_start=preview_start)
     stock_by_id = {member.instrument_id: member for member in members}
+    st.session_state.pop(_STOCK_PICKER_KEY, None)
     selected_stock_id = st.session_state.get(_STOCK_KEY)
-    if (
-        selected_stock_id is not None and selected_stock_id not in stock_by_id
-    ) or st.session_state.get(_STOCK_PICKER_KEY) not in (*stock_by_id, None):
+    if selected_stock_id is not None and selected_stock_id not in stock_by_id:
         _clear_stock_selection()
         selected_stock_id = None
-    if not isinstance(selected_stock_id, str) or selected_stock_id not in stock_by_id:
-        selected_stock_id = st.selectbox(
-            "Open stock detail",
-            options=tuple(stock_by_id),
-            index=None,
-            key=_STOCK_PICKER_KEY,
-            format_func=lambda key: _stock_label(stock_by_id[key], requested_as_of),
-        )
-        if selected_stock_id is not None:
-            st.session_state[_STOCK_KEY] = selected_stock_id
     if selected_stock_id is not None:
         member = stock_by_id[selected_stock_id]
         if member.provider_symbol_on(requested_as_of) is None:
@@ -561,6 +577,9 @@ def _render_member_tape(
         )
         if st.session_state.get(_MEMBER_HISTORY_CONTEXT_KEY) != member_history_context:
             st.session_state.pop(_MEMBER_HISTORY_KEY, None)
+            st.session_state.pop(_MEMBER_HISTORY_LOOKBACK_KEY, None)
+            st.session_state.pop(_DETAIL_WIDGET_PREFIX + "chart_range", None)
+            st.session_state.pop(_DETAIL_WIDGET_PREFIX + "chart_range_context", None)
             st.session_state[_MEMBER_HISTORY_CONTEXT_KEY] = member_history_context
         history_requested = st.session_state.get(_MEMBER_HISTORY_KEY) == member_history_context
         load_selected_history = st.button(
@@ -579,6 +598,20 @@ def _render_member_tape(
             try:
                 from market_leadership.bootstrap import load_selected_stock_history
 
+                chart_range = st.session_state.get(
+                    _DETAIL_WIDGET_PREFIX + "chart_range", "6m"
+                )
+                requested_lookback_days = stock_chart_lookback_days(
+                    requested_as_of, chart_range
+                )
+                if refresh_selected_history:
+                    lookback_days = requested_lookback_days
+                else:
+                    lookback_days = max(
+                        requested_lookback_days,
+                        st.session_state.get(_MEMBER_HISTORY_LOOKBACK_KEY, 0),
+                    )
+                st.session_state[_MEMBER_HISTORY_LOOKBACK_KEY] = lookback_days
                 selected_history = load_selected_stock_history(
                     snapshot,
                     region_id=scope.region_id,
@@ -586,6 +619,7 @@ def _render_member_tape(
                     listing_id=selected_listing.listing_id,
                     as_of=requested_as_of,
                     require_primary=True,
+                    lookback_days=lookback_days,
                     refresh=refresh_selected_history,
                 )
             except (OSError, RuntimeError, ValueError) as error:
@@ -645,10 +679,13 @@ def _render_member_tape(
                 member.instrument_id,
                 requested_as_of,
             ),
+            widget_key_prefix=_DETAIL_WIDGET_PREFIX,
         )
         return
 
-    selected_rows = render_selectable_stock_tape(stock_frame, key=_PREFIX + "stock_tape")
+    selected_rows = render_selectable_stock_tape(
+        stock_frame, key=_PREFIX + "stock_tape", show_volume_legend=False
+    )
     if selected_rows:
         st.session_state[_STOCK_KEY] = members[selected_rows[0]].instrument_id
         st.rerun()
@@ -791,6 +828,11 @@ def _build_entity_tape(
         history_by_id=chart_history,
         preview_start=preview_start,
     )
+    frame.attrs["evidence_context"] = (
+        f"SOURCE YFINANCE\nREQUESTED {requested_as_of.isoformat()}\n"
+        f"OBSERVED {observed_as_of.isoformat() if observed_as_of else 'UNAVAILABLE'}\n"
+        "ADJUSTED DAILY BARS"
+    )
     return frame.drop(columns=["_chart_key"])
 
 
@@ -908,18 +950,10 @@ def render_discovery(
             st.info("The selected sector has no active industries.")
             return
         selected_industry_id = st.session_state.get(_INDUSTRY_KEY)
-        st.selectbox(
-            "Industry",
-            options=industry_ids,
-            index=None,
-            key=_INDUSTRY_KEY,
-            on_change=_clear_member_context,
-            format_func=lambda key: industry_names[key],
-        )
 
     stock_label = None
     if selected_industry_id is not None:
-        stock_id = st.session_state.get(_STOCK_KEY) or st.session_state.get(_STOCK_PICKER_KEY)
+        stock_id = st.session_state.get(_STOCK_KEY)
         if isinstance(stock_id, str):
             member = next(
                 (
@@ -1015,40 +1049,72 @@ def render_discovery(
         return
 
     observed = discovery.benchmark_as_of
-    st.caption(
-        f"SOURCE YFINANCE · REQUESTED {requested_as_of.isoformat()} · "
-        f"OBSERVED {observed.isoformat() if observed else 'UNAVAILABLE'} · ADJUSTED DAILY BARS"
-    )
+    if selected_industry_id is None or st.session_state.get(_STOCK_KEY) is not None:
+        st.caption(
+            f"SOURCE YFINANCE · REQUESTED {requested_as_of.isoformat()} · "
+            f"OBSERVED {observed.isoformat() if observed else 'UNAVAILABLE'} · ADJUSTED DAILY BARS"
+        )
     if observed != latest_completed_us_session(requested_as_of):
         st.warning(
             "The latest completed benchmark session is unavailable; "
             "results are stale or insufficient."
         )
-    title_column, period_column, basis_column = st.columns((2, 2, 2))
-    with title_column:
-        st.subheader(
-            "Sector performance"
-            if selected_sector_id is None
-            else "Industry momentum"
-            if selected_industry_id is None
-            else "Contained stocks"
-        )
-    with period_column:
-        thumbnail_period = st.segmented_control(
-            "Thumbnail period",
-            options=["1w", "1m", "3m", "6m", "1y"],
-            default="3m",
-            selection_mode="single",
-            key=_PREFIX + "thumbnail_period",
-        )
-    with basis_column:
-        performance_mode = st.segmented_control(
-            "Performance basis",
-            options=["Absolute", "vs S&P 500"],
-            default="Absolute",
-            selection_mode="single",
-            key=_PREFIX + "performance_basis",
-        )
+    is_entity_tape = selected_industry_id is None
+    performance_mode = "Absolute"
+    if (
+        is_entity_tape
+        and _PERFORMANCE_BASIS_KEY not in st.session_state
+        and _PERFORMANCE_BASIS_STATE_KEY in st.session_state
+    ):
+        st.session_state[_PERFORMANCE_BASIS_KEY] = st.session_state[
+            _PERFORMANCE_BASIS_STATE_KEY
+        ]
+    elif not is_entity_tape and _PERFORMANCE_BASIS_KEY in st.session_state:
+        st.session_state[_PERFORMANCE_BASIS_STATE_KEY] = st.session_state[
+            _PERFORMANCE_BASIS_KEY
+        ]
+    if is_entity_tape:
+        st.html(_ENTITY_PERFORMANCE_CONTROL_STYLE)
+        controls_key = "entity_performance_controls"
+    else:
+        st.html(_CONTAINED_STOCKS_CONTROL_STYLE)
+        controls_key = "contained_stocks_controls"
+    with st.container(key=controls_key):
+        basis_column = None
+        if is_entity_tape:
+            title_column, period_column, basis_column = st.columns((2, 2, 2))
+        else:
+            title_column, period_column = st.columns((2, 2))
+        with title_column:
+            st.subheader(
+                "Sector performance"
+                if selected_sector_id is None
+                else "Industry momentum"
+                if is_entity_tape
+                else "Contained stocks"
+            )
+            if selected_industry_id is not None:
+                st.caption(industry_names[selected_industry_id])
+        with period_column:
+            thumbnail_period = st.segmented_control(
+                "Thumbnail period",
+                options=["1w", "1m", "3m", "6m", "1y"],
+                default="3m",
+                selection_mode="single",
+                key=_PREFIX + "thumbnail_period",
+            )
+        if basis_column is not None:
+            with basis_column:
+                performance_mode = st.segmented_control(
+                    "Performance basis",
+                    options=["Absolute", "vs S&P 500"],
+                    default="Absolute",
+                    selection_mode="single",
+                    key=_PERFORMANCE_BASIS_KEY,
+                )
+                st.session_state[_PERFORMANCE_BASIS_STATE_KEY] = (
+                    performance_mode or "Absolute"
+                )
     period_offsets = {
         "1w": pd.DateOffset(weeks=1),
         "1m": pd.DateOffset(months=1),

@@ -92,6 +92,26 @@ def test_daily_history_fingerprint_covers_provider_and_request_scope() -> None:
         start=date(2026, 1, 1),
         end=date(2026, 10, 24),
     )
+    six_month_range = daily_history_fingerprint(
+        provider_id="massive",
+        symbols=("SPY",),
+        start=date(2026, 4, 23),
+        end=date(2026, 10, 23),
+    )
+    twelve_month_range = daily_history_fingerprint(
+        provider_id="massive",
+        symbols=("SPY",),
+        start=date(2025, 10, 23),
+        end=date(2026, 10, 23),
+    )
+    changed_cutoff = daily_history_fingerprint(
+        provider_id="massive",
+        symbols=("SPY",),
+        start=date(2026, 4, 23),
+        end=date(2026, 10, 24),
+    )
+    assert six_month_range != twelve_month_range
+    assert six_month_range != changed_cutoff
 
 
 def test_missing_cache_entry_calls_provider_once_and_publishes_entry(tmp_path) -> None:
@@ -144,7 +164,7 @@ def test_cache_manifest_records_complete_normalized_request_and_provenance(tmp_p
     assert manifest["request"] == {
         "provider_id": "stub",
         "logical_data_point": "daily_history",
-        "schema_version": 4,
+        "schema_version": 5,
         "symbols": ["SPY"],
         "start": "2026-01-01",
         "end": "2026-10-23",
@@ -162,6 +182,44 @@ def test_cache_manifest_records_complete_normalized_request_and_provenance(tmp_p
     )
     assert tuple(result) == ("SPY",)
     assert result["SPY"].iloc[-1]["close"] == 99.0
+
+
+def test_cache_round_trip_preserves_ohlc_split_evidence_and_comparability(tmp_path) -> None:
+    history = pd.DataFrame(
+        {
+            "open": [100.0],
+            "high": [102.0],
+            "low": [99.0],
+            "close": [101.0],
+            "volume": [1_000.0],
+            "split_ratio": [0.0],
+        },
+        index=pd.to_datetime(["2026-10-23"]),
+    )
+    history.attrs.update(
+        {
+            "adjusted_ohlc": True,
+            "volume_comparable": True,
+            "available_on": "2026-10-23",
+        }
+    )
+    request = {
+        "symbols": ("SPY",),
+        "start": date(2026, 1, 1),
+        "end": date(2026, 10, 23),
+    }
+    first_provider = StubProvider([{"SPY": history}])
+    CachedMarketDataProvider(first_provider, tmp_path).fetch_daily_history(**request)
+    second_provider = StubProvider([RuntimeError("cache should satisfy request")])
+    cached = CachedMarketDataProvider(second_provider, tmp_path).fetch_daily_history(**request)
+
+    assert first_provider.calls == 1
+    assert second_provider.calls == 0
+    assert list(cached["SPY"].columns) == list(history.columns)
+    assert cached["SPY"]["close"].iloc[-1] == 101.0
+    assert cached["SPY"]["split_ratio"].iloc[-1] == 0.0
+    assert cached["SPY"].attrs["adjusted_ohlc"] is True
+    assert cached["SPY"].attrs["volume_comparable"] is True
 
 
 def test_fresh_persistent_hit_makes_zero_upstream_calls(tmp_path) -> None:

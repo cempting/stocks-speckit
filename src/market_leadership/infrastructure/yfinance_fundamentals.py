@@ -42,6 +42,14 @@ ROWS = {
     "TotalAssets": "assets",
     "Current Liabilities": "current_liabilities",
     "CurrentLiabilities": "current_liabilities",
+    "Cash And Cash Equivalents": "cash_and_equivalents",
+    "CashAndCashEquivalents": "cash_and_equivalents",
+    "Total Debt": "total_debt",
+    "TotalDebt": "total_debt",
+    "Stockholders Equity": "shareholders_equity",
+    "StockholdersEquity": "shareholders_equity",
+    "Ordinary Shares Number": "shares_outstanding",
+    "OrdinarySharesNumber": "shares_outstanding",
 }
 
 

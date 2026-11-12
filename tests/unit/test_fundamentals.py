@@ -6,11 +6,12 @@ import pytest
 from market_data.domain.fundamentals import (
     FinancialQuarter,
     FundamentalBundle,
+    build_history_metrics,
     build_scorecard,
 )
 
 
-def bundle(count=12, **overrides):
+def bundle(count=12, *, balance_overrides=None, **overrides):
     quarters = tuple(date(2023 + index // 4, (index % 4 + 1) * 3, 28) for index in range(count))
     income = tuple(
         FinancialQuarter(
@@ -31,7 +32,21 @@ def bundle(count=12, **overrides):
     )
     cash = tuple(FinancialQuarter(period, (("ocf", 12.0), ("capex", -2.0))) for period in quarters)
     balance = tuple(
-        FinancialQuarter(period, (("assets", 200.0), ("current_liabilities", 100.0)))
+        FinancialQuarter(
+            period,
+            tuple(
+                {
+                    "assets": 200.0,
+                    "current_assets": 150.0,
+                    "current_liabilities": 100.0,
+                    "total_debt": 80.0,
+                    "shareholders_equity": 100.0,
+                    "cash_and_equivalents": 25.0,
+                    "shares_outstanding": 100.0,
+                    **(balance_overrides or {}),
+                }.items()
+            ),
+        )
         for period in quarters
     )
     return FundamentalBundle("TEST", "fixture", datetime.now(UTC), "USD", income, cash, balance)
@@ -113,3 +128,85 @@ def test_gap_breaks_comparability_and_missing_latest_does_not_use_older_values()
 def test_negative_eps_baseline_is_unavailable_and_zero_numerator_is_valid():
     assert metrics(bundle(diluted_eps=-1.0))["eps_yoy"].value is None
     assert metrics(bundle(gross_profit=0.0))["gross_margin"].value == 0.0
+
+
+def test_history_metrics_reuse_approved_formulas_without_changing_scorecard():
+    evidence = bundle(8)
+    latest = evidence.income[-1].period
+    result = {
+        metric.key: metric
+        for metric in build_history_metrics(evidence)
+        if metric.period == latest
+    }
+
+    assert {
+        key: result[key].value
+        for key in (
+            "sales_yoy",
+            "eps_yoy",
+            "gross_margin",
+            "operating_margin",
+            "net_margin",
+            "fcf_margin",
+            "roce",
+            "current_ratio",
+            "debt_to_equity",
+        )
+    } == {
+        "sales_yoy": 0.0,
+        "eps_yoy": 0.0,
+        "gross_margin": 0.4,
+        "operating_margin": -0.05,
+        "net_margin": 0.1,
+        "fcf_margin": 0.1,
+        "roce": 0.2,
+        "current_ratio": 1.5,
+        "debt_to_equity": 0.8,
+    }
+    assert all(result[key].state == "available" for key in result)
+    assert {metric.key for metric in build_scorecard(evidence).metrics} == {
+        "gross_margin",
+        "operating_margin",
+        "roce",
+        "sales_yoy",
+        "eps_yoy",
+        "eps_consistency",
+        "cash_conversion",
+        "fcf_margin",
+    }
+
+
+def test_history_metrics_distinguish_zero_negative_missing_and_invalid_denominators():
+    evidence = bundle(
+        8,
+        net_income=0.0,
+        diluted_eps=-1.0,
+        balance_overrides={"current_liabilities": 0.0, "shareholders_equity": -100.0},
+    )
+    latest = evidence.income[-1].period
+    result = {
+        metric.key: metric
+        for metric in build_history_metrics(evidence)
+        if metric.period == latest
+    }
+
+    assert result["net_margin"].value == 0.0
+    assert result["current_ratio"].value is None
+    assert result["current_ratio"].state == "insufficient"
+    assert result["debt_to_equity"].value is None
+    assert result["eps_yoy"].value is None
+
+
+def test_history_metrics_do_not_bridge_missing_fiscal_quarters():
+    evidence = bundle(8)
+    gapped = replace(evidence, income=(*evidence.income[:3], *evidence.income[4:]))
+    latest = evidence.income[-1].period
+    result = {
+        metric.key: metric
+        for metric in build_history_metrics(gapped)
+        if metric.period == latest
+    }
+
+    assert result["sales_yoy"].value is None
+    assert result["sales_yoy"].state == "insufficient"
+    assert result["eps_yoy"].value is None

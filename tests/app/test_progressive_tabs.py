@@ -105,12 +105,11 @@ def test_discovery_does_not_read_legacy_experimental_catalog(monkeypatch, catalo
     assert not (catalog_release.parent / "unused.sqlite").exists()
 
 
-def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_cache(
+def test_two_controlled_activations_preserve_discovery_cache_and_screening_selection(
     monkeypatch, catalog_release
 ):
     from market_data.catalog import CatalogReader, activate_release
     from market_leadership.ui.workflows import discovery_page
-    from tests.app.test_stock_detail import _score_result
     from tests.fixtures.catalogs.ui import edit_csv
 
     calls = configure_ui(monkeypatch, catalog_release)
@@ -119,7 +118,6 @@ def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_
     monkeypatch.setenv("MARKET_CATALOG_MANIFEST_PATH", str(entry))
     reader = CatalogReader()
     first_snapshot = reader.read(entry)
-    score_calls = []
     discovery_calls = []
     original_calculate = discovery_page.discover_sectors_from_history
     discovery_page._calculate_discovery.clear()
@@ -130,33 +128,18 @@ def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_
 
     monkeypatch.setattr(discovery_page, "discover_sectors_from_history", calculate)
 
-    def score(
-        members,
-        *,
-        cutoff,
-        refresh=False,
-        cohort_fingerprint=None,
-        comparison_context=None,
-    ):
-        score_calls.append(cohort_fingerprint)
-        assert comparison_context is not None
-        return _score_result(members)
-
-    monkeypatch.setattr("market_leadership.application.score_industry.score_industry", score)
     app = AppTest.from_file(ROOT / "streamlit_app.py").run(timeout=20)
     discovery = "market_leadership.progressive_discovery."
     screening = "market_leadership.screening."
     app.button(discovery + "sector_tape_select_test-sector").click().run()
-    _select_industry(app, discovery, "test-cloud").run()
+    app.button(discovery + "industry_tape_select_test-cloud").click().run()
     app.selectbox(screening + "sector").select("test-sector").run()
     _select_industry(app, screening, "test-cloud").run()
     app.multiselect(screening + "stocks").select("test-stock-1").run()
-    next(button for button in app.button if button.label == "Load peer scores").click().run()
     app.segmented_control(discovery + "thumbnail_period").set_value("1w").run()
     app.date_input[0].set_value(date(2026, 10, 30)).run()
-    next(button for button in app.button if button.label == "Load peer scores").click().run()
     assert not app.exception
-    loaded = len(score_calls)
+    assert not any(button.label == "Load peer scores" for button in app.button)
     calculated = len(discovery_calls)
     calls.clear()
     candidate = catalog_release.parent / "next-authoring/manifest.json"
@@ -184,7 +167,6 @@ def test_two_controlled_activations_preserve_unaffected_cohort_scores_and_price_
     )
     app.run()
     assert not app.exception
-    assert len(score_calls) == loaded
     assert len(discovery_calls) == calculated
     assert app.multiselect(screening + "stocks").value == ["test-stock-1"]
     assert app.segmented_control(discovery + "thumbnail_period").value == "1w"

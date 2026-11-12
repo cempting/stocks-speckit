@@ -43,6 +43,52 @@ def test_reader_constructs_one_ticker_and_normalizes_all_components():
     assert build_scorecard(evidence).metrics[0].value == 0.4
 
 
+def test_reader_maps_explicit_balance_sheet_rows_and_keeps_absent_rows_missing():
+    class ExtendedBalance(FakeTicker):
+        quarterly_balance_sheet = pd.DataFrame(
+            {pd.Timestamp("2026-06-30"): [25, 80, 100, 100]},
+            index=[
+                "Cash And Cash Equivalents",
+                "Total Debt",
+                "Stockholders Equity",
+                "Ordinary Shares Number",
+            ],
+        )
+
+    bundle = read_fundamentals(
+        FundamentalRequest("TEST"),
+        lambda _: ExtendedBalance(),
+    )
+    values = dict(bundle.balance[0].values)
+
+    assert values == {
+        "cash_and_equivalents": 25.0,
+        "shares_outstanding": 100.0,
+        "shareholders_equity": 100.0,
+        "total_debt": 80.0,
+    }
+
+
+def test_reader_supports_explicit_aliases_without_zero_filling_absent_rows():
+    class AliasBalance(FakeTicker):
+        quarterly_balance_sheet = pd.DataFrame(
+            {pd.Timestamp("2026-06-30"): [25, 25, 80]},
+            index=[
+                "Cash And Cash Equivalents",
+                "CashAndCashEquivalents",
+                "TotalDebt",
+            ],
+        )
+
+    bundle = read_fundamentals(
+        FundamentalRequest("TEST"),
+        lambda _: AliasBalance(),
+    )
+    values = dict(bundle.balance[0].values)
+
+    assert values == {"cash_and_equivalents": 25.0, "total_debt": 80.0}
+
+
 def test_reader_retains_profile_discriminator_and_separate_currencies_once() -> None:
     class Profile(FakeTicker):
         profile_reads = 0

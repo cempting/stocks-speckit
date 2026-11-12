@@ -31,8 +31,8 @@
 
 ## Notes
 
-- Validation passed all 16 criteria on the first review; no clarification is required.
-- Requirements FR-001-FR-009 are covered by the three user stories, edge cases, and SC-001-SC-005.
+- Validation passed all 16 criteria; the contrast and 390px chart/scroll criteria are testable without clarification.
+- Requirements FR-001-FR-012 and SC-001-SC-009 are covered by the three user stories and acceptance criteria.
 - The scope explicitly amends the existing five-column baseline without changing thumbnail periods, default ranking, or stock-table behavior.
 - Completed items indicate specification quality, not completed implementation or executed application tests.
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`.

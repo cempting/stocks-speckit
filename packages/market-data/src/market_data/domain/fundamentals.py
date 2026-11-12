@@ -100,6 +100,16 @@ class FundamentalMetric:
 
 
 @dataclass(frozen=True)
+class HistoryMetric:
+    key: str
+    label: str
+    period: date
+    value: float | None
+    state: Literal["available", "insufficient"]
+    detail: str
+
+
+@dataclass(frozen=True)
 class FundamentalScorecard:
     symbol: str
     provider_id: str
@@ -175,6 +185,12 @@ def _value(bundle: FundamentalBundle, key: str, period: date) -> float | None:
         return _ratio(income.get("gross_profit"), revenue)
     if key == "operating_margin":
         return _ratio(income.get("operating_income"), revenue)
+    if key == "net_margin":
+        return _ratio(income.get("net_income"), revenue)
+    if key == "current_ratio":
+        return _ratio(balance.get("current_assets"), balance.get("current_liabilities"))
+    if key == "debt_to_equity":
+        return _ratio(balance.get("total_debt"), balance.get("shareholders_equity"))
     if key == "cash_conversion":
         return _ratio(cash.get("ocf"), income.get("net_income"))
     if key == "fcf_margin":
@@ -206,6 +222,47 @@ def _value(bundle: FundamentalBundle, key: str, period: date) -> float | None:
     row = "revenue" if key == "sales_yoy" else "diluted_eps"
     result = _ratio(income.get(row), incomes[window[0]].get(row))
     return result - 1 if result is not None else None
+
+
+def build_history_metrics(bundle: FundamentalBundle) -> tuple[HistoryMetric, ...]:
+    definitions = (
+        ("sales_yoy", "Revenue YoY", "Same fiscal quarter one year earlier"),
+        ("eps_yoy", "Diluted EPS YoY", "Same fiscal quarter one year earlier"),
+        ("gross_margin", "Gross margin", "Gross profit / revenue"),
+        ("operating_margin", "Operating margin", "Operating income / revenue"),
+        ("net_margin", "Net margin", "Net income / revenue"),
+        ("fcf_margin", "FCF margin", "Free cash flow / revenue"),
+        ("roce", "ROCE", "TTM EBIT / quarter-end capital employed"),
+        ("current_ratio", "Current ratio", "Current assets / current liabilities"),
+        ("debt_to_equity", "Debt-to-equity", "Total debt / shareholders' equity"),
+    )
+    periods = tuple(
+        sorted(
+            {
+                quarter.period
+                for table in (bundle.income, bundle.cash, bundle.balance)
+                for quarter in table
+            }
+        )
+    )
+    metrics: list[HistoryMetric] = []
+    for period in periods:
+        for key, label, formula in definitions:
+            value = _value(bundle, key, period)
+            detail = formula
+            if value is None:
+                detail += "; required comparable evidence or a positive denominator unavailable"
+            metrics.append(
+                HistoryMetric(
+                    key=key,
+                    label=label,
+                    period=period,
+                    value=value,
+                    state="available" if value is not None else "insufficient",
+                    detail=detail,
+                )
+            )
+    return tuple(metrics)
 
 
 def build_scorecard(bundle: FundamentalBundle, history_window: int = 8) -> FundamentalScorecard:

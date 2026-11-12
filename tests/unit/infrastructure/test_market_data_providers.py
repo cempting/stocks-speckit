@@ -31,6 +31,9 @@ def test_yfinance_provider_normalizes_adjusted_batch_download() -> None:
 
     assert calls[0]["auto_adjust"] is True
     assert calls[0]["interval"] == "1d"
+    assert calls[0]["start"] == "2026-10-01"
+    assert calls[0]["end"] == "2026-10-24"
+    assert YFinanceProvider(downloader=lambda **kwargs: downloaded).provider_id == "yfinance"
     assert list(result["SPY"].columns) == ["close", "volume"]
     assert result["XLB"].iloc[-1].to_dict() == {"close": 51.0, "volume": 550.0}
 

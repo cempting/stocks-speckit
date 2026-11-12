@@ -11,8 +11,69 @@ from market_leadership.ui.performance_table import (
 )
 
 
+def _contrast_ratio(foreground: str, background: str) -> float:
+    def luminance(color: str) -> float:
+        channels = [int(color[index : index + 2], 16) / 255 for index in (1, 3, 5)]
+        linear = [
+            channel / 12.92
+            if channel <= 0.04045
+            else ((channel + 0.055) / 1.055) ** 2.4
+            for channel in channels
+        ]
+        return sum(
+            weight * channel
+            for weight, channel in zip((0.2126, 0.7152, 0.0722), linear, strict=True)
+        )
+
+    lighter, darker = sorted(
+        (luminance(foreground), luminance(background)), reverse=True
+    )
+    return (lighter + 0.05) / (darker + 0.05)
+
+
 def test_performance_table_height_fits_all_rows() -> None:
     assert performance_table_height(11) == 440
+
+
+@pytest.mark.parametrize("dark_mode", [False, True])
+def test_generated_return_palette_meets_wcag_aa(
+    dark_mode: bool,
+) -> None:
+    values = pd.Series(range(-10000, 10001), dtype="float64")
+    styles = performance_column_styles(values, dark_mode=dark_mode)
+    pairs = {
+        (foreground, background)
+        for background, foreground in re.findall(
+            r"background-color: (#[0-9a-f]{6}); color: (#[0-9a-f]{6})",
+            " ".join(styles),
+        )
+    }
+
+    assert len(pairs) > 3
+    for foreground, background in pairs:
+        ratio = _contrast_ratio(foreground, background)
+        assert ratio >= 4.5, f"{foreground} on {background} has contrast {ratio:.2f}:1"
+        assert ratio >= 3.0, f"{foreground} on {background} has contrast {ratio:.2f}:1"
+
+    frame = pd.DataFrame({"1 day": [1.0, -1.0, 0.0]})
+    html = style_performance_table(frame, dark_mode=dark_mode).to_html()
+    for value in ("1.0", "-1.0", "0.0"):
+        assert value in html
+
+
+@pytest.mark.parametrize("year_column", ["1 year", "12 months"])
+@pytest.mark.parametrize("dark_mode", [False, True])
+def test_yearly_and_legacy_frames_retain_performance_styles(
+    year_column: str, dark_mode: bool
+) -> None:
+    frame = pd.DataFrame({year_column: [8.0, -4.0, 0.0, None]})
+    html = style_performance_table(frame, dark_mode=dark_mode).to_html()
+    assert f">{year_column}</th>" in html
+    for color in (
+        ("#166534", "#991b1b", "#18232d")
+        if dark_mode else ("#5f9f75", "#d66d65", "#f4f6f5")
+    ):
+        assert f"background-color: {color}" in html
 
 
 @pytest.mark.parametrize(

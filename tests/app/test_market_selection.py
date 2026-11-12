@@ -9,6 +9,73 @@ from tests.fixtures.catalogs.ui import DailyProvider, configure_ui
 
 APP_PATH = Path(__file__).parents[2] / "src/market_leadership/ui/workflows/discovery_page.py"
 
+PREFIX = "market_leadership.progressive_discovery."
+
+
+@pytest.mark.parametrize("dark_mode", [False, True])
+@pytest.mark.parametrize("industry", [False, True])
+def test_entity_heading_controls_keep_native_scope_and_state(
+    monkeypatch, catalog_release, dark_mode, industry
+) -> None:
+    calls = configure_ui(monkeypatch, catalog_release)
+    app = AppTest.from_file(APP_PATH)
+    app.session_state["dark_mode"] = dark_mode
+    app.run(timeout=20)
+    if industry:
+        app.button(PREFIX + "sector_tape_select_test-sector").click().run()
+    assert not app.exception
+    heading = next(
+        item for item in app.subheader
+        if item.value == ("Industry momentum" if industry else "Sector performance")
+    )
+    row = next(
+        block for block in app.get("flex_container")
+        if any(child.type == "column" for child in block.children.values())
+        and any(item is heading for item in block.subheader)
+    )
+    columns = list(row.children.values())
+    assert len(columns) == 3
+    assert [column.proto.weight for column in columns] == pytest.approx([1 / 3] * 3)
+    assert columns[0].subheader[0] is heading
+    period = columns[1].segmented_control[0]
+    basis = columns[2].segmented_control[0]
+    assert period.key == PREFIX + "thumbnail_period"
+    assert period.label == "Thumbnail period" and period.value == "3m"
+    assert period.options == ["1w", "1m", "3m", "6m", "1y"]
+    assert basis.key == PREFIX + "performance_basis"
+    assert basis.label == "Performance basis" and basis.value == "Absolute"
+    assert basis.options == ["Absolute", "vs S&P 500"]
+    wrappers = [
+        block for block in app.get("flex_container")
+        if "entity_performance_controls" in block.proto.id
+    ]
+    assert len(wrappers) == 1
+    style = next(
+        element.proto.body for element in app.get("html")
+        if ".st-key-entity_performance_controls" in element.proto.body
+    )
+    assert "@media (max-width: 640px)" in style
+    assert "grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)" in style
+    assert "grid-row: 1 / span 2" in style
+    assert "grid-row: 2" in style
+    assert "overflow-wrap: anywhere" in style
+    assert ".st-key-discovery_header" not in style
+    count = len(calls)
+    period.set_value("1y").run()
+    basis = app.segmented_control(PREFIX + "performance_basis")
+    basis.set_value("vs S&P 500").run()
+    assert not app.exception and len(calls) == count + 2
+    app.button("dark_mode_button").click().run()
+    assert app.segmented_control(PREFIX + "thumbnail_period").value == "1y"
+    assert app.segmented_control(PREFIX + "performance_basis").value == "vs S&P 500"
+    if industry:
+        app.button(PREFIX + "industry_tape_select_test-cloud").click().run()
+        assert not app.exception
+        assert not any(
+            "entity_performance_controls" in block.proto.id
+            for block in app.get("flex_container")
+        )
+
 
 @pytest.mark.parametrize("app_path", [APP_PATH, APP_PATH.parents[4] / "streamlit_app.py"])
 def test_discovery_header_places_dark_mode_to_the_right_of_refresh(
@@ -59,6 +126,8 @@ def test_discovery_header_places_dark_mode_to_the_right_of_refresh(
     assert "grid-row: 2;" in header_style
     assert ".st-key-discovery_header .st-key-theme_action button" in header_style
     assert "min-width: 2.5rem;" in header_style
+    assert ".st-key-discovery_header h1" in header_style
+    assert "overflow-wrap: anywhere;" in header_style
 
 
 @pytest.mark.parametrize("app_path", [APP_PATH, APP_PATH.parents[4] / "streamlit_app.py"])

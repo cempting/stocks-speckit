@@ -203,6 +203,7 @@ def load_selected_stock_history(
     listing_id: str,
     as_of: date,
     require_primary: bool,
+    lookback_days: int = 550,
     refresh: bool = False,
 ) -> StockHistoryBatch:
     settings = load_settings()
@@ -233,7 +234,7 @@ def load_selected_stock_history(
                     state="unavailable",
                     reason="No dated reviewed issuer-continuity binding is available.",
                     unverifiable_intervals=(
-                        (as_of - timedelta(days=550), as_of),
+                        (as_of - timedelta(days=lookback_days), as_of),
                     ),
                 ),
             ),
@@ -246,6 +247,7 @@ def load_selected_stock_history(
         association,
         as_of,
         retry_limit=settings.retry_limit,
+        lookback_days=lookback_days,
         require_primary=require_primary,
         force_refresh=refresh,
     )

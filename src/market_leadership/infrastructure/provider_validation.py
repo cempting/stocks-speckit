@@ -25,7 +25,15 @@ def canonicalize_daily_history(
         else:
             if not {"close", "volume"}.issubset(history.columns):
                 raise ValueError(f"Daily history for {symbol} lacks canonical columns")
-            frame = history.loc[:, ["close", "volume"]].copy()
+            has_ohlc = {"open", "high", "low"}.issubset(history.columns)
+            columns = (
+                ["open", "high", "low", "close", "volume"]
+                if has_ohlc
+                else ["close", "volume"]
+            )
+            if "split_ratio" in history.columns:
+                columns.append("split_ratio")
+            frame = history.loc[:, columns].copy()
             index = pd.DatetimeIndex(frame.index)
             if index.tz is not None:
                 index = index.tz_localize(None)
@@ -41,6 +49,42 @@ def canonicalize_daily_history(
                 raise ValueError(f"Daily history for {symbol} contains invalid close")
             if not np.isfinite(frame["volume"]).all() or (frame["volume"] < 0).any():
                 raise ValueError(f"Daily history for {symbol} contains invalid volume")
+            for column in ("open", "high", "low", "split_ratio"):
+                if column not in frame.columns:
+                    continue
+                try:
+                    frame[column] = pd.to_numeric(frame[column], errors="raise").astype(
+                        "float64"
+                    )
+                except (TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"Daily history for {symbol} contains invalid {column}"
+                    ) from error
+                observed = frame[column].dropna()
+                if not np.isfinite(observed).all() or (
+                    column != "split_ratio" and (observed <= 0).any()
+                ):
+                    raise ValueError(f"Daily history for {symbol} contains invalid {column}")
+                if column == "split_ratio" and (observed < 0).any():
+                    raise ValueError(f"Daily history for {symbol} contains invalid split_ratio")
+            if has_ohlc:
+                complete_bars = frame[["open", "high", "low", "close"]].notna().all(axis=1)
+                upper_bound = frame[["open", "low", "close"]].max(axis=1)
+                lower_bound = frame[["open", "high", "close"]].min(axis=1)
+                invalid_bars = complete_bars & (
+                    (frame["high"] < upper_bound) | (frame["low"] > lower_bound)
+                )
+                if invalid_bars.any():
+                    raise ValueError(f"Daily history for {symbol} contains inconsistent OHLC")
+            if has_ohlc or "split_ratio" in frame.columns:
+                frame.attrs["adjusted_ohlc"] = (
+                    has_ohlc and history.attrs.get("adjusted_ohlc") is True
+                )
+                frame.attrs["volume_comparable"] = (
+                    frame.attrs["adjusted_ohlc"]
+                    and "split_ratio" in frame.columns
+                    and history.attrs.get("volume_comparable") is True
+                )
         frame.attrs["source_id"] = source_id
         frame.attrs["available_on"] = (
             pd.DatetimeIndex(frame.index)[-1].date().isoformat() if not frame.empty else None

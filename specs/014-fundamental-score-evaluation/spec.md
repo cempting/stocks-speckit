@@ -7,7 +7,7 @@
 **Status**: Draft
 
 **Input**: User description:
-> scoreboard calcualtion and stock list score have to be evaluated. The score board focusses on Quality, Growth, and Cashflow criteria. The goal is to under stand the company fundamentals to allow for a proper riskmanagment.
+> scoreboard calculation and stock list score have to be evaluated. The score board focusses on Quality, Growth, and Cashflow criteria. The goal is to understand the company fundamentals to allow for a proper riskmanagment.
 
 ## Scope and Ownership
 

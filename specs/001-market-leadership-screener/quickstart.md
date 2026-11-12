@@ -1,9 +1,10 @@
 # Quickstart and Validation: Progressive Stock Screener
 
-**Status**: Post-implementation validation guide for [plan.md](plan.md).
-Current execution follows the reconciled [tasks](tasks.md). The root already has
-Discovery, Industry Deep-Dive, Yahoo Classification Preview and Find a stock.
-This guide does not certify the adaptive detector, source coverage or acceptance.
+**Status**: Partial delivery. T103-T106 implement and validate the shared
+consolidation detector and adjusted-OHLC/source handoff. The remaining feature-001
+backlog, chart/UI integration, live source coverage and acceptance gates are not
+certified. The root already has Discovery, Industry Deep-Dive, Yahoo Classification
+Preview and Find a stock.
 
 ## Prerequisites and Setup
 
@@ -36,11 +37,33 @@ uv run ruff check src packages services tests
 uv run pyright
 ```
 
-These are existing tool/directory conventions, not a claim that revised-feature tests
-already exist. Track newly introduced and pre-existing diagnostic failures separately;
-this plan grants no waiver of required quality gates. Preserve existing legacy
-snapshot compatibility tests. Keep live requests mocked by default; live smoke tests
-must be opt-in and explicitly labelled.
+The T103-T106 focused validation completed:
+
+```bash
+uv run pytest -q tests/unit/domain/test_consolidation.py tests/contract/test_runtime_market_data_providers.py tests/contract/test_market_data_provider.py tests/unit/infrastructure/test_market_data_cache.py tests/integration/test_stock_evidence.py tests/app/test_stock_detail.py
+uv run ruff check tests/unit/domain/test_consolidation.py packages/market-data/src/market_data/domain/consolidation.py src/market_leadership/infrastructure/provider_validation.py src/market_leadership/infrastructure/yfinance_provider.py src/market_leadership/infrastructure/market_data_cache.py src/market_leadership/application/load_stock_history.py src/market_leadership/ui/cache.py tests/contract/test_runtime_market_data_providers.py tests/contract/test_market_data_provider.py tests/unit/infrastructure/test_market_data_cache.py tests/integration/test_stock_evidence.py
+uv run pyright packages/market-data/src/market_data/domain/consolidation.py src/market_leadership/infrastructure/provider_validation.py src/market_leadership/infrastructure/yfinance_provider.py src/market_leadership/infrastructure/market_data_cache.py src/market_leadership/application/load_stock_history.py src/market_leadership/ui/cache.py
+```
+
+Result: 120 tests passed; Ruff and strict Pyright passed. Pytest emitted 12
+third-party `exchange_calendars`/NumPy deprecation warnings. This does not certify
+the full non-live suite. The subsequent repository-wide run completed with 1,112
+passed, one failed, and one live test deselected; full Ruff and Pyright passed. The
+remaining failure is the existing
+`tests/unit/test_default_market_catalog.py::test_app_starts_with_default_catalog_without_live_provider`,
+which expects three tabs while the current app also exposes “Find a stock.” This
+feature work did not alter that unrelated navigation behavior. Preserve existing
+legacy snapshot compatibility tests and keep live requests mocked by default.
+
+yfinance now requests split actions with adjusted OHLC. The existing adjusted
+`daily_history` request is sufficient, so no new request identity field was needed;
+the Streamlit history cache version was bumped for the richer response. Comparable
+volume is asserted only when adjusted OHLC and complete split-action evidence are
+present and no split occurs in the requested history. Split-affected or incomplete
+histories are explicitly insufficient; no volume normalization is invented. Other
+providers still expose their legacy close/volume data and are not detector-ready
+without verified OHLC/action data. Live source coverage and display/derived-use
+rights remain unverified.
 
 ## End-to-End Controlled Scenarios (after implementation)
 

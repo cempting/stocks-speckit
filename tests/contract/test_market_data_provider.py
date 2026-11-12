@@ -172,6 +172,65 @@ def test_daily_history_conformance_returns_typed_empty_data_and_source_traceabil
     assert history.attrs["available_on"] is None
 
 
+def test_daily_history_preserves_verified_adjusted_ohlc_and_split_evidence() -> None:
+    history = pd.DataFrame(
+        {
+            "open": [100.0],
+            "high": [102.0],
+            "low": [99.0],
+            "close": [101.0],
+            "volume": [1_000.0],
+            "split_ratio": [0.0],
+        },
+        index=pd.to_datetime(["2026-10-23"]),
+    )
+    history.attrs.update({"adjusted_ohlc": True, "volume_comparable": True})
+
+    canonical = canonicalize_daily_history(
+        {"SPY": history},
+        ("SPY",),
+        start=date(2026, 10, 23),
+        end=date(2026, 10, 23),
+        source_id="fixture",
+    )["SPY"]
+
+    assert list(canonical.columns) == [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "split_ratio",
+    ]
+    assert canonical.attrs["adjusted_ohlc"] is True
+    assert canonical.attrs["volume_comparable"] is True
+    assert canonical.attrs["source_id"] == "fixture"
+
+
+def test_daily_history_rejects_inconsistent_adjusted_ohlc() -> None:
+    history = pd.DataFrame(
+        {
+            "open": [100.0],
+            "high": [100.5],
+            "low": [99.0],
+            "close": [101.0],
+            "volume": [1_000.0],
+            "split_ratio": [0.0],
+        },
+        index=pd.to_datetime(["2026-10-23"]),
+    )
+    history.attrs["adjusted_ohlc"] = True
+
+    with pytest.raises(ValueError, match="inconsistent OHLC"):
+        canonicalize_daily_history(
+            {"SPY": history},
+            ("SPY",),
+            start=date(2026, 10, 23),
+            end=date(2026, 10, 23),
+            source_id="fixture",
+        )
+
+
 def test_fixture_history_availability_does_not_exceed_requested_as_of() -> None:
     history = FixtureProvider().fetch_daily_history(
         ("SPY",),

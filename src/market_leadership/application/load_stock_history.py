@@ -113,15 +113,25 @@ def load_stock_history(
         raise ValueError("Stock history requires a nonempty, duplicate-free member set")
     if any(not symbol or symbol != symbol.upper() for symbol in symbols):
         raise ValueError("Stock history symbols must be nonempty canonical uppercase symbols")
+    requested_start = as_of - timedelta(days=550)
     requested = provider.fetch_daily_history(
         symbols,
-        start=as_of - timedelta(days=550),
+        start=requested_start,
         end=as_of,
         force=force,
     )
     series: list[StockHistorySeries] = []
     for symbol in symbols:
-        series.append(_series_from_response(symbol, requested.get(symbol), as_of=as_of))
+        series.append(
+            _series_from_response(
+                symbol,
+                requested.get(symbol),
+                as_of=as_of,
+                start=requested_start,
+                end=as_of,
+                history_truncated=True,
+            )
+        )
     return StockHistoryBatch(provider.provider_id, as_of, tuple(series))
 
 
@@ -170,6 +180,7 @@ def load_selected_listing_history(
         as_of=window.eligible_end,
         start=window.eligible_start,
         end=window.eligible_end,
+        history_truncated=True,
     )
     return StockHistoryBatch(
         provider.provider_id,
@@ -196,6 +207,7 @@ def _series_from_response(
     as_of: date,
     start: date | None = None,
     end: date | None = None,
+    history_truncated: bool = False,
 ) -> StockHistorySeries:
     empty = pd.DataFrame(columns=["close", "volume"], dtype="float64")
     if history is None or history.empty:
@@ -212,7 +224,21 @@ def _series_from_response(
         mask &= dates >= start
     if end is not None:
         mask &= dates <= end
-    eligible = history.loc[mask].reindex(columns=["close", "volume"]).sort_index()
+    optional_columns = [
+        column for column in ("open", "high", "low", "split_ratio") if column in history.columns
+    ]
+    ordered_columns = [
+        *[column for column in ("open", "high", "low") if column in optional_columns],
+        "close",
+        "volume",
+    ]
+    if "split_ratio" in optional_columns:
+        ordered_columns.append("split_ratio")
+    eligible = history.loc[mask].reindex(columns=ordered_columns).sort_index()
+    eligible.attrs.update(history.attrs)
+    eligible.attrs["history_truncated"] = (
+        history_truncated or history.attrs.get("history_truncated") is True
+    )
     if eligible.empty:
         return StockHistorySeries(
             symbol,

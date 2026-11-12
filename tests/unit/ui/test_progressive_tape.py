@@ -49,7 +49,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
                 "1 month": [None, None],
                 "3 months": [None, None],
                 "6 months": [None, None],
-                "12 months": [None, None],
+                "1 year": [None, None],
             }
         )
         if entity_column == "Industry":
@@ -84,7 +84,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
         "1 month",
         "3 months",
         "6 months",
-        "12 months",
+        "1 year",
     }
     assert [item.value for item in app.caption if item.value in headings] == [
         "Price + 50 MA",
@@ -95,7 +95,7 @@ def test_entity_name_buttons_select_stable_ids_even_when_names_match(entity_colu
         "1 month",
         "3 months",
         "6 months",
-        "12 months",
+        "1 year",
     ]
     assert not any(item.value == "Node ID" for item in app.caption)
     assert not any(item.value == "Status" for item in app.caption)
@@ -671,28 +671,32 @@ def test_missing_price_and_volume_series_are_reported_independently():
         (True, "#166534", "#991b1b", "#18232d", "#edf3f7"),
     ],
 )
+@pytest.mark.parametrize("year_column", ["1 year", "12 months"])
 def test_visual_tape_preserves_performance_colors_and_formats_missing_values(
-    dark_mode: bool, gain: str, loss: str, neutral: str, foreground: str
+    dark_mode: bool, gain: str, loss: str, neutral: str, foreground: str, year_column: str
 ) -> None:
-    def render(dark_mode: bool) -> None:
+    def render(dark_mode: bool, year_column: str) -> None:
         import pandas as pd
         import streamlit as st
 
         from market_leadership.ui.components.progressive_tape import render_chart_tape
-        from market_leadership.ui.performance_table import PERFORMANCE_COLUMNS
-
         st.session_state["dark_mode"] = dark_mode
         frame = pd.DataFrame(
             {
                 "Price chart": ["Unavailable"] * 4,
                 "Volume chart": ["Unavailable"] * 4,
                 "Sector": ["Gaining", "Declining", "Flat", "Missing"],
-                **{column: [8.0, -4.0, 0.0, None] for column in PERFORMANCE_COLUMNS},
+                **{
+                    column: [8.0, -4.0, 0.0, None]
+                    for column in (
+                        "1 day", "1 week", "1 month", "3 months", "6 months", year_column
+                    )
+                },
             }
         )
         render_chart_tape(frame, key="test-sector")
 
-    app = AppTest.from_function(render, args=(dark_mode,)).run()
+    app = AppTest.from_function(render, args=(dark_mode, year_column)).run()
 
     assert not app.exception
     responsive_style = next(
@@ -703,9 +707,10 @@ def test_visual_tape_preserves_performance_colors_and_formats_missing_values(
     assert responsive_style is not None
     assert "@media (max-width: 640px)" in responsive_style
     assert "nth-child(-n+2)" in responsive_style
-    assert "flex: 1 1 100%" in responsive_style
-    assert "nth-child(n+4)" in responsive_style
-    assert "flex: 1 1 0%" in responsive_style
+    assert "container-type: inline-size" in responsive_style
+    assert "overflow-x: auto" in responsive_style
+    assert "repeat(6, minmax(64px, 1fr))" in responsive_style
+    assert "100cqw" in responsive_style
     cells = [
         element.proto.body for element in app.get("html")
         if '<div class="tape-performance-cell"' in element.proto.body
@@ -780,3 +785,84 @@ def test_daily_unavailable_tooltip_retains_status_and_hides_backing_reason(entit
     assert len(cells) == 2
     assert "Unavailable" in cells[0] and "background-color" not in cells[0]
     assert "0.00%" in cells[1] and "background-color: #f4f6f5" in cells[1]
+
+
+@pytest.mark.parametrize("entity_column", ["Sector", "Industry"])
+def test_entity_details_and_scroll_cue_are_accessible_without_selection(entity_column: str) -> None:
+    def render(entity_column: str) -> None:
+        import pandas as pd
+        import streamlit as st
+
+        from market_leadership.ui.components.progressive_tape import render_chart_tape
+
+        frame = pd.DataFrame({
+            "Price chart": ["Unavailable"],
+            "Volume chart": ["Unavailable"],
+            entity_column: ["Complete unabbreviated entity name " * 10],
+            "Node ID": ["missing"],
+            "Ticker" if entity_column == "Sector" else "ETF": ["FIRST"],
+            "Status": ["Stale: prior evidence"],
+            "1d reason": ["No close for required session 2026-10-30"],
+            "1 day": [None],
+            "Representation": ["Approved ETF"],
+            "Representation type": ["ETF"],
+        })
+        frame.attrs["evidence_context"] = (
+            "SOURCE YFINANCE\nREQUESTED 2026-10-30\nOBSERVED 2026-10-29"
+        )
+        render_chart_tape(
+            frame, key="details", on_select=lambda node: st.session_state.update(selected=node)
+        )
+        st.write(f"Selected: {st.session_state.get('selected')}")
+
+    app = AppTest.from_function(render, args=(entity_column,)).run()
+    assert not app.exception
+    details = app.get("expander")
+    assert len(details) == 1
+    assert details[0].label == "Full name and evidence: FIRST"
+    text = "\n".join(element.value for element in details[0].text)
+    assert "Complete unabbreviated entity name " * 10 in text
+    assert "Stale: prior evidence" in text
+    assert "No close for required session 2026-10-30" in text
+    assert "SOURCE YFINANCE" in text and "REQUESTED 2026-10-30" in text
+    assert "OBSERVED 2026-10-29" in text
+    assert any(element.value == "Selected: None" for element in app.markdown)
+    html = "\n".join(element.proto.body for element in app.get("html"))
+    assert 'tabindex="0"' in html
+    assert "Swipe within the table or use Tab" in html
+    assert "white-space: pre-wrap" in html
+
+
+@pytest.mark.parametrize("entity_column", ["Sector", "Industry"])
+def test_final_return_field_is_keyboard_focusable(entity_column: str) -> None:
+    def render(entity_column: str) -> None:
+        import pandas as pd
+
+        from market_leadership.ui.components.progressive_tape import render_chart_tape
+
+        frame = pd.DataFrame(
+            {
+                "Price chart": ["Unavailable"],
+                "Volume chart": ["Unavailable"],
+                entity_column: ["Entity"],
+                "Node ID": ["entity"],
+                "1 day": [1.0],
+                "1 week": [2.0],
+                "1 month": [3.0],
+                "3 months": [4.0],
+                "6 months": [5.0],
+                "1 year": [6.0],
+            }
+        )
+        render_chart_tape(frame, key="keyboard-scroll")
+
+    app = AppTest.from_function(render, args=(entity_column,)).run()
+
+    assert not app.exception
+    year_cell = next(
+        element.proto.body
+        for element in app.get("html")
+        if 'class="tape-performance-label">1 year</span>' in element.proto.body
+    )
+    assert 'tabindex="0"' in year_cell
+    assert 'aria-label="1 year return: 6.00%"' in year_cell

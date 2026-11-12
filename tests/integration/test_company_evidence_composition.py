@@ -136,8 +136,12 @@ def test_production_composition_rechecks_permissions_outside_cached_acquisition(
     assert reused.outcome.state == "complete"
     assert first.snapshot is not None
     assert calls == ["FIXTURE"]
-    assert len(first.outcome.observations) == 10
-    assert len(reused.outcome.observations) == 10
+    expected_origins = {"source_supplied": 10, "derived": 9}
+    for outcome in (first.outcome, reused.outcome):
+        assert {
+            origin: sum(item.origin == origin for item in outcome.observations)
+            for origin in expected_origins
+        } == expected_origins
     assert store.list_latest_snapshots("research") == ()
     historical = load_selected_company_evidence(
         replace(request, mode="historical"),
@@ -186,7 +190,10 @@ def test_production_composition_rechecks_permissions_outside_cached_acquisition(
     )
     assert second_result.outcome.state == "complete"
     assert second_result.snapshot is not None
-    assert len(second_result.outcome.observations) == 10
+    assert {
+        origin: sum(item.origin == origin for item in second_result.outcome.observations)
+        for origin in expected_origins
+    } == expected_origins
     assert calls == ["FIXTURE", "FIXTURE_B"]
     assert second_result.projections
     assert all(
@@ -205,7 +212,12 @@ def test_production_composition_rechecks_permissions_outside_cached_acquisition(
         projection.acquisition_association_id == association.association_id
         and projection.consumer_association_id == second_class.association_id
         and projection.observation.association_id == association.association_id
-        and projection.observation.currency == "USD"
+        and (
+            projection.observation.currency == "USD"
+            if projection.observation.origin == "source_supplied"
+            else projection.observation.currency is None
+            and projection.observation.unit == "ratio"
+        )
         for projection in projections
     )
 

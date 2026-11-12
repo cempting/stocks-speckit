@@ -8,7 +8,10 @@ import streamlit as st
 
 from market_data.catalog import CatalogSnapshot
 from market_data.domain.catalog import CatalogMember, Listing
-from market_data.domain.stock_chart import build_stock_chart_evidence
+from market_data.domain.stock_chart import (
+    build_stock_chart_evidence,
+    stock_chart_lookback_days,
+)
 from market_data.domain.stock_selection import StockIdentitySelection
 from market_leadership.config import Settings, load_settings
 from market_leadership.ui.cache import load_catalog_snapshot
@@ -27,6 +30,8 @@ _OPEN_KEY = _PREFIX + "lookup_open"
 _CONTEXT_KEY = _PREFIX + "lookup_context"
 _HISTORY_KEY = _PREFIX + "lookup_history"
 _HISTORY_CONTEXT_KEY = _PREFIX + "lookup_history_context"
+_HISTORY_LOOKBACK_KEY = _PREFIX + "lookup_history_lookback"
+_DETAIL_WIDGET_PREFIX = _PREFIX + "detail."
 
 
 def _clear_lookup_selection() -> None:
@@ -120,6 +125,9 @@ def _render_lookup(
         st.session_state.pop(_OPEN_KEY, None)
         st.session_state.pop(_HISTORY_KEY, None)
         st.session_state.pop(_HISTORY_CONTEXT_KEY, None)
+        st.session_state.pop(_HISTORY_LOOKBACK_KEY, None)
+        st.session_state.pop(_DETAIL_WIDGET_PREFIX + "chart_range", None)
+        st.session_state.pop(_DETAIL_WIDGET_PREFIX + "chart_range_context", None)
         st.session_state[_CONTEXT_KEY] = detail_context
     if st.button("Open stock detail", key=_PREFIX + "open_lookup"):
         if listings and listing_id is None:
@@ -143,6 +151,7 @@ def _render_lookup(
     history_context = (detail_context, listing.listing_id if listing else None)
     if st.session_state.get(_HISTORY_CONTEXT_KEY) != history_context:
         st.session_state.pop(_HISTORY_KEY, None)
+        st.session_state.pop(_HISTORY_LOOKBACK_KEY, None)
         st.session_state[_HISTORY_CONTEXT_KEY] = history_context
     history_requested = st.session_state.get(_HISTORY_KEY) == history_context
     load_history = listing is not None and st.button(
@@ -160,6 +169,18 @@ def _render_lookup(
         try:
             from market_leadership.bootstrap import load_selected_stock_history
 
+            chart_range = st.session_state.get(
+                _DETAIL_WIDGET_PREFIX + "chart_range", "6m"
+            )
+            requested_lookback_days = stock_chart_lookback_days(as_of, chart_range)
+            if refresh_history:
+                lookback_days = requested_lookback_days
+            else:
+                lookback_days = max(
+                    requested_lookback_days,
+                    st.session_state.get(_HISTORY_LOOKBACK_KEY, 0),
+                )
+            st.session_state[_HISTORY_LOOKBACK_KEY] = lookback_days
             history_result = load_selected_stock_history(
                 snapshot,
                 region_id=region_id,
@@ -167,6 +188,7 @@ def _render_lookup(
                 listing_id=listing.listing_id,
                 as_of=as_of,
                 require_primary=False,
+                lookback_days=lookback_days,
                 refresh=refresh_history,
             )
         except (OSError, RuntimeError, ValueError) as error:
@@ -223,7 +245,7 @@ def _render_lookup(
         research_evidence=research_evidence,
         on_load_financial=on_load_financial,
         on_load_research=on_load_research,
-        widget_key_prefix=_PREFIX + "detail.",
+        widget_key_prefix=_DETAIL_WIDGET_PREFIX,
         back_button_label="Back to Find a stock",
     )
 

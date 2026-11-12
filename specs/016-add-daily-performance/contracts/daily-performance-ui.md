@@ -19,8 +19,8 @@ directional-volume chart, Sector/Industry button, then these six return fields:
 | `6 months` | `6m` |
 | `1 year` | `12m` |
 
-The final caption replaces `12 months` without changing arithmetic or internal keys;
-implementation remains pending T030. Daily reason metadata remains `1d reason`.
+The final caption replaces `12 months` without changing arithmetic or internal keys.
+Daily reason metadata remains `1d reason`.
 Ticker/ETF, Node ID, status and representation metadata stay internal, available to buttons,
 charts and evidence details. Preserve row ordering, callbacks, keys and stock projections.
 No daily thumbnail, period/direction selector, ranking default, tab or stock-horizon change.
@@ -51,7 +51,10 @@ Calculation/result shapes and migration are defined in [data-model.md](../data-m
 ## Presentation and Interaction
 
 - Values are right-aligned two-decimal percentages: green gains, red losses, neutral zero,
-  independently scaled by period and sign in both themes.
+  independently scaled by period and sign in both themes. Return text meets WCAG AA contrast
+  ratios of at least 4.5:1 for normal text and 3:1 for large text in both themes; gain/loss/neutral
+  status remains distinguishable without color. A browser or automated check covers every
+  applicable return-text foreground/background pair.
 - Chart thumbnails and aligned performance cells remain 84px high. Sector/industry buttons
   are 84px with wider aligned columns and at most three visible name lines. Compact clipping
   is allowed only with unrestricted full-text touch/keyboard details, never hover alone.
@@ -59,9 +62,10 @@ Calculation/result shapes and migration are defined in [data-model.md](../data-m
   unrestricted wrapping/minimum height.
 - At 1440 CSS pixels, retain the wide nine-field table and four-column Discovery header.
   At 640px, charts stack above one fitting ticker/name and six-labeled-value strip; hide the
-  separate wide heading row. At 390px, retain this unwrapped strip with visibly discoverable
-  touch/keyboard-operable horizontal scrolling inside the table. Charts stay stacked/readable.
-  No clipped values, overlap or horizontal scrolling of ordinary page content.
+  separate wide heading row. At 390px, retain this unwrapped strip with a persistent visible
+  table-local scroll cue while fields extend beyond the viewport. Touch and keyboard scrolling
+  reaches the final field; text is not clipped within its cell. Charts remain 84 CSS pixels high
+  without clipping plotted content. No overlap or horizontal scrolling of ordinary page content.
 - At 390/640px, Discovery title stays left beside `As of` in the upper right row and
   `Refresh data`/theme side by side below. Adapt text/spacing without clipping or overlap.
   Retain desktop order/weights, date limits, native callbacks, refresh/cache and theme behavior.
@@ -71,6 +75,40 @@ Calculation/result shapes and migration are defined in [data-model.md](../data-m
 - Basis persists across hierarchy navigation; thumbnails change chart cropping, not returns.
   Native selection/back actions and stock loading safeguards remain. Rendering and ordinary
   basis/thumbnail/detail projections add zero requests beyond the existing workflow.
+- On the Industry momentum tape, select an industry from its row; do not show the Industry
+  dropdown there.
+
+## Entity Heading and Controls
+
+FR-012/SC-008 apply only to the Sector performance and Industry momentum heading/control groups,
+not the Discovery title/date/refresh/theme header or Contained stocks.
+
+- At viewport widths up to and including 640 CSS pixels, the heading occupies the left column
+  beside two right-hand control groups: `Thumbnail period` above `Performance basis`.
+  The heading spans their two rows; neither control group moves beneath it.
+- Above 640px, including wider tablets, retain the existing single-row order: heading left,
+  Thumbnail period middle, Performance basis right. Preserve the existing three-column weights.
+- Keep the current native widgets, namespaced keys and selection semantics. Thumbnail options
+  remain `1w`, `1m`, `3m`, `6m`, `1y`, default `3m`; basis options remain `Absolute` and
+  `vs S&P 500`, default `Absolute`. Retain existing empty-selection defaults.
+  Labels/options remain readable and reachable by touch/keyboard; contents may wrap within
+  their own cells, but no hiding, ellipsis, clipping, overlap or page-level horizontal scrolling.
+- Changing viewport width alone must not rerun acquisition or alter hierarchy, valid selections,
+  chart choice or return values. Ordinary control changes preserve existing rerun/cache behavior;
+  no duplicate mobile widgets, new requests or calculation changes.
+- Keep the existing heading/control presence for no-industry, empty, loading and failure states.
+  This layout change does not introduce new controls or data loads into those states.
+
+Narrow placement:
+
+```text
+Heading (left, spanning both rows) | Thumbnail period (upper right)
+                                  | Performance basis (lower right)
+```
+
+At 390/640px, verify this placement in both tables and themes. At 641/1440px, verify desktop
+preservation. These heading/control cases are additional to the existing table/main-header
+acceptance matrix; they do not change those surfaces' breakpoints or acceptance widths.
 
 ## Acceptance Cases
 
@@ -90,6 +128,8 @@ Calculation/result shapes and migration are defined in [data-model.md](../data-m
 | Short valid daily history or isolated longer horizon | Supported periods remain independently visible |
 
 Verify literal captions/order independently of constants, nine fields and 24 return cells for
-the four-row fixture. [Quickstart](../quickstart.md) defines all six actual width/theme cases
-and touch/keyboard, long-name, unavailable, navigation/control/request checks.
-T027-T030 remain open; historical 640/1440px evidence does not establish phone or new-caption acceptance.
+the four-row fixture. [Quickstart](../quickstart.md) defines the six existing width/theme cases,
+eight heading/control cases, and touch/keyboard, long-name, unavailable, navigation/control/request checks.
+T034 and T029 remain open; FR-012/SC-008 test-first, shared-layout and story-specific acceptance
+work is tracked in [tasks](../tasks.md). Current browser measurements are recorded in
+[quickstart](../quickstart.md); outstanding touch acceptance is not established by those measurements.

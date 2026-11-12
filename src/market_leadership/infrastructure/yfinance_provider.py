@@ -69,7 +69,7 @@ class YFinanceProvider:
                     end=(end + timedelta(days=1)).isoformat(),
                     interval="1d",
                     auto_adjust=True,
-                    actions=False,
+                    actions=True,
                     progress=False,
                     group_by="ticker",
                     threads=True,
@@ -119,14 +119,39 @@ class YFinanceProvider:
             return YFinanceProvider._empty_history()
 
         normalized = symbol_frame.copy()
-        normalized.columns = [str(column).lower() for column in normalized.columns]
+        normalized.columns = [
+            {
+                "stock splits": "split_ratio",
+                "split ratio": "split_ratio",
+            }.get(str(column).strip().lower(), str(column).strip().lower())
+            for column in normalized.columns
+        ]
         if not {"close", "volume"}.issubset(normalized.columns):
             raise ValueError(f"Daily history for {symbol} lacks canonical columns")
-        result = normalized.loc[:, ["close", "volume"]].dropna(how="all").sort_index().copy()
-        complete = result.notna().all(axis=1)
+        has_adjusted_ohlc = {"open", "high", "low"}.issubset(normalized.columns)
+        columns = (
+            ["open", "high", "low", "close", "volume"]
+            if has_adjusted_ohlc
+            else ["close", "volume"]
+        )
+        has_split_evidence = "split_ratio" in normalized.columns
+        if has_split_evidence:
+            columns.append("split_ratio")
+        result = normalized.loc[:, columns].dropna(how="all").sort_index().copy()
+        complete = result.loc[:, ["close", "volume"]].notna().all(axis=1)
         if complete.any():
             result = result.loc[: result.index[complete][-1]]
         result.index = pd.DatetimeIndex(result.index).tz_localize(None)
+        split_actions_complete = (
+            has_split_evidence and result["split_ratio"].notna().all()
+        )
+        has_split_action = (
+            split_actions_complete and (result["split_ratio"] > 0).any()
+        )
+        result.attrs["adjusted_ohlc"] = has_adjusted_ohlc
+        result.attrs["volume_comparable"] = (
+            has_adjusted_ohlc and split_actions_complete and not has_split_action
+        )
         return result
 
     @staticmethod

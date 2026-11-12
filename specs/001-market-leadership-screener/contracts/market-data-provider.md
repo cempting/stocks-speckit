@@ -57,7 +57,11 @@ coverage and truncation; source history limits are not detector maximum duration
 Use `auto_adjust=True` explicitly for OHLC and request actions where needed to validate
 split handling. Specify daily interval, date inclusivity, timezone and price/volume basis.
 Preserve legacy close/volume consumers separately; adding OHLC cannot silently break
-their canonical frame contract.
+their canonical frame contract. Verified adjusted histories may additionally retain
+`open`, `high`, `low`, and `split_ratio`; the disk-cache schema is version 5 and records
+the adjusted-OHLC and volume-comparability evidence alongside those values. Providers
+without complete adjusted OHLC and split-action coverage continue to serve close/volume
+but must not claim detector-ready evidence.
 
 Finite positive OHLC and consistent high/low bounds are required. Dates must be unique,
 ordered and no later than cutoff. Nonnegative finite volume is not automatically
